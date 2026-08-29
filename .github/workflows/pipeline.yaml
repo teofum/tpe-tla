@@ -1,0 +1,36 @@
+# @see https://docs.github.com/en/actions
+# @see https://github.com/marketplace?verification=verified_creator&type=actions
+jobs:
+  Integration:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Pull repository."
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: "Install."
+        run: |
+          sudo apt-get update --yes
+          sudo apt-get install --yes \
+            bison \
+            cmake \
+            flex \
+            gcc \
+            make
+          chmod u+x --recursive src/main/bash
+      - name: "Build."
+        run: |
+          src/main/bash/build.sh
+      - name: "Test."
+        run: |
+          src/main/bash/test.sh
+
+name: "CI"
+
+# @see https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows
+on:
+  pull_request:
+    types:
+      - closed
+      - reopened
+  push:

@@ -1,0 +1,28 @@
+# @see https://docs.docker.com/build/building/context/#dockerignore-files
+
+# WARNING: This language doesn't support patterns beginning with "/".
+
+# Folders.
+.build/
+.DS_Store/
+.git/
+.vs/
+.vscode/
+bin/
+cache/
+log/
+node_modules/
+obj/
+
+# Files.
+.DS_Store
+.env*
+*.csproj.user
+*~
+
+# Application specific.
+BisonParser.c
+BisonParser.h
+FlexScanner.c
+program
+subexp

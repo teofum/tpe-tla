@@ -1,0 +1,43 @@
+# @see https://docs.docker.com/compose/compose-file/
+name: "ar-edu-itba-atlyc"
+
+# @see https://docs.docker.com/reference/compose-file/extension/
+x-shared:
+  environment: &environment
+    ENVIRONMENT: "${ENVIRONMENT:-Local}"
+    LOG_IGNORED_LEXEMES: "${LOG_IGNORED_LEXEMES:-true}"
+    LOGGING_LEVEL: "${LOGGING_LEVEL:-ALL}"
+
+networks:
+  ar-edu-itba-atlyc:
+    attachable: true
+    driver_opts:
+      com.docker.network.bridge.host_binding_ipv4: "127.0.0.1"
+    driver: "bridge"
+    enable_ipv4: true
+    enable_ipv6: false
+    name: "ar-edu-itba-atlyc"
+
+services:
+  compiler:
+    build:
+      context: "."
+      dockerfile: "src/main/docker/compiler/Dockerfile"
+    develop:
+      watch:
+        - action: rebuild
+          path: "src/main/docker/compiler/"
+    env_file:
+      - path: ".env"
+        required: false
+    environment:
+      <<: *environment
+    networks:
+      ar-edu-itba-atlyc:
+        aliases:
+          - "compiler.atlyc.itba.edu.ar"
+    pull_policy: "every_7d"
+    user: "ubuntu:ubuntu"
+    volumes:
+      - ".:/home/ubuntu/Flex-Bison-Compiler"
+    working_dir: "/home/ubuntu/Flex-Bison-Compiler"

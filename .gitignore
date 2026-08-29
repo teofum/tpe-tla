@@ -1,0 +1,27 @@
+# @see https://git-scm.com/docs/gitignore/
+
+# Folders.
+.DS_Store/
+/.build/
+/.git/
+/.vs/
+/.vscode/
+/bin/
+/cache/
+/log/
+/node_modules/
+/obj/
+
+# Files.
+.DS_Store
+.env*
+*.csproj.user
+*~
+
+# Application specific.
+/program
+/subexp
+BisonParser.c
+BisonParser.h
+FlexScanner.c
+FlexScanner.h
