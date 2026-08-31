@@ -1,4 +1,5 @@
 latex:
+	mkdir -p out
 	# cd src && lualatex -shell-escape --output-directory ../out main
 	# cd src && bibtex main
 	cd src && lualatex -shell-escape --output-directory ../out main

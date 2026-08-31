@@ -29,9 +29,10 @@ La solución será versionada en \href{https://github.com/teofum/tpe-tla}{https:
 Desarrollar un lenguaje para generación de sitios web estáticos (HTML + CSS +
 JS) que puedan ser hosteados por un servidor web estándar (e.g. Apache, nginx).
 El lenguaje debe permitir crear programas cuya salida sea una página HTML
-válida, crear componentes reutilizables en la forma de funciones, y programar
+válida, crear componentes reutilizables en la forma de funciones, programar
 lógica sencilla (condicionales, iterar listas), y leer datos de entrada de
-ciertos formatos (JSON, CSV) a variables.
+ciertos formatos (JSON, CSV) a variables. También deberá permitir generar
+páginas con un formato predefinido a partir de archivos CSV, JSON y Markdown.
 
 Con tal de reducir la complejidad del proyecto, los estilos (CSS) y cualquier
 comportamiento frontend (JS) serán importados como \textit{assets} externos y
@@ -228,7 +229,7 @@ llama. \textbf{No tiene acceso al \textit{scope} interno de la función.}
 \subsection{Expresiones}
 
 El lenguaje será \textbf{basado en expresiones}, es decir, todo en el lenguaje
-es una expresión que retorna un valor.
+es una expresión que retorna un valor excepto las definiciones de tipo de datos.
 
 \begin{enumerate}
 	\item Una asignación retorna el valor asignado a la variable; esto permite
@@ -297,6 +298,85 @@ retorne \texttt{[]T} y la función tenga como tipo de retorno una tupla de
 \end{verbatim}
 \normalsize
 
+\subsection{Parámetros de compilación y recursos externos}
+
+El lenguaje tendrá la posibilidad de definir variables cuyo valor se toma como
+parámetro en tiempo de compilación mediante la palabra reservada \texttt{var}:
+
+\small
+\begin{verbatim}
+// Al invocar el compiler se pasa --var title:"Book Inventory"
+page_title := var title default "Data Table"
+
+// Al invocar el compiler se pasa --var src:"books.csv"
+// No tiene default, si no se le da un valor es error de compilación
+csv_source := var csv
+\end{verbatim}
+\normalsize
+
+También se dará la posibilidad de incluir recursos externos mediante la palabra
+reservada \texttt{import}, con distintos usos dependiendo del tipo de recurso:
+
+\begin{description}
+	\item[\texttt{import url}] retorna la url del recurso en el artefacto de
+	  salida. Útil para recursos estáticos como imágenes o CSS.
+	\item[\texttt{import csv}] parsea un archivo CSV y retorna una tupla de headers
+	  y filas de datos. Opcionalmente se le puede pasar un tipo de datos struct con
+		la expresión \texttt{import csv of T}, en cuyo caso retorna una lista de ese
+		tipo para las filas de datos y valida la cantidad de campos.
+	\item[\texttt{import json}] parsea un archivo JSON y retorna una estructura de
+	  valor JSON, que consiste en una unión de todos los tipos que soporta el
+		formato. Opcionalmente se le puede pasar un tipo de datos con la expresión
+		\texttt{import json of T}, en cuyo caso retorna \texttt{T} y valida que el
+		JSON pueda adaptarse a ese tipo.
+	\item[\texttt{import md}] parsea un archivo Markdown y retorna una lista
+	  \texttt{[]element} con los elementos del archivo. Opcionalmente se le puede
+		pasar una lista de componentes con la expresión \texttt{import md with
+		components}, donde \texttt{components} es un mapa con claves
+		\texttt{MdComponent} (enumeración \textit{builtin}) y valores función que
+	  aceptan composición y retornan \texttt{element}.
+\end{description}
+
+\subsection{Layout}
+
+En sitios complejos con varias páginas, frecuentemente es deseable repetir una
+gran parte del layout de cada página variando únicamente el contenido. El
+lenguaje cubrirá este caso de uso mediante la funcionalidad de \textit{layout}.
+
+Un \textit{layout} es una página especial, definida en un archivo dentro de un
+directorio fuente. Se comporta como un componente especial: cuando un directorio
+contiene un \textit{layout}, las páginas en ese directorio y tods sus
+subdirectorios son automáticamente "envueltas" en el mismo. Esto permite
+contener un \textit{layout} dentro de otro.
+
+\subsection{Templates}
+
+En algunos casos puede ser deseable tener el contenido del sitio en formatos
+simples (e.g. Markdown para un blog, CSV para tablas de datos) y generar
+automáticamente páginas para cada archivo. El lenguaje cubrirá esta necesidad
+mediante la funcionalidad de \textit{templates}.
+
+Un template es una página especial, definida en un archivo \texttt{template.xx}
+donde \texttt{xx} es el tipo de archivo al cual aplica. Dentro de un template,
+se define la variable global \texttt{content\_path} la cual contiene el path al
+archivo fuente. Esta variable se puede combinar con \texttt{import}:
+
+\pagebreak
+\small
+\begin{verbatim}
+// Ejemplo CSV
+headers, rows := import csv content_path
+
+// Ejemplo MD
+article := import md with components content_path
+\end{verbatim}
+\normalsize
+
+Al encontrarse un archivo de un tipo soportado, el compilador deberá buscar el
+template apropiado más cercano entre el directorio del archivo y la raíz del
+directorio fuente. Si se encuentra un template, se compila una copia del template
+en lugar del archivo, pasando su path en la variable \texttt{content\_path}.
+
 \section{Casos de prueba}
 
 Se proponen los siguientes casos de prueba de \textbf{aceptación}:
@@ -306,6 +386,9 @@ Se proponen los siguientes casos de prueba de \textbf{aceptación}:
 	\item Un programa que genere una página en base a datos de un CSV.
 	\item Un programa que genere una página en base a datos de un JSON.
 	\item Un programa que defina un componente y lo utilize en una página.
+	\item Un programa que defina un \textit{layout} y lo utilize en varias páginas.
+	\item Un programa que defina un \textit{template} y lo utilize con una o varias
+	  fuentes Markdown.
 \end{enumerate}
 
 Así como los siguientes casos de prueba de \textbf{rechazo}:
@@ -320,6 +403,7 @@ Así como los siguientes casos de prueba de \textbf{rechazo}:
 
 \section{Ejemplos}
 
+\pagebreak
 \subsection{Página simple}
 
 Este ejemplo muestra la creación de una página sencilla, utilizando recursos
