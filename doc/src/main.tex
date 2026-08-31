@@ -1,0 +1,477 @@
+\input{preamble.tex}
+
+\begin{document}
+
+\input{titlepage.tex}
+
+\tableofcontents
+\pagebreak
+
+\section{Equipo}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{|l|l|l|l|}
+		\hline
+		\textbf{Nombre} & \textbf{Apellido} & \textbf{Legajo} & \textbf{E-mail} \\
+		\hline
+		Teo             & Fumagalli         & 66048           & \href{mailto:tfumagalli@itba.edu.ar}{\texttt{tfumagalli@itba.edu.ar}} \\
+		\hline
+	\end{tabular}
+\end{table}
+
+\section{Repositorio}
+
+La solución será versionada en \href{https://github.com/teofum/tpe-tla}{https://github.com/teofum/tpe-tla}
+
+\section{Dominio}
+
+Desarrollar un lenguaje para generación de sitios web estáticos (HTML + CSS +
+JS) que puedan ser hosteados por un servidor web estándar (e.g. Apache, nginx).
+El lenguaje debe permitir crear programas cuya salida sea una página HTML
+válida, crear componentes reutilizables en la forma de funciones, y programar
+lógica sencilla (condicionales, iterar listas), y leer datos de entrada de
+ciertos formatos (JSON, CSV) a variables.
+
+Con tal de reducir la complejidad del proyecto, los estilos (CSS) y cualquier
+comportamiento frontend (JS) serán importados como \textit{assets} externos y
+referenciados en el HTML generado.
+
+Toda la evaluación del programa que genera una página HTML será realizada dentro
+del compilador como parte del proceso de compilación. El artefacto de entrada es
+uno o más archivos fuente o un directorio con archivos fuente y recursos (CSS,
+JS, imágenes, datos en formato JSON o CSV, etc.), y el artefacto de salida es un
+directorio con archivos HTML correspondiendo a cada archivo fuente que retorne
+una página completa, y todos los recursos necesarios.
+
+La implementación satisfactoria del lenguaje permitiría escribir sitios web
+sencillos (estáticos) con un \textit{toolchain} muy simple y sin dependencias
+externas (e.g. npm), ningún componente requerido en tiempo de ejecución, y en un
+lenguaje más amigable que HTML estándar.
+
+\section{Construcciones}
+
+El lenguaje desarrollado debería ofrecer las siguientes construcciones,
+prestaciones y funcionalidades:
+
+\subsection{Variables}
+
+El lenguaje permitirá definir variables con un \textit{scope} localizado al
+bloque más cercano (con reglas similares a e.g. C). Cada variable tiene un tipo
+y un valor; las variables deberán ser inicializadas explícitamente al definirlas
+y no hacerlo será un error.
+
+También se podrán definir constantes, con semántica idéntica a una variable con
+la excepción de que no pueden ser modificadas una vez definidas. Se permitirá la
+definición de variables con el mismo nombre que otras (\textit{shadowing}), pero
+nunca dentro del mismo \textit{scope}.
+
+\paragraph{Ejemplos de sintaxis}
+\small
+\begin{verbatim}
+x: int = 5           // Declara la variable "x" con tipo "int" y valor 5
+y := 5               // Se infiere el tipo "int" del literal 5
+z := "Hello, world!" // Se infiere el tipo "string" del literal
+z_2 := z             // Inicializar con otra variable toma su tipo de datos
+x_2: int = z         // ERROR: z es de tipo "string"
+\end{verbatim}
+\normalsize
+
+\subsection{Tipos de datos}
+
+El sistema de tipado será \textbf{estático fuerte}: los tipos de datos serán
+verificados en tiempo de compilación, y el tipo de datos de una variable será
+permanente durante toda la vida de esa variable.
+
+El lenguaje contará con tipos de datos generales, tanto primitivos como
+compuestos, y otros específicos al dominio. Los tipos de datos serán:
+
+\begin{description}
+	\item[Tipos primitivos:] \texttt{int} (números enteros); \texttt{float}
+  	(números decimales, siguiendo IEEE 754); \texttt{bool} (verdadero/falso);
+    \texttt{string} (cadenas de texto UTF-8); \texttt{nil} (tipo vacío, su único
+    valor válido es \texttt{nil}).
+  \item[Tipos de dominio:] \texttt{element}, representa un elemento HTML con su
+    nombre de \textit{tag}, atributos, y descendientes. Un archivo fuente que
+    retorna una variable de tipo \texttt{element} es considerado un punto de
+    entrada, y genera una página en la salida.
+  \item[Estructuras:] definidas con la palabra reservada \texttt{struct}, son
+    una agrupación de otros valores cada uno con un nombre y tipo de datos.
+  \item[Uniones:] definidas con la palabra reservada \texttt{union}, representan
+    un tipo que puede tomar uno de varios tipos de datos, junto con información
+    del tipo actual de la variable (\textit{tagged union}).
+  \item[Opcionales:] definidos a partir de un tipo \texttt{T} como \texttt{T?},
+    es un atajo para el patrón común \texttt{union \{ T, nil \}}.
+  \item[Enumeraciones:] definidas con la palabra reservada \texttt{enum}, son un
+    tipo de datos que toma valores específicos de una lista.
+  \item[Listas:] definidas a partir de un tipo \texttt{T} como \texttt{[]T}
+    ("lista de \texttt{T}"). Tamaño dinámico.
+  \item[Tuplas:] definidas a partir de tipos \texttt{T, U, ...} como
+    \texttt{<T, U, ...>}. Tamaño fijo, con elementos de tipos heterogéneos.
+  \item[Mapas:] definidos a partir de dos tipos \texttt{K, V} como \texttt{[K]V}
+    ("mapa de \texttt{V} indexado por \texttt{K}"). Sintaxis especial para el
+    caso \texttt{K = string}, ya que es un uso muy común (al trabajar con JSON).
+  \item[Funciones:] definidas a partir de sus tipos de parámetros y de retorno,
+    con la palabra reservada \texttt{function}.
+\end{description}
+
+Los tipos de datos de usuario se definen con el operador \texttt{is}:
+
+\small
+\begin{verbatim}
+# Struct usuario con campos int, string y opcional(string)
+User is struct {
+  id: int,
+  username, first_name, last_name: string,
+  profile_image_url: string?,
+}
+
+# Lista de elementos que pueden tomar uno de cuatro tipos
+Article is []union { Paragraph, Image, Quote, CodeBlock }
+\end{verbatim}
+\normalsize
+
+\subsection{Funciones y componentes}
+
+Las funciones se definen como un tipo de datos de usuario, con la adición de un
+cuerpo de función que contiene su código:
+
+\small
+\begin{verbatim}
+display_name is function(user: User) -> string {
+  concat(" ", user.first_name, user.last_name)
+}
+\end{verbatim}
+\normalsize
+
+Toda función debe tener un tipo de retorno, indicado por \texttt{->} siguiendo
+su lista de parámetros. Los argumentos de una función se pasan por valor, y no
+pueden ser modificados.
+
+Un componente es sencillamente una función que retorna el tipo \texttt{element}:
+
+\small
+\begin{verbatim}
+user_avatar is function(user: User) -> element {
+  div.flex.flex-row.gap-4.items-center {
+    // ...
+  }
+}
+\end{verbatim}
+\normalsize
+
+La sintaxis de llamada de función es similar a un lenguaje como C, con la
+diferencia que si una función no toma parámetros, o todos sus parámetros tienen
+un valor por defecto y no se pasa ninguno al llamarla, se puede omitir la lista
+de parámetros por completo.
+
+\small
+\begin{verbatim}
+hello is function(name: string = "world") -> string {
+  "Hello, ${name}!"
+}
+
+name := display_name(user)
+str1 := hello(name)        // "Hello, <users's name>!"
+str2 := hello              // "Hello, world!"
+\end{verbatim}
+\normalsize
+
+Los componentes se definen como cualquier función, pero tienen comportamientos
+especiales al llamarlos: se admiten cadenas de texto arbitrarias (sin espacios)
+prefijadas con \texttt{.} (cualquier cantidad) o \texttt{\#} (sólo una) entre el
+nombre de función y la lista de parámetros. Las primeras se pasan como
+\texttt{[]string} al parámetro especial \texttt{class}, y la segunda como
+\texttt{string} al parámetro especial \texttt{id}. En caso de no existir estos
+parámetros, el uso de su sintaxis especial es un error.
+
+La sintaxis de llamada especial para componentes existe para facilitar la
+escritura de código markup:
+
+\small
+\begin{verbatim}
+// Sin sintaxis especial de llamada
+div(class = "flex flex-row gap-4 items-center", id = "myDiv")
+
+// Con sintaxis especial de llamada
+div.flex.flex-row.gap-4.items-center#myDiv
+\end{verbatim}
+\normalsize
+
+\subsection{Composición de funciones}
+
+La construcción que permite utilizar el lenguaje para construir estructuras
+HTML complejas de modo sencillo es la \textbf{composición de funciones}. Esto
+consiste en pasar una expresión arbitraria como parte de una llamada a función.
+La expresión es tratada como un parámetro especial, y es inserta en cada
+lugar donde la función tenga la palabra reservada \texttt{compose}:
+
+\small
+\begin{verbatim}
+twice is function -> <string, string> {
+  compose
+  compose
+}
+
+foo := twice "Hello"    // <"Hello", "Hello">
+bar := twice {
+  who := "world"
+  "Hello ${who}!"
+}                       // <"Hello, world!", "Hello, world!">
+\end{verbatim}
+\normalsize
+
+Un bloque de código pasado para composición captura el \textit{scope} de la
+llamada a función; es decir, tiene acceso a las variables del lugar donde se
+llama. \textbf{No tiene acceso al \textit{scope} interno de la función.}
+
+\subsection{Expresiones}
+
+El lenguaje será \textbf{basado en expresiones}, es decir, todo en el lenguaje
+es una expresión que retorna un valor.
+
+\begin{enumerate}
+	\item Una asignación retorna el valor asignado a la variable; esto permite
+	  encadenar asignaciones. Las asignaciones tienen comportamiento especial.
+	\item Una llamada a función retorna el valor de retorno de la función.
+	\item Una expresión condicional retorna el valor de la rama que haya sido
+	  tomada en base a la o las condiciones. Todas deben retornar el mismo tipo.
+	\item Un \textit{loop} retorna un valor de tipo \texttt{[]T}, donde \texttt{T}
+	  es el tipo que retorna la expresión interna.
+\end{enumerate}
+
+Un bloque también es una expresión, que consiste de un agrupamiento lineal y
+ordenado de otras expresiones. El tipo de retorno de un bloque se decide según
+su contexto:
+
+\begin{itemize}
+	\item Si el bloque es el cuerpo de una función, su tipo de retorno coincide con
+	  el de la función.
+	\item En cualquier otro caso, el tipo de retorno se infiere del valor, que
+	  sigue las reglas detalladas a continuación.
+\end{itemize}
+
+El valor de retorno de un bloque está dado por las siguientes reglas:
+
+\begin{enumerate}
+	\item Toda expresión dentro del bloque, \textbf{excepto las asignaciones},
+	  agrega su valor de retorno al del bloque.
+	\item Si el bloque contiene una única expresión que no es una asignación,
+	  retorna directamente su valor.
+	\item Si el bloque contiene varias expresiones y todas retornan un mismo tipo
+	  \texttt{T}, entonces retorna una lista de tipo \texttt{[]T} con los valores
+		de todas sus expresiones (que no sean asignaciones).
+	\item Si el bloque contiene varias expresiones y retornan distintos tipos,
+	  entonces retorna una tupla con los valores de todas sus expresiones (excepto
+		asignaciones).
+\end{enumerate}
+
+En el caso del cuerpo de una función, si el valor de retorno no coincide con el
+tipo declarado en la función, es un error, excepto en el caso que el bloque
+retorne \texttt{[]T} y la función tenga como tipo de retorno una tupla de
+\texttt{T} con el tamaño apropiado.
+
+\paragraph{Ejemplos}
+\small
+\begin{verbatim}
+// Retorna string ("Hello, world!")
+{
+  greeting := "Hello, "
+  greeting = greeting + "world!"
+  greeting
+}
+
+// Retorna []int ([42, 505, 77])
+{
+  42
+  500 + 5
+  77
+}
+
+// Retorna <int, string> (<42, "Hello, world!">)
+{
+  (80 + 4) / 2
+  who := "world"
+  "Hello, ${who}!"
+}
+\end{verbatim}
+\normalsize
+
+\section{Casos de prueba}
+
+Se proponen los siguientes casos de prueba de \textbf{aceptación}:
+
+\begin{enumerate}
+	\item Un programa que genere una página simple con texto.
+	\item Un programa que genere una página en base a datos de un CSV.
+	\item Un programa que genere una página en base a datos de un JSON.
+	\item Un programa que defina un componente y lo utilize en una página.
+\end{enumerate}
+
+Así como los siguientes casos de prueba de \textbf{rechazo}:
+
+\begin{enumerate}
+	\item Un programa malformado.
+	\item Un programa que intente operar con tipos de datos incompatibles.
+	\item Un programa que asigne una variable que no se utiliza.
+	\item Un programa que defina una función que no se utiliza.
+	\item Un programa que defina un tipo de datos que no se utiliza.
+\end{enumerate}
+
+\section{Ejemplos}
+
+\subsection{Página simple}
+
+Este ejemplo muestra la creación de una página sencilla, utilizando recursos
+externos como imágenes y CSS.
+
+\scriptsize
+\begin{verbatim}
+// "import url" toma un path a recursos en el directorio fuente.
+// En compilación, se transforma en url relativa de salida.
+my_cool_image := import url "img/cool.png"
+tailwind_css  := import url "css/tailwind.css"
+
+html {
+  head {
+    title "My cool website"
+    stylesheet(tailwind_css)
+  }
+  body.p-8.pb-16 {
+    main.max-w-2xl.mx-auto {
+      h1.text-2xl.font-bold.mb-4 "Hello, world!"
+      p.text-sm.text-black/80.mb-2 {
+        "This is some text"
+        "and this is some more text"
+      }
+      img.border.rounded-md(src = my_cool_image)
+    }
+  }
+}
+\end{verbatim}
+\normalsize
+
+\pagebreak
+\subsection{Tabla de CSV}
+
+Este ejemplo muestra la creación de una tabla con datos cargados de un CSV.
+Demuestra el uso de \texttt{import csv}, structs, y estructuras de control de
+flujo como \textit{loops} y condicionales.
+
+\scriptsize
+\begin{verbatim}
+Book is struct {
+  title: string,
+  isbn: string,
+  price: float,
+  stock: int,
+  amount_sold: int,
+}
+
+// "import csv" toma un path a recursos en el directorio fuente.
+// En compilación, parsea el CSV y retorna los datos con el tipo dado, causando
+// un error si los tipos no coinciden.
+// En este caso retorna una tupla <[string]string, []Book>
+headers, books := import csv of Book "data/csv/books.csv"
+tailwind_css   := import url "css/tailwind.css"
+
+html {
+  head {
+    title "Book inventory"
+    stylesheet(tailwind_css)
+  }
+  body.p-8.pb-16 {
+    main.max-w-2xl.mx-auto {
+      h1.text-2xl.font-bold.mb-4 "Book Inventory"
+
+      table {
+        thead {
+          tr.font-bold {
+            th.py-1.px-2 headers.title
+            th.py-1.px-2 headers.isbn
+            th.py-1.px-2 headers.price
+            th.py-1.px-2 headers.stock
+            th.py-1.px-2 headers.amount_sold
+          }
+        }
+        tbody {
+          for book in books {
+            tr {
+              th.font-semibold.font-italic {
+                a.text-underline(href = "/books/${book.isbn}") book.title
+              }
+              td book.isbn
+              td format("$%.2f", book.price)
+              td {
+                if book.stock == 0 {
+                  "Out of stock"
+                } else {
+                  book.stock "units"
+                }
+              }
+              td { book.amount_sold "units" }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+\end{verbatim}
+\normalsize
+
+\pagebreak
+\subsection{Tabla de CSV genérica}
+
+Este ejemplo muestra la definición de un componente para dibujar tablas a partir
+de un conjunto de datos arbitrario, y su uso para dibujar una tabla con datos de
+un CSV de formato desconocido. Demuestra el uso de componentes, mapas, y de
+\texttt{import csv} sin tipo de datos definido.
+
+\scriptsize
+\begin{verbatim}
+csv_table is function(headers: [string]string, data: [][string]string) -> element {
+  fields := for key, header in headers key
+
+  table {
+    thead {
+      tr.font-bold {
+        for key, header in headers th.py-1.px-2 header
+      }
+    }
+    tbody {
+      for item in data {
+        tr {
+          th.font-semibold item[fields[0]]
+          for field_name in fields[1:] {
+            td item[field_name]
+          }
+        }
+      }
+    }
+  }
+}
+
+// Al no pasarle un tipo de datos, "import csv" retorna una tupla
+// <[string]string, [][string]string>, donde las claves de los mapas son
+// generadas a partir de los headers.
+headers, books := import csv "data/csv/books.csv"
+tailwind_css   := import url "css/tailwind.css"
+
+html {
+  head {
+    title "Book inventory"
+    stylesheet(tailwind_css)
+  }
+  body.p-8.pb-16 {
+    main.max-w-2xl.mx-auto {
+      h1.text-2xl.font-bold.mb-4 "Book Inventory"
+
+      csv_table(headers, books)
+    }
+  }
+}
+\end{verbatim}
+\normalsize
+
+\end{document}

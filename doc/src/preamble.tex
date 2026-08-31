@@ -1,0 +1,57 @@
+\documentclass[12pt, a4paper]{article}
+
+% Language
+\usepackage[utf8x]{inputenc}
+\usepackage[T1]{fontenc}
+
+\usepackage{amsmath, amssymb, amsthm, amsfonts, mathrsfs}
+\usepackage[]{graphicx}
+\usepackage[table,xcdraw]{xcolor}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage[font={small}]{caption}
+\usepackage{multirow}
+\usepackage{float}
+\usepackage{tikz}
+\usepackage{minted2}
+\usepackage{verbatim}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{gensymb}
+
+\usepackage{hyperref}
+\hypersetup{
+  colorlinks = true,
+  linkcolor = black,
+  urlcolor = blue,
+  citecolor = black}
+
+% Margins
+\usepackage[
+  a4paper,
+  includehead,
+  footskip=7mm, headsep=6mm, headheight=7mm,
+  top=20mm, bottom=20mm, left=25mm, right=25mm
+]{geometry}
+
+% Paragraph
+\setlength{\parindent}{0cm} % No indent
+\setlength{\parskip}{6pt}
+\linespread{1.15}
+\hyphenpenalty=0
+
+% Header/Footer
+\usepackage{fancyhdr}
+\fancyhf{}
+\setlength{\headheight}{20pt}
+\addtolength{\topmargin}{-2pt}
+\fancyhead[L,R]{\bfseries\thepage}
+\fancyhead[L]{Diseño e implementación de un lenguaje}
+\fancyhead[R]{Especificación}
+\fancyfoot[R]{\thepage}
+\renewcommand{\headrulewidth}{0.5pt}
+\renewcommand{\footrulewidth}{0.5pt}
+\fancyheadoffset[R,L]{0\textwidth}
+\pagestyle{fancy}
+
+% \usetikzlibrary {graphs,graphdrawing} \usegdlibrary {trees}
