@@ -12,7 +12,7 @@ if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
 
   # Compiles the parser with Bison, generating counter-examples in case S/R or R/R conflicts exists.
   add_custom_command(
-  OUTPUT ../src/main/c/frontend/syntactic-analysis/BisonParser.c ../src/main/c/frontend/syntactic-analysis/BisonParser.h
+  OUTPUT ../src/main/c/frontend/syntactic-analysis/bison_parser.c ../src/main/c/frontend/syntactic-analysis/bison_parser.h
   COMMAND ../src/main/bash/bison.sh
  )
 
@@ -25,9 +25,9 @@ if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
 
   # Compiles the scanner with Flex.
   add_custom_command(
-  OUTPUT ../src/main/c/frontend/lexical-analysis/FlexScanner.c ../src/main/c/frontend/lexical-analysis/FlexScanner.h
+  OUTPUT ../src/main/c/frontend/lexical-analysis/flex_scanner.c ../src/main/c/frontend/lexical-analysis/flex_scanner.h
   COMMAND ../src/main/bash/flex.sh
-  DEPENDS ../src/main/c/frontend/syntactic-analysis/BisonParser.c ../src/main/c/frontend/syntactic-analysis/BisonParser.h
+  DEPENDS ../src/main/c/frontend/syntactic-analysis/bison_parser.c ../src/main/c/frontend/syntactic-analysis/bison_parser.h
  )
 
   # Defines the entry-point of the application, and the source-codes (*.c extension).
@@ -38,10 +38,10 @@ if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
   src/main/c/EntryPoint.c
   src/main/c/frontend/Frontend.c
   src/main/c/frontend/lexical-analysis/FlexActions.c
-  src/main/c/frontend/lexical-analysis/FlexScanner.c
+  src/main/c/frontend/lexical-analysis/flex_scanner.c
   src/main/c/frontend/syntactic-analysis/AbstractSyntaxTree.c
   src/main/c/frontend/syntactic-analysis/BisonActions.c
-  src/main/c/frontend/syntactic-analysis/BisonParser.c
+  src/main/c/frontend/syntactic-analysis/bison_parser.c
   src/main/c/support/configuration/Environment.c
   src/main/c/support/language/String.c
   src/main/c/support/logging/Logger.c

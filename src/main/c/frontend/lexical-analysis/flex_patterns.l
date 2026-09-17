@@ -4,7 +4,7 @@
 #include "../../support/type/FlexContext.h"
 #include "../../support/type/TokenLabel.h"
 #include "../syntactic-analysis/AbstractSyntaxTree.h"
-#include "../syntactic-analysis/BisonParser.h"
+#include "../syntactic-analysis/bison_parser.h"
 
 }
 

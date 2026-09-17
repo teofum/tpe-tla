@@ -10,7 +10,7 @@ OFF='\033[0m'
 
 bison \
 	-Wcounterexamples \
-	-d "src/main/c/frontend/syntactic-analysis/BisonGrammar.y" \
-	--output="src/main/c/frontend/syntactic-analysis/BisonParser.c"
+	-d "src/main/c/frontend/syntactic-analysis/bison_grammar.y" \
+	--output="src/main/c/frontend/syntactic-analysis/bison_parser.c"
 
 echo -e "${GREEN}Bison done.${OFF}"

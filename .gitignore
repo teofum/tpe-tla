@@ -19,7 +19,7 @@
 *~
 
 # Application specific.
-BisonParser.c
-BisonParser.h
-FlexScanner.c
-FlexScanner.h
+bison_parser.c
+bison_parser.h
+flex_scanner.c
+flex_scanner.h

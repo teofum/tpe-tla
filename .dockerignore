@@ -21,6 +21,6 @@ obj/
 *~
 
 # Application specific.
-BisonParser.c
-BisonParser.h
-FlexScanner.c
+bison_parser.c
+bison_parser.h
+flex_scanner.c
