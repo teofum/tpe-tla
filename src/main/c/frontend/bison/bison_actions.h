@@ -3,6 +3,6 @@
 
 #include <support/types.h>
 
-i32 parse_integer(i32 i);
+i64 parse_integer(i64 i);
 
 #endif

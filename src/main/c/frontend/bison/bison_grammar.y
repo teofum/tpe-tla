@@ -17,16 +17,24 @@ void yyerror(YYLTYPE *location, const char *message) {}
 %locations
 
 %union {
-	i32 integer;
 	TokenLabel token;
+	i64 integer;
+	f64 floating;
+	str string;
+	bool boolean;
 
-	i32 constant;
+	i64 constant;
 }
 
-%token <integer> INTEGER
+%token <token>    NIL
 
-%token <token> IGNORED
-%token <token> UNKNOWN
+%token <integer>  INTEGER
+%token <floating> FLOAT
+%token <string>   STRING
+%token <boolean>  BOOL
+
+%token <token>    IGNORED
+%token <token>    UNKNOWN
 
 %type <constant> constant
 

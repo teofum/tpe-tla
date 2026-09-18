@@ -26,6 +26,7 @@ bool flex_has_buffer(Frontend *la);
  * @see https://westes.github.io/flex/manual/Start-Conditions.html
  */
 %x MULTILINE_COMMENT
+%x STRING_LITERAL
 
 /**
  * Reusable patterns.
@@ -34,6 +35,11 @@ bool flex_has_buffer(Frontend *la);
  * @see https://westes.github.io/flex/manual/Patterns.html
  */
 whitespace			[[:space:]]+
+d               [[:digit:]]
+d_nz            [1-9]
+d_hex           [[:digit:]]
+d_hex_nz        [1-9]
+int             (({d_nz}{d}*)|0)
 
 %%
 
@@ -43,10 +49,17 @@ whitespace			[[:space:]]+
  */
 %}
 
-[[:digit:]]+          { return lex_integer_literal(); }
-.                     { return lex_unknown(); }
+-?{int}                       { return lex_integer_literal(); }
+-?{int}?\.{d}+                { return lex_float_literal(); }
+-?{d}(\.{d}+)?e(-|\+)?{int}   { return lex_float_literal(); }
+\"([^"]|\\\")*\"              { return lex_string_literal(); }
 
-<<EOF>>               { return lex_eof(); }
+"nil"                         { return lex_nil(); }
+
+{whitespace}                  { return lex_ignored(); }
+.                             { return lex_unknown(); }
+
+<<EOF>>                       { return lex_eof(); }
 
 %%
 

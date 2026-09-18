@@ -4,7 +4,13 @@
 #include <frontend/frontend.h>
 #include <support/types.h>
 
+CompilationStatus lex_nil();
+
 CompilationStatus lex_integer_literal();
+CompilationStatus lex_float_literal();
+CompilationStatus lex_string_literal();
+
+CompilationStatus lex_ignored();
 CompilationStatus lex_unknown();
 CompilationStatus lex_eof();
 
