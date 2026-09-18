@@ -44,8 +44,8 @@ if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
     src/main/c/frontend/bison/bison_parser.c
     src/main/c/frontend/flex/flex_actions.c
     src/main/c/frontend/flex/flex_scanner.c
-    src/main/c/frontend/lexer.c
-    src/main/c/frontend/token.c
+    src/main/c/frontend/frontend.c
+    src/main/c/support/logger.c
   )
   target_include_directories(Flex-Bison-Compiler PRIVATE src/main/c)
 

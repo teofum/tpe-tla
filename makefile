@@ -23,6 +23,10 @@ clean:
 
 clean-build: clean .build/Flex-Bison-Compiler
 
+rebuild:
+	rm -f .build/Flex-Bison-Compiler
+	make
+
 configure: clean .build
 
 test: .build/Flex-Bison-Compiler

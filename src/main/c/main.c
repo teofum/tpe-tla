@@ -1,10 +1,10 @@
 #include <support/types.h>
 
-#include <frontend/lexer.h>
+#include <frontend/frontend.h>
 
 i32 main(i32 argc, const char **argv) {
-  LexicalAnalyzer *la = la_create();
-
-  la_free(la);
-  return 0;
+  fe_init();
+  CompilationStatus parse_status = fe_parse();
+  fe_shutdown();
+  return parse_status;
 }

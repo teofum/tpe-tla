@@ -1,7 +1,7 @@
 %{
 
 #include <support/types.h>
-#include <frontend/token.h>
+#include <frontend/frontend.h>
 
 #include "bison_actions.h"
 #include "bison_parser.h"

@@ -1,14 +1,14 @@
 %top{
 
 #include "../../support/types.h"
-#include "../token.h"
-#include "../lexer.h"
+#include "../frontend.h"
 #include "../bison/bison_parser.h"
+#include "flex_actions.h"
 
-FlexContext flex_current_context(LexicalAnalyzer *la);
-void flex_enter_context(LexicalAnalyzer *la, FlexContext ctx);
-void flex_leave_context(LexicalAnalyzer *la);
-bool flex_has_buffer(LexicalAnalyzer *la);
+FlexContext flex_current_context(Frontend *la);
+void flex_enter_context(Frontend *la, FlexContext ctx);
+void flex_leave_context(Frontend *la);
+bool flex_has_buffer(Frontend *la);
 
 }
 
@@ -38,12 +38,15 @@ whitespace			[[:space:]]+
 %%
 
 %{
-
 /**
  * @see https://westes.github.io/flex/manual/Rules-Section.html#Rules-Section
  */
-
 %}
+
+[[:digit:]]+          { return lex_integer_literal(); }
+.                     { return lex_unknown(); }
+
+<<EOF>>               { return lex_eof(); }
 
 %%
 
@@ -51,5 +54,4 @@ whitespace			[[:space:]]+
  * @see https://westes.github.io/flex/manual/User-Code-Section.html#User-Code-Section
  */
 
-#include "flex_actions.h"
 #include "flex_export.h"

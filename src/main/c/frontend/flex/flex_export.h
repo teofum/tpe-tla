@@ -1,7 +1,7 @@
 #ifndef FLEX_EXPORT_HEADER
 #define FLEX_EXPORT_HEADER
 
-#include <frontend/lexer.h>
+#include <frontend/frontend.h>
 #include <support/types.h>
 
 /**
@@ -11,19 +11,19 @@
  * that are in its public API, a clearly flawed design decision.
  */
 
-FlexContext flex_current_context(LexicalAnalyzer *la) {
-  struct yyguts_t *yyg = (struct yyguts_t *)la->scanner;
+FlexContext flex_current_context(Frontend *f) {
+  struct yyguts_t *yyg = (struct yyguts_t *)f->scanner;
   return YYSTATE;
 }
 
-void flex_enter_context(LexicalAnalyzer *la, FlexContext ctx) {
-  yy_push_state(ctx, la->scanner);
+void flex_enter_context(Frontend *f, FlexContext ctx) {
+  yy_push_state(ctx, f->scanner);
 }
 
-void flex_leave_context(LexicalAnalyzer *la) { yy_pop_state(la->scanner); }
+void flex_leave_context(Frontend *f) { yy_pop_state(f->scanner); }
 
-bool flex_has_buffer(LexicalAnalyzer *la) {
-  struct yyguts_t *yyg = (struct yyguts_t *)la->scanner;
+bool flex_has_buffer(Frontend *f) {
+  struct yyguts_t *yyg = (struct yyguts_t *)f->scanner;
   return YY_CURRENT_BUFFER != NULL;
 }
 

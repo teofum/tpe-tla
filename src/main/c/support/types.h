@@ -18,7 +18,7 @@ typedef size_t usize;
 typedef float f32;
 typedef double f64;
 
-// ---
+// -----------------------------------------------------------------------------
 
 typedef u32 FlexContext;
 
@@ -29,5 +29,7 @@ typedef enum {
   UNKNOWN_ERROR = 3,
   IN_PROGRESS = 4,
 } CompilationStatus;
+
+typedef union SemanticValue SemanticValue;
 
 #endif
