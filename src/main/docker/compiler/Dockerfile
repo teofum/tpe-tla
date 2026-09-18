@@ -10,4 +10,5 @@ RUN apt update --yes \
   flex \
   gcc \
   make \
+  gdb \
   && rm --force --recursive /var/lib/apt/lists/*
