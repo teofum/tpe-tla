@@ -35,16 +35,37 @@ void fe_shutdown() {
   f = NULL;
 }
 
+static const char *token_label_str[] = {
+  [NIL] = "Nil",
+  [INTEGER] = "Integer Literal",
+  [FLOAT] = "Float Literal",
+  [STRING] = "String Literal",
+  [BOOL] = "Boolean Literal",
+  [IGNORED] = "Ignored Lexeme",
+  [UNKNOWN] = "Unknown Lexeme",
+};
+
+static void _log_token(Token *token) {
+  fe_log(LOG_DEBUG, "%s '%s' @ %u:%u-%u:%u",
+    token_label_str[token->label],
+    token->lexeme,
+    token->location.first_line,
+    token->location.first_column,
+    token->location.last_line,
+    token->location.last_column
+  );
+}
+
 Token *fe_create_token(TokenLabel label) {
   Token *token = new (Token);
   token->label = label;
   token->ctx = flex_current_context(f);
   token->len = yyget_leng(f->scanner);
-  token->line = yyget_lineno(f->scanner);
-  token->col = yyget_column(f->scanner);
+  token->location = *((Location *)yyget_lloc(f->scanner));
   token->lexeme = strndup(yyget_text(f->scanner), token->len);
   token->semantic_value = new(SemanticValue);
 
+  _log_token(token);
   return token;
 }
 

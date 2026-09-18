@@ -7,6 +7,13 @@
 typedef i32 TokenLabel;
 
 typedef struct {
+  int first_line;
+  int first_column;
+  int last_line;
+  int last_column;
+} Location;
+
+typedef struct {
   char *lexeme;
   u32 len;
 
@@ -14,8 +21,7 @@ typedef struct {
   TokenLabel label;
   SemanticValue *semantic_value;
 
-  u32 line;
-  u32 col;
+  Location location;
 } Token;
 
 typedef struct {
