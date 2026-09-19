@@ -5,8 +5,14 @@
 
 #include "flex_actions.h"
 
-CompilationStatus lex_nil() {
-  Token *token = fe_create_token(NIL);
+CompilationStatus lex_operator(TokenLabel label) {
+  Token *token = fe_create_token(label);
+  fe_free_token(token);
+  return IN_PROGRESS;
+}
+
+CompilationStatus lex_keyword(TokenLabel label) {
+  Token *token = fe_create_token(label);
   fe_free_token(token);
   return IN_PROGRESS;
 }

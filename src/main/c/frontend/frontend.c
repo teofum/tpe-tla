@@ -36,7 +36,18 @@ void fe_shutdown() {
 }
 
 static const char *token_label_str[] = {
+  [IF] = "If",
+  [ELSE] = "Else",
+  [FOR] = "For",
+  [IN] = "In",
   [NIL] = "Nil",
+  [IS] = "Is",
+  [OF] = "Of",
+  [STRUCT] = "Struct",
+  [UNION] = "Union",
+  [ENUM] = "Enum",
+  [FUNCTION] = "Function",
+  [IMPORT] = "Import",
   [INTEGER] = "Integer Literal",
   [FLOAT] = "Float Literal",
   [STRING] = "String Literal",
