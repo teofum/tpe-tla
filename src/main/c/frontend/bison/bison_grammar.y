@@ -1,7 +1,8 @@
 %{
 
-#include <support/types.h>
+#include <ast/ast.h>
 #include <frontend/frontend.h>
+#include <support/types.h>
 
 #include "bison_actions.h"
 #include "bison_parser.h"
@@ -23,7 +24,20 @@ void yyerror(YYLTYPE *location, const char *message) {}
 	str string;
 	bool boolean;
 
-	i64 constant;
+	Expr *expression;
+	LiteralExpr *literal;
+  VariableExpr *variable;
+  GroupExpr *group;
+  UnaryExpr *unary;
+  BinaryExpr *binary;
+  AssignmentExpr *assignment;
+  DeclarationExpr *declaration;
+  IfExpr *if_expr;
+  ForExpr *for_expr;
+  BlockExpr *block_expr;
+
+  Program *program;
+  ExprList *expression_list;
 }
 
 // Symbols
@@ -77,12 +91,30 @@ void yyerror(YYLTYPE *location, const char *message) {}
 // Other
 %token <token>    IGNORED
 %token <token>    UNKNOWN
+%token <token>    END
 
-%type <constant>  constant
+%type <expression>        expression
+%type <literal>           literal
+
+%type <program>           program
+%type <expression_list>   expression_list
 
 %%
 
-constant: INTEGER            { $$ = parse_integer($1); }
+program: expression_list END        { $$ = parse_program($1); }
+  ;
+
+expression_list: expression         { $$ = parse_expr_list($1, NULL); }
+  | expression_list expression      { $$ = parse_expr_list($2, $1); }
+  ;
+
+expression: literal                 { $$ = parse_literal_expr($1); }
+  ;
+
+literal: INTEGER                    { $$ = parse_integer_literal($1); }
+  | FLOAT                           { $$ = parse_float_literal($1); }
+  | STRING                          { $$ = parse_string_literal($1); }
+  | BOOL                            { $$ = parse_boolean_literal($1); }
   ;
 
 %%

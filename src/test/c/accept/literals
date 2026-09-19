@@ -1,0 +1,11 @@
+// Integers
+42 -5 0
+
+// Floats
+45.67 .98 -4.5463e-3
+
+// Booleans
+true false
+
+// Strings
+"Hello, world!" ""

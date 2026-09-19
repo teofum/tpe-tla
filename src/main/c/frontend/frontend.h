@@ -37,6 +37,8 @@ void fe_shutdown();
 Token *fe_create_token(TokenLabel label);
 void fe_free_token(Token *token);
 
+CompilationStatus fe_push_token(Token *token);
+
 void fe_enter_context(FlexContext ctx);
 void fe_leave_context();
 

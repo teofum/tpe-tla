@@ -4,6 +4,7 @@
 
 #include "frontend.h"
 
+#include <ast/ast.h>
 #include <frontend/bison/bison_parser.h>
 #include <frontend/flex/flex_scanner.h>
 #include <support/types.h>
@@ -78,9 +79,19 @@ static const char *token_label_str[] = {
   [IDENTIFIER] = "Identifier",
   [IGNORED] = "Ignored Lexeme",
   [UNKNOWN] = "Unknown Lexeme",
+  [END] = "EOF",
 };
 
 static void _log_token(Token *token, LogLevel level) {
+  if (token->label == END) {
+    fe_log(level, "%s @ %u:%u",
+      token_label_str[token->label],
+      token->location.first_line,
+      token->location.first_column
+    );
+    return;
+  }
+
   fe_log(level, "%s '%s' @ %u:%u-%u:%u",
     token_label_str[token->label],
     token->lexeme,
@@ -95,10 +106,10 @@ Token *fe_create_token(TokenLabel label) {
   Token *token = new (Token);
   token->label = label;
   token->ctx = flex_current_context(f);
-  token->len = yyget_leng(f->scanner);
   token->location = *((Location *)yyget_lloc(f->scanner));
-  token->lexeme = strndup(yyget_text(f->scanner), token->len);
   token->semantic_value = new(SemanticValue);
+  token->len = yyget_leng(f->scanner);
+  token->lexeme = strndup(yyget_text(f->scanner), token->len);
 
   if (label != IGNORED) _log_token(token, label == UNKNOWN ? LOG_FATAL : LOG_DEBUG);
   return token;
@@ -110,6 +121,10 @@ void fe_free_token(Token *token) {
   if (token->lexeme) free(token->lexeme);
   if (token->semantic_value) free(token->semantic_value);
   free(token);
+}
+
+CompilationStatus fe_push_token(Token *token) {
+  return yypush_parse(f->parser, token->label, token->semantic_value, f->location);
 }
 
 void fe_enter_context(FlexContext ctx) {

@@ -10,6 +10,7 @@ CompilationStatus lex_operator(TokenLabel token);
 CompilationStatus lex_integer_literal();
 CompilationStatus lex_float_literal();
 CompilationStatus lex_string_literal();
+CompilationStatus lex_boolean_literal();
 
 CompilationStatus lex_identifier();
 

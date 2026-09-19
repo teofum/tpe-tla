@@ -1,3 +1,4 @@
+#include <ast/ast.h>
 #include <frontend/frontend.h>
 #include <frontend/bison/bison_parser.h>
 #include <support/types.h>
@@ -7,36 +8,49 @@
 
 CompilationStatus lex_operator(TokenLabel label) {
   Token *token = fe_create_token(label);
+  fe_push_token(token);
   fe_free_token(token);
   return IN_PROGRESS;
 }
 
 CompilationStatus lex_keyword(TokenLabel label) {
   Token *token = fe_create_token(label);
+  fe_push_token(token);
   fe_free_token(token);
   return IN_PROGRESS;
 }
 
 CompilationStatus lex_integer_literal() {
   Token *token = fe_create_token(INTEGER);
+  fe_push_token(token);
   fe_free_token(token);
   return IN_PROGRESS;
 }
 
 CompilationStatus lex_float_literal() {
   Token *token = fe_create_token(FLOAT);
+  fe_push_token(token);
   fe_free_token(token);
   return IN_PROGRESS;
 }
 
 CompilationStatus lex_string_literal() {
   Token *token = fe_create_token(STRING);
+  fe_push_token(token);
+  fe_free_token(token);
+  return IN_PROGRESS;
+}
+
+CompilationStatus lex_boolean_literal() {
+  Token *token = fe_create_token(BOOL);
+  fe_push_token(token);
   fe_free_token(token);
   return IN_PROGRESS;
 }
 
 CompilationStatus lex_identifier() {
   Token *token = fe_create_token(IDENTIFIER);
+  fe_push_token(token);
   fe_free_token(token);
   return IN_PROGRESS;
 }
@@ -64,6 +78,8 @@ CompilationStatus lex_unknown() {
 }
 
 CompilationStatus lex_eof() {
-  // TODO: create EOF token
+  Token *token = fe_create_token(END);
+  fe_push_token(token);
+  fe_free_token(token);
   return SUCCEEDED;
 }

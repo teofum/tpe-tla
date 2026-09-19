@@ -1,5 +1,6 @@
 %top{
 
+#include "../../ast/ast.h"
 #include "../../support/types.h"
 #include "../frontend.h"
 #include "../bison/bison_parser.h"
@@ -110,6 +111,7 @@ id_char         [a-zA-Z0-9_-]
 -?{int}?\.{d}+                { return lex_float_literal(); }
 -?{d}(\.{d}+)?e(-|\+)?{int}   { return lex_float_literal(); }
 \"([^"]|\\\")*\"              { return lex_string_literal(); }
+"true"|"false"                { return lex_boolean_literal(); }
 
 ({alpha}|_){id_char}*         { return lex_identifier(); }
 
