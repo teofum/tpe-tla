@@ -1,5 +1,26 @@
-1 584 nil 2101 -20
-5.0 6.78823 .5 -10.0 -.84 0.0000003
-5.0e1 1.2e+5 4.3e-67 -1.0e+3 5e6 7e-8
-"Hello, World!" "" "Escape \" Quotes" "Escape Backslash \\" nil
-if else for in is of struct union enum function import 56
+// "import url" toma un path a recursos en el directorio fuente.
+// En compilación, se transforma en url relativa de salida.
+my_cool_image := import url "img/cool.png"
+tailwind_css := import url "css/tailwind.css"
+
+/* block comment */
+/*
+ * multi line comment
+ */
+
+html {
+  head {
+    title "My cool website"
+    stylesheet(tailwind_css)
+  }
+  body.p-8.pb-16 {
+    main.max-w-2xl.mx-auto {
+      h1.text-2xl.font-bold.mb-4 "Hello, world!"
+      p.text-sm.text-black/80.mb-2 {
+        "This is some text"
+        "and this is some more text"
+      }
+      img.border.rounded-md(src = my_cool_image)
+    }
+  }
+}

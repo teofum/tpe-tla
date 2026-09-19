@@ -39,7 +39,6 @@ bool flex_has_buffer(Frontend *la);
  * @see https://westes.github.io/flex/manual/Start-Conditions.html
  */
 %x MULTILINE_COMMENT
-%x STRING_LITERAL
 
 /**
  * Reusable patterns.
@@ -53,6 +52,8 @@ d_nz            [1-9]
 d_hex           [[:digit:]]
 d_hex_nz        [1-9]
 int             (({d_nz}{d}*)|0)
+alpha           [a-zA-Z]
+id_char         [a-zA-Z0-9_-]
 
 %%
 
@@ -61,6 +62,36 @@ int             (({d_nz}{d}*)|0)
  * @see https://westes.github.io/flex/manual/Rules-Section.html#Rules-Section
  */
 %}
+
+"//".*\n                      { return lex_ignored(); }
+"/*"								          { return lex_begin_multiline_comment(MULTILINE_COMMENT); }
+<MULTILINE_COMMENT>"*/"				{ return lex_end_multiline_comment(); }
+<MULTILINE_COMMENT>[^*]+			{ return lex_ignored(); }
+<MULTILINE_COMMENT>.				  { return lex_ignored(); }
+
+"("                           { return lex_operator(PAREN_L); }
+")"                           { return lex_operator(PAREN_R); }
+"["                           { return lex_operator(SQUARE_L); }
+"]"                           { return lex_operator(SQUARE_R); }
+"{"                           { return lex_operator(CURLY_L); }
+"}"                           { return lex_operator(CURLY_R); }
+":"                           { return lex_operator(COLON); }
+","                           { return lex_operator(COMMA); }
+"."                           { return lex_operator(DOT); }
+"-"                           { return lex_operator(MINUS); }
+"+"                           { return lex_operator(PLUS); }
+"*"                           { return lex_operator(STAR); }
+"/"                           { return lex_operator(SLASH); }
+"?"                           { return lex_operator(QUESTION_MARK); }
+"#"                           { return lex_operator(HASH); }
+"="                           { return lex_operator(EQUAL); }
+"=="                          { return lex_operator(EQUAL_EQUAL); }
+"!"                           { return lex_operator(BANG); }
+"!="                          { return lex_operator(BANG_EQUAL); }
+">"                           { return lex_operator(GREATER); }
+">="                          { return lex_operator(GREATER_EQUAL); }
+"<"                           { return lex_operator(LESS); }
+"<="                          { return lex_operator(LESS_EQUAL); }
 
 "if"                          { return lex_keyword(IF); }
 "else"                        { return lex_keyword(ELSE); }
@@ -79,6 +110,8 @@ int             (({d_nz}{d}*)|0)
 -?{int}?\.{d}+                { return lex_float_literal(); }
 -?{d}(\.{d}+)?e(-|\+)?{int}   { return lex_float_literal(); }
 \"([^"]|\\\")*\"              { return lex_string_literal(); }
+
+({alpha}|_){id_char}*         { return lex_identifier(); }
 
 {whitespace}                  { return lex_ignored(); }
 .                             { return lex_unknown(); }

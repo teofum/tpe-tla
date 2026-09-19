@@ -36,6 +36,29 @@ void fe_shutdown() {
 }
 
 static const char *token_label_str[] = {
+  [PAREN_L] = "Paren_L",
+  [PAREN_R] = "Paren_R",
+  [SQUARE_L] = "Square_L",
+  [SQUARE_R] = "Square_R",
+  [CURLY_L] = "Curly_L",
+  [CURLY_R] = "Curly_R",
+  [COLON] = "Colon",
+  [COMMA] = "Comma",
+  [DOT] = "Dot",
+  [MINUS] = "Minus",
+  [PLUS] = "Plus",
+  [STAR] = "Star",
+  [SLASH] = "Slash",
+  [QUESTION_MARK] = "Question_Mark",
+  [HASH] = "Hash",
+  [EQUAL] = "Equal",
+  [EQUAL_EQUAL] = "Equal_Equal",
+  [BANG] = "Bang",
+  [BANG_EQUAL] = "Bang_Equal",
+  [GREATER] = "Greater",
+  [GREATER_EQUAL] = "Greater_Equal",
+  [LESS] = "Less",
+  [LESS_EQUAL] = "Less_Equal",
   [IF] = "If",
   [ELSE] = "Else",
   [FOR] = "For",
@@ -52,12 +75,13 @@ static const char *token_label_str[] = {
   [FLOAT] = "Float Literal",
   [STRING] = "String Literal",
   [BOOL] = "Boolean Literal",
+  [IDENTIFIER] = "Identifier",
   [IGNORED] = "Ignored Lexeme",
   [UNKNOWN] = "Unknown Lexeme",
 };
 
-static void _log_token(Token *token) {
-  fe_log(LOG_DEBUG, "%s '%s' @ %u:%u-%u:%u",
+static void _log_token(Token *token, LogLevel level) {
+  fe_log(level, "%s '%s' @ %u:%u-%u:%u",
     token_label_str[token->label],
     token->lexeme,
     token->location.first_line,
@@ -76,7 +100,7 @@ Token *fe_create_token(TokenLabel label) {
   token->lexeme = strndup(yyget_text(f->scanner), token->len);
   token->semantic_value = new(SemanticValue);
 
-  _log_token(token);
+  if (label != IGNORED) _log_token(token, label == UNKNOWN ? LOG_FATAL : LOG_DEBUG);
   return token;
 }
 
@@ -86,6 +110,14 @@ void fe_free_token(Token *token) {
   if (token->lexeme) free(token->lexeme);
   if (token->semantic_value) free(token->semantic_value);
   free(token);
+}
+
+void fe_enter_context(FlexContext ctx) {
+  flex_enter_context(f, ctx);
+}
+
+void fe_leave_context() {
+  flex_leave_context(f);
 }
 
 static FlexContext _ctx() {

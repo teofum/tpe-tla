@@ -41,6 +41,7 @@ void yyerror(YYLTYPE *location, const char *message) {}
 %token <token>    STAR
 %token <token>    SLASH
 %token <token>    QUESTION_MARK
+%token <token>    HASH
 %token <token>    EQUAL
 %token <token>    EQUAL_EQUAL
 %token <token>    BANG
@@ -77,7 +78,7 @@ void yyerror(YYLTYPE *location, const char *message) {}
 %token <token>    IGNORED
 %token <token>    UNKNOWN
 
-%type <constant> constant
+%type <constant>  constant
 
 %%
 

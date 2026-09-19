@@ -35,6 +35,22 @@ CompilationStatus lex_string_literal() {
   return IN_PROGRESS;
 }
 
+CompilationStatus lex_identifier() {
+  Token *token = fe_create_token(IDENTIFIER);
+  fe_free_token(token);
+  return IN_PROGRESS;
+}
+
+CompilationStatus lex_begin_multiline_comment(FlexContext ctx) {
+  fe_enter_context(ctx);
+  return IN_PROGRESS;
+}
+
+CompilationStatus lex_end_multiline_comment() {
+  fe_leave_context();
+  return IN_PROGRESS;
+}
+
 CompilationStatus lex_ignored() {
   Token *token = fe_create_token(IGNORED);
   fe_free_token(token);
