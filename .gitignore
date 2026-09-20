@@ -23,3 +23,7 @@ bison_parser.c
 bison_parser.h
 flex_scanner.c
 flex_scanner.h
+
+# Debug output
+ast.dot
+ast.png

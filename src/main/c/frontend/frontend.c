@@ -19,7 +19,7 @@ void fe_init(CompilerState *compiler_state) {
   yylex_init(&f->scanner);
   f->parser = yypstate_new();
   f->location = new (YYLTYPE);
-  f->scan_logger = logger_create("Scanner", stderr, LOG_ALL);
+  f->scan_logger = logger_create("Scanner", stderr, LOG_INFO);
   f->parse_logger = logger_create("Parser", stderr, LOG_ALL);
 
   flex_enter_context(f, 0);

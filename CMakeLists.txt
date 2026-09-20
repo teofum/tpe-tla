@@ -41,6 +41,7 @@ if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
   add_executable(Flex-Bison-Compiler
     src/main/c/main.c
     src/main/c/ast/ast.c
+    src/main/c/ast/dot.c
     src/main/c/frontend/bison/bison_actions.c
     src/main/c/frontend/bison/bison_parser.c
     src/main/c/frontend/flex/flex_actions.c
