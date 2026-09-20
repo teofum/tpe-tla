@@ -3,8 +3,6 @@
 #include <support/util.h>
 
 #include "ast.h"
-#include "frontend/frontend.h"
-#include "support/logger.h"
 #include "support/str.h"
 
 Expr *ast_expr_literal(LiteralExpr *literal) {
@@ -85,6 +83,8 @@ Program *ast_program(ExprList *exprs) {
     tail = tail->tail;
   }
 
+  // We consumed the expression list, so free its memory without freeing the
+  // actual expressions, which we now own
   ast_free_expr_list(exprs, false);
   return prog;
 }
