@@ -9,14 +9,14 @@ Expr *parse_unary_expr(UnaryExpr *unary);
 Expr *parse_binary_expr(BinaryExpr *binary);
 Expr *parse_group_expr(GroupExpr *group);
 
-LiteralExpr *parse_integer_literal(i64 i);
-LiteralExpr *parse_float_literal(f64 f);
-LiteralExpr *parse_string_literal(str s);
-LiteralExpr *parse_boolean_literal(bool b);
+LiteralExpr *parse_integer_literal(IntegerLiteral *i);
+LiteralExpr *parse_float_literal(FloatLiteral *f);
+LiteralExpr *parse_string_literal(StringLiteral *s);
+LiteralExpr *parse_boolean_literal(BooleanLiteral *b);
 
-UnaryExpr *parse_unary(TokenLabel op, Expr *expr);
-BinaryExpr *parse_binary(Expr *left, TokenLabel op, Expr *right);
-GroupExpr *parse_group(Expr *expr);
+UnaryExpr *parse_unary(TokenMeta *op, Expr *expr);
+BinaryExpr *parse_binary(Expr *left, TokenMeta *op, Expr *right);
+GroupExpr *parse_group(TokenMeta *open, Expr *expr, TokenMeta *close);
 
 ExprList *parse_expr_list(Expr *head, ExprList *tail);
 Program *parse_program(ExprList *exprs);

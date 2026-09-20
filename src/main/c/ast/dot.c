@@ -50,20 +50,20 @@ static void dot_literal(LiteralExpr *literal, u64 pid) {
   switch (literal->type) {
     case L_INTEGER:
       label = new_array(char, 256);
-      snprintf(label, 256, "Integer Literal\\n%lld", (long long)literal->int_value);
+      snprintf(label, 256, "Integer Literal\\n%lld", (long long)literal->integer->value);
       break;
     case L_FLOAT:
       label = new_array(char, 256);
-      snprintf(label, 256, "Float Literal\\n%f", literal->float_value);
+      snprintf(label, 256, "Float Literal\\n%f", literal->floating->value);
       break;
     case L_BOOL:
       label = new_array(char, 23);
-      snprintf(label, 23, "Boolean Literal\\n%s", literal->bool_value ? "true" : "false");
+      snprintf(label, 23, "Boolean Literal\\n%s", literal->boolean->value ? "true" : "false");
       break;
     case L_STRING:
-      char *str = str_to_cstring(literal->string_value);
-      label = new_array(char, literal->string_value.len + 19);
-      snprintf(label, literal->string_value.len + 19, "String Literal\\n'%s'", str);
+      char *str = str_to_cstring(literal->string->value);
+      label = new_array(char, literal->string->value.len + 19);
+      snprintf(label, literal->string->value.len + 19, "String Literal\\n'%s'", str);
       free(str);
       break;
   }
@@ -75,14 +75,14 @@ static void dot_literal(LiteralExpr *literal, u64 pid) {
 
 static void dot_unary(UnaryExpr *unary, u64 pid) {
   u64 id = next_id();
-  _node(id, TOKEN_LABEL_STR[unary->op]);
+  _node(id, unary->op->lexeme);
   _edge(pid, id);
   dot_expr(unary->expr, id);
 }
 
 static void dot_binary(BinaryExpr *binary, u64 pid) {
   u64 id = next_id();
-  _node(id, TOKEN_LABEL_STR[binary->op]);
+  _node(id, binary->op->lexeme);
   _edge(pid, id);
   dot_expr(binary->left, id);
   dot_expr(binary->right, id);

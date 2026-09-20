@@ -4,7 +4,6 @@
 #include <support/util.h>
 
 #include "bison_actions.h"
-#include "support/str.h"
 
 Expr *parse_literal_expr(LiteralExpr *literal) {
   fe_parser_log(LOG_DEBUG, "Literal Expr");
@@ -28,42 +27,42 @@ Expr *parse_group_expr(GroupExpr *group) {
 
 // -----------------------------------------------------------------------------
 
-LiteralExpr *parse_integer_literal(i64 i) {
-  fe_parser_log(LOG_DEBUG, "Integer Literal %lld", i);
+LiteralExpr *parse_integer_literal(IntegerLiteral *i) {
+  fe_parser_log(LOG_DEBUG, "Integer Literal %lld", i->value);
   return ast_literal_integer(i);
 }
 
-LiteralExpr *parse_float_literal(f64 f) {
-  fe_parser_log(LOG_DEBUG, "Float Literal %f", f);
+LiteralExpr *parse_float_literal(FloatLiteral *f) {
+  fe_parser_log(LOG_DEBUG, "Float Literal %f", f->value);
   return ast_literal_float(f);
 }
 
-LiteralExpr *parse_string_literal(str s) {
-  char *cstring = str_to_cstring(s);
-  fe_parser_log(LOG_DEBUG, "String Literal '%s'", cstring);
-  free(cstring);
+LiteralExpr *parse_string_literal(StringLiteral *s) {
+  fe_parser_log(LOG_DEBUG, "String Literal %s", s->meta->lexeme);
   return ast_literal_string(s);
 }
 
-LiteralExpr *parse_boolean_literal(bool b) {
-  fe_parser_log(LOG_DEBUG, "Boolean Literal %s", b ? "true" : "false");
+LiteralExpr *parse_boolean_literal(BooleanLiteral *b) {
+  fe_parser_log(LOG_DEBUG, "Boolean Literal %s", b->meta->lexeme);
   return ast_literal_boolean(b);
 }
 
 // -----------------------------------------------------------------------------
 
-UnaryExpr *parse_unary(TokenLabel op, Expr *expr) {
-  fe_parser_log(LOG_DEBUG, "Unary %d", op);
+UnaryExpr *parse_unary(TokenMeta *op, Expr *expr) {
+  fe_parser_log(LOG_DEBUG, "Unary '%s'", op->lexeme);
   return ast_unary(op, expr);
 }
 
-BinaryExpr *parse_binary(Expr *left, TokenLabel op, Expr *right) {
-  fe_parser_log(LOG_DEBUG, "Binary %d", op);
+BinaryExpr *parse_binary(Expr *left, TokenMeta *op, Expr *right) {
+  fe_parser_log(LOG_DEBUG, "Binary '%s'", op->lexeme);
   return ast_binary(left, op, right);
 }
 
-GroupExpr *parse_group(Expr *expr) {
+GroupExpr *parse_group(TokenMeta *open, Expr *expr, TokenMeta *close) {
   fe_parser_log(LOG_DEBUG, "Group");
+  ast_free_meta(open);
+  ast_free_meta(close);
   return ast_group(expr);
 }
 

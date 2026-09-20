@@ -25,6 +25,21 @@ typedef enum {
   L_BOOL,
 } LiteralType;
 
+typedef struct {
+  int first_line;
+  int first_column;
+  int last_line;
+  int last_column;
+} Location;
+
+typedef struct {
+  TokenLabel label;
+  char *lexeme;
+  u32 len;
+
+  Location location;
+} TokenMeta;
+
 typedef struct Expr Expr;
 typedef struct LiteralExpr LiteralExpr;
 typedef struct VariableExpr VariableExpr;
@@ -36,6 +51,11 @@ typedef struct DeclarationExpr DeclarationExpr;
 typedef struct IfExpr IfExpr;
 typedef struct ForExpr ForExpr;
 typedef struct BlockExpr BlockExpr;
+
+typedef struct IntegerLiteral IntegerLiteral;
+typedef struct FloatLiteral FloatLiteral;
+typedef struct StringLiteral StringLiteral;
+typedef struct BooleanLiteral BooleanLiteral;
 
 typedef struct Program Program;
 typedef struct ExprList ExprList;
@@ -65,10 +85,10 @@ struct Expr {
 struct LiteralExpr {
   LiteralType type;
   union {
-    i64 int_value;
-    f64 float_value;
-    str string_value;
-    bool bool_value;
+    IntegerLiteral *integer;
+    FloatLiteral *floating;
+    StringLiteral *string;
+    BooleanLiteral *boolean;
   };
 };
 
@@ -81,12 +101,12 @@ struct GroupExpr {
 };
 
 struct UnaryExpr {
-  TokenLabel op;
+  TokenMeta *op;
   Expr *expr;
 };
 
 struct BinaryExpr {
-  TokenLabel op;
+  TokenMeta *op;
   Expr *left;
   Expr *right;
 };
@@ -122,6 +142,28 @@ struct BlockExpr {
 
 // -----------------------------------------------------------------------------
 
+struct IntegerLiteral {
+  i64 value;
+  TokenMeta *meta;
+};
+
+struct FloatLiteral {
+  f64 value;
+  TokenMeta *meta;
+};
+
+struct StringLiteral {
+  str value;
+  TokenMeta *meta;
+};
+
+struct BooleanLiteral {
+  bool value;
+  TokenMeta *meta;
+};
+
+// -----------------------------------------------------------------------------
+
 struct ExprList {
   u32 len;
   Expr *head;
@@ -140,13 +182,13 @@ Expr *ast_expr_unary(UnaryExpr *unary);
 Expr *ast_expr_binary(BinaryExpr *binary);
 Expr *ast_expr_group(GroupExpr *group);
 
-LiteralExpr *ast_literal_integer(i64 i);
-LiteralExpr *ast_literal_float(f64 f);
-LiteralExpr *ast_literal_string(str s);
-LiteralExpr *ast_literal_boolean(bool b);
+LiteralExpr *ast_literal_integer(IntegerLiteral *i);
+LiteralExpr *ast_literal_float(FloatLiteral *f);
+LiteralExpr *ast_literal_string(StringLiteral *s);
+LiteralExpr *ast_literal_boolean(BooleanLiteral *b);
 
-UnaryExpr *ast_unary(TokenLabel op, Expr *expr);
-BinaryExpr *ast_binary(Expr *left, TokenLabel op, Expr *right);
+UnaryExpr *ast_unary(TokenMeta *op, Expr *expr);
+BinaryExpr *ast_binary(Expr *left, TokenMeta *op, Expr *right);
 GroupExpr *ast_group(Expr *expr);
 
 ExprList *ast_expr_list(Expr *head, ExprList *tail);
@@ -157,6 +199,13 @@ void ast_free_literal(LiteralExpr *literal);
 void ast_free_unary(UnaryExpr *unary);
 void ast_free_binary(BinaryExpr *binary);
 void ast_free_group(GroupExpr *group);
+
+void ast_free_int_literal(IntegerLiteral *l);
+void ast_free_float_literal(FloatLiteral *l);
+void ast_free_string_literal(StringLiteral *l);
+void ast_free_bool_literal(BooleanLiteral *l);
+
+void ast_free_meta(TokenMeta *meta);
 void ast_free_expr_list(ExprList *list, bool free_exprs);
 void ast_free_program(Program *program);
 

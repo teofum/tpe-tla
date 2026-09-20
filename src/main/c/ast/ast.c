@@ -24,41 +24,41 @@ AST_EXPR_FUNC(ast_expr_group, GroupExpr, EXPR_GROUP, group)
 
 // -----------------------------------------------------------------------------
 
-LiteralExpr *ast_literal_integer(i64 i) {
+LiteralExpr *ast_literal_integer(IntegerLiteral *i) {
   LiteralExpr *literal = new(LiteralExpr);
   *literal = (LiteralExpr){
     .type = L_INTEGER,
-    .int_value = i,
+    .integer = i,
   };
 
   return literal;
 }
 
-LiteralExpr *ast_literal_float(f64 f) {
+LiteralExpr *ast_literal_float(FloatLiteral *f) {
   LiteralExpr *literal = new(LiteralExpr);
   *literal = (LiteralExpr){
     .type = L_FLOAT,
-    .float_value = f,
+    .floating = f,
   };
 
   return literal;
 }
 
-LiteralExpr *ast_literal_string(str s) {
+LiteralExpr *ast_literal_string(StringLiteral *s) {
   LiteralExpr *literal = new(LiteralExpr);
   *literal = (LiteralExpr){
     .type = L_STRING,
-    .string_value = s,
+    .string = s,
   };
 
   return literal;
 }
 
-LiteralExpr *ast_literal_boolean(bool b) {
+LiteralExpr *ast_literal_boolean(BooleanLiteral *b) {
   LiteralExpr *literal = new(LiteralExpr);
   *literal = (LiteralExpr){
     .type = L_BOOL,
-    .bool_value = b,
+    .boolean = b,
   };
 
   return literal;
@@ -66,7 +66,7 @@ LiteralExpr *ast_literal_boolean(bool b) {
 
 // -----------------------------------------------------------------------------
 
-UnaryExpr *ast_unary(TokenLabel op, Expr *expr) {
+UnaryExpr *ast_unary(TokenMeta *op, Expr *expr) {
   UnaryExpr *unary = new(UnaryExpr);
   *unary = (UnaryExpr){
     .op = op,
@@ -76,7 +76,7 @@ UnaryExpr *ast_unary(TokenLabel op, Expr *expr) {
   return unary;
 }
 
-BinaryExpr *ast_binary(Expr *left, TokenLabel op, Expr *right) {
+BinaryExpr *ast_binary(Expr *left, TokenMeta *op, Expr *right) {
   BinaryExpr *binary = new(BinaryExpr);
   *binary = (BinaryExpr){
     .left = left,
@@ -148,7 +148,12 @@ void ast_free_expr(Expr *expr) {
 void ast_free_literal(LiteralExpr *literal) {
   if (!literal) return;
 
-  if (literal->type == L_STRING) str_free(literal->string_value);
+  switch (literal->type) {
+    case L_INTEGER: ast_free_int_literal(literal->integer); break;
+    case L_FLOAT: ast_free_float_literal(literal->floating); break;
+    case L_STRING: ast_free_string_literal(literal->string); break;
+    case L_BOOL: ast_free_bool_literal(literal->boolean); break;
+  }
   free(literal);
 }
 
@@ -156,6 +161,7 @@ void ast_free_unary(UnaryExpr *unary) {
   if (!unary) return;
 
   ast_free_expr(unary->expr);
+  ast_free_meta(unary->op);
   free(unary);
 }
 
@@ -164,6 +170,7 @@ void ast_free_binary(BinaryExpr *binary) {
 
   ast_free_expr(binary->left);
   ast_free_expr(binary->right);
+  ast_free_meta(binary->op);
   free(binary);
 }
 
@@ -172,6 +179,42 @@ void ast_free_group(GroupExpr *group) {
 
   ast_free_expr(group->inner_expr);
   free(group);
+}
+
+void ast_free_int_literal(IntegerLiteral *l) {
+  if (!l) return;
+
+  ast_free_meta(l->meta);
+  free(l);
+}
+
+void ast_free_float_literal(FloatLiteral *l) {
+  if (!l) return;
+
+  ast_free_meta(l->meta);
+  free(l);
+}
+
+void ast_free_string_literal(StringLiteral *l) {
+  if (!l) return;
+
+  str_free(l->value);
+  ast_free_meta(l->meta);
+  free(l);
+}
+
+void ast_free_bool_literal(BooleanLiteral *l) {
+  if (!l) return;
+
+  ast_free_meta(l->meta);
+  free(l);
+}
+
+void ast_free_meta(TokenMeta *meta) {
+  if (!meta) return;
+
+  free(meta->lexeme);
+  free(meta);
 }
 
 void ast_free_expr_list(ExprList *list, bool free_exprs) {

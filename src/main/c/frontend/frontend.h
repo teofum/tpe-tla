@@ -8,13 +8,6 @@
 extern const char *TOKEN_LABEL_STR[];
 
 typedef struct {
-  int first_line;
-  int first_column;
-  int last_line;
-  int last_column;
-} Location;
-
-typedef struct {
   char *lexeme;
   u32 len;
 

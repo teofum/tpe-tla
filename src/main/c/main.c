@@ -12,6 +12,7 @@ i32 main(i32 argc, const char **argv) {
   fe_init(&cs);
 
   CompilationStatus parse_status = fe_parse();
+  fe_parser_log(LOG_INFO, "Parsing done");
 
   FILE *dot_output = fopen("ast.dot", "w");
   ast_generate_dot(cs.ast, dot_output);

@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <string.h>
 
 #include <ast/ast.h>
 #include <frontend/frontend.h>
@@ -6,12 +7,24 @@
 #include <support/types.h>
 #include <support/logger.h>
 #include <support/str.h>
+#include <support/util.h>
 
 #include "flex_actions.h"
 
+static TokenMeta *_token_meta(Token *token) {
+  TokenMeta *meta = new(TokenMeta);
+  *meta = (TokenMeta){
+    .label = token->label,
+    .len = token->len,
+    .location = token->location,
+    .lexeme = strndup(token->lexeme, token->len),
+  };
+  return meta;
+}
+
 CompilationStatus lex_operator(TokenLabel label) {
   Token *token = fe_create_token(label);
-  token->semantic_value->token = label;
+  token->semantic_value->token = _token_meta(token);
 
   fe_push_token(token);
   fe_free_token(token);
@@ -20,7 +33,7 @@ CompilationStatus lex_operator(TokenLabel label) {
 
 CompilationStatus lex_keyword(TokenLabel label) {
   Token *token = fe_create_token(label);
-  token->semantic_value->token = label;
+  token->semantic_value->token = _token_meta(token);
 
   fe_push_token(token);
   fe_free_token(token);
@@ -29,7 +42,12 @@ CompilationStatus lex_keyword(TokenLabel label) {
 
 CompilationStatus lex_integer_literal() {
   Token *token = fe_create_token(INTEGER);
-  token->semantic_value->integer = strtoll(token->lexeme, NULL, 10);
+  IntegerLiteral *l = new(IntegerLiteral);
+  *l = (IntegerLiteral){
+    .value = strtoll(token->lexeme, NULL, 10),
+    .meta = _token_meta(token),
+  };
+  token->semantic_value->integer = l;
 
   fe_push_token(token);
   fe_free_token(token);
@@ -38,7 +56,12 @@ CompilationStatus lex_integer_literal() {
 
 CompilationStatus lex_float_literal() {
   Token *token = fe_create_token(FLOAT);
-  token->semantic_value->floating = strtod(token->lexeme, NULL);
+  FloatLiteral *l = new(FloatLiteral);
+  *l = (FloatLiteral){
+    .value = strtod(token->lexeme, NULL),
+    .meta = _token_meta(token),
+  };
+  token->semantic_value->floating = l;
 
   fe_push_token(token);
   fe_free_token(token);
@@ -48,8 +71,13 @@ CompilationStatus lex_float_literal() {
 CompilationStatus lex_string_literal() {
   Token *token = fe_create_token(STRING);
   str lexeme = str_from_cstring(token->lexeme);
-  token->semantic_value->string = str_clone(str_slice(lexeme, 1, -1));
+  StringLiteral *l = new(StringLiteral);
+  *l = (StringLiteral){
+    .value = str_clone(str_slice(lexeme, 1, -1)),
+    .meta = _token_meta(token),
+  };
   str_free(lexeme);
+  token->semantic_value->string = l;
 
   fe_push_token(token);
   fe_free_token(token);
@@ -58,7 +86,12 @@ CompilationStatus lex_string_literal() {
 
 CompilationStatus lex_boolean_literal() {
   Token *token = fe_create_token(BOOL);
-  token->semantic_value->boolean = token->lexeme[0] == 't';
+  BooleanLiteral *l = new(BooleanLiteral);
+  *l = (BooleanLiteral){
+    .value = token->lexeme[0] == 't',
+    .meta = _token_meta(token),
+  };
+  token->semantic_value->boolean = l;
 
   fe_push_token(token);
   fe_free_token(token);

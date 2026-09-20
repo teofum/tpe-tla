@@ -18,11 +18,11 @@ void yyerror(YYLTYPE *location, const char *message) {}
 %locations
 
 %union {
-	TokenLabel token;
-	i64 integer;
-	f64 floating;
-	str string;
-	bool boolean;
+	TokenMeta *token;
+	IntegerLiteral *integer;
+	FloatLiteral *floating;
+	StringLiteral *string;
+	BooleanLiteral *boolean;
 
 	Expr *expression;
 	LiteralExpr *literal;
@@ -40,6 +40,11 @@ void yyerror(YYLTYPE *location, const char *message) {}
   ExprList *expression_list;
 }
 
+%destructor { ast_free_meta($$); } <token>
+%destructor { ast_free_int_literal($$); } <integer>
+%destructor { ast_free_float_literal($$); } <floating>
+%destructor { ast_free_string_literal($$); } <string>
+%destructor { ast_free_bool_literal($$); } <boolean>
 %destructor { ast_free_expr($$); } <expression>
 %destructor { ast_free_literal($$); } <literal>
 %destructor { ast_free_unary($$); } <unary>
@@ -163,6 +168,6 @@ binary: expression PLUS expression          { $$ = parse_binary($1, $2, $3); }
   | expression OR expression                { $$ = parse_binary($1, $2, $3); }
   ;
 
-group: PAREN_L expression PAREN_R           { $$ = parse_group($2); }
+group: PAREN_L expression PAREN_R           { $$ = parse_group($1, $2, $3); }
 
 %%
