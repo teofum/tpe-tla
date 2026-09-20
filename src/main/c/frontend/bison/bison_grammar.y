@@ -42,6 +42,9 @@ void yyerror(YYLTYPE *location, const char *message) {}
 
 %destructor { ast_free_expr($$); } <expression>
 %destructor { ast_free_literal($$); } <literal>
+%destructor { ast_free_unary($$); } <unary>
+%destructor { ast_free_binary($$); } <binary>
+%destructor { ast_free_group($$); } <group>
 %destructor { ast_free_expr_list($$, true); } <expression_list>
 %destructor { ast_free_program($$); } <program>
 
@@ -105,6 +108,7 @@ void yyerror(YYLTYPE *location, const char *message) {}
 %type <literal>           literal
 %type <unary>             unary
 %type <binary>            binary
+%type <group>             group
 
 %type <program>           program
 %type <expression_list>   expression_list
@@ -132,6 +136,13 @@ expression_list: expression                 { $$ = parse_expr_list($1, NULL); }
 expression: literal                         { $$ = parse_literal_expr($1); }
   | unary                                   { $$ = parse_unary_expr($1); }
   | binary                                  { $$ = parse_binary_expr($1); }
+  | group                                   { $$ = parse_group_expr($1); }
+  ;
+
+literal: INTEGER                            { $$ = parse_integer_literal($1); }
+  | FLOAT                                   { $$ = parse_float_literal($1); }
+  | STRING                                  { $$ = parse_string_literal($1); }
+  | BOOL                                    { $$ = parse_boolean_literal($1); }
   ;
 
 unary: BANG expression                      { $$ = parse_unary($1, $2); }
@@ -152,10 +163,6 @@ binary: expression PLUS expression          { $$ = parse_binary($1, $2, $3); }
   | expression OR expression                { $$ = parse_binary($1, $2, $3); }
   ;
 
-literal: INTEGER                            { $$ = parse_integer_literal($1); }
-  | FLOAT                                   { $$ = parse_float_literal($1); }
-  | STRING                                  { $$ = parse_string_literal($1); }
-  | BOOL                                    { $$ = parse_boolean_literal($1); }
-  ;
+group: PAREN_L expression PAREN_R           { $$ = parse_group($2); }
 
 %%

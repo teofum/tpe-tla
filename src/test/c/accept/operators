@@ -3,6 +3,9 @@
 // Arithmetic operators
 5 + 3 * 5 / 2 - 1
 
+// Grouping overrides precedence
+(5 + 3) * (5 / 2 - 1)
+
 // Comparison operators
 45 * 3 > 45 + 3
 

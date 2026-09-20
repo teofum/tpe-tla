@@ -88,11 +88,19 @@ static void dot_binary(BinaryExpr *binary, u64 pid) {
   dot_expr(binary->right, id);
 }
 
+static void dot_group(GroupExpr *group, u64 pid) {
+  u64 id = next_id();
+  _node(id, "Group");
+  _edge(pid, id);
+  dot_expr(group->inner_expr, id);
+}
+
 static void dot_expr(Expr *expr, u64 pid) {
   switch (expr->type) {
     case EXPR_LITERAL: return dot_literal(expr->literal, pid);
     case EXPR_UNARY: return dot_unary(expr->unary, pid);
     case EXPR_BINARY: return dot_binary(expr->binary, pid);
+    case EXPR_GROUP: return dot_group(expr->group, pid);
   }
 }
 

@@ -21,6 +21,13 @@ Expr *parse_binary_expr(BinaryExpr *binary) {
   return ast_expr_binary(binary);
 }
 
+Expr *parse_group_expr(GroupExpr *group) {
+  fe_parser_log(LOG_DEBUG, "Group Expr");
+  return ast_expr_group(group);
+}
+
+// -----------------------------------------------------------------------------
+
 LiteralExpr *parse_integer_literal(i64 i) {
   fe_parser_log(LOG_DEBUG, "Integer Literal %lld", i);
   return ast_literal_integer(i);
@@ -43,6 +50,8 @@ LiteralExpr *parse_boolean_literal(bool b) {
   return ast_literal_boolean(b);
 }
 
+// -----------------------------------------------------------------------------
+
 UnaryExpr *parse_unary(TokenLabel op, Expr *expr) {
   fe_parser_log(LOG_DEBUG, "Unary %d", op);
   return ast_unary(op, expr);
@@ -52,6 +61,13 @@ BinaryExpr *parse_binary(Expr *left, TokenLabel op, Expr *right) {
   fe_parser_log(LOG_DEBUG, "Binary %d", op);
   return ast_binary(left, op, right);
 }
+
+GroupExpr *parse_group(Expr *expr) {
+  fe_parser_log(LOG_DEBUG, "Group");
+  return ast_group(expr);
+}
+
+// -----------------------------------------------------------------------------
 
 ExprList *parse_expr_list(Expr *head, ExprList *tail) {
   ExprList* list = ast_expr_list(head, tail);

@@ -20,6 +20,7 @@ Expr *f_name(T *p_name) {                         \
 AST_EXPR_FUNC(ast_expr_literal, LiteralExpr, EXPR_LITERAL, literal)
 AST_EXPR_FUNC(ast_expr_unary, UnaryExpr, EXPR_UNARY, unary)
 AST_EXPR_FUNC(ast_expr_binary, BinaryExpr, EXPR_BINARY, binary)
+AST_EXPR_FUNC(ast_expr_group, GroupExpr, EXPR_GROUP, group)
 
 // -----------------------------------------------------------------------------
 
@@ -86,6 +87,13 @@ BinaryExpr *ast_binary(Expr *left, TokenLabel op, Expr *right) {
   return binary;
 }
 
+GroupExpr *ast_group(Expr *expr) {
+  GroupExpr *group = new(GroupExpr);
+  *group = (GroupExpr){ .inner_expr = expr };
+
+  return group;
+}
+
 // -----------------------------------------------------------------------------
 
 ExprList *ast_expr_list(Expr *head, ExprList *tail) {
@@ -130,6 +138,7 @@ void ast_free_expr(Expr *expr) {
     case EXPR_LITERAL: ast_free_literal(expr->literal); break;
     case EXPR_UNARY: ast_free_unary(expr->unary); break;
     case EXPR_BINARY: ast_free_binary(expr->binary); break;
+    case EXPR_GROUP: ast_free_group(expr->group); break;
     // TODO other types
   }
 
@@ -156,6 +165,13 @@ void ast_free_binary(BinaryExpr *binary) {
   ast_free_expr(binary->left);
   ast_free_expr(binary->right);
   free(binary);
+}
+
+void ast_free_group(GroupExpr *group) {
+  if (!group) return;
+
+  ast_free_expr(group->inner_expr);
+  free(group);
 }
 
 void ast_free_expr_list(ExprList *list, bool free_exprs) {

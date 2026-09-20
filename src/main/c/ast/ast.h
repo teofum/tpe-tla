@@ -138,6 +138,7 @@ struct Program {
 Expr *ast_expr_literal(LiteralExpr *literal);
 Expr *ast_expr_unary(UnaryExpr *unary);
 Expr *ast_expr_binary(BinaryExpr *binary);
+Expr *ast_expr_group(GroupExpr *group);
 
 LiteralExpr *ast_literal_integer(i64 i);
 LiteralExpr *ast_literal_float(f64 f);
@@ -146,6 +147,7 @@ LiteralExpr *ast_literal_boolean(bool b);
 
 UnaryExpr *ast_unary(TokenLabel op, Expr *expr);
 BinaryExpr *ast_binary(Expr *left, TokenLabel op, Expr *right);
+GroupExpr *ast_group(Expr *expr);
 
 ExprList *ast_expr_list(Expr *head, ExprList *tail);
 Program *ast_program(ExprList *exprs);
@@ -154,6 +156,7 @@ void ast_free_expr(Expr *expr);
 void ast_free_literal(LiteralExpr *literal);
 void ast_free_unary(UnaryExpr *unary);
 void ast_free_binary(BinaryExpr *binary);
+void ast_free_group(GroupExpr *group);
 void ast_free_expr_list(ExprList *list, bool free_exprs);
 void ast_free_program(Program *program);
 
