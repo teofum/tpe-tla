@@ -4,3 +4,7 @@ foo = 5
 // Struct member
 my_struct.foo = 5 + 6
 my_struct.bar = my_struct.foo + 1
+
+// Weird, but valid: assignment returns a value so it can be used as an expression
+// Equivalent to foo + (bar = 5)
+foo + bar = 5
