@@ -73,6 +73,27 @@ static void dot_literal(LiteralExpr *literal, u64 pid) {
   free(label);
 }
 
+static void dot_variable(VariableExpr *var, u64 pid) {
+  u64 id = next_id();
+  char *label;
+
+  switch (var->type) {
+    case V_IDENTIFIER:
+      label = new_array(char, 256);
+      snprintf(label, 256, "Variable\\n%s", var->identifier->meta->lexeme);
+      break;
+    case V_STRUCT_MEMBER:
+      label = new_array(char, 256);
+      snprintf(label, 256, "Struct Member\\n%s", var->struct_member->meta->lexeme);
+      dot_expr(var->struct_member->struct_expr, id);
+      break;
+  }
+
+  _node(id, label);
+  _edge(pid, id);
+  free(label);
+}
+
 static void dot_unary(UnaryExpr *unary, u64 pid) {
   u64 id = next_id();
   _node(id, unary->op->lexeme);
@@ -98,6 +119,7 @@ static void dot_group(GroupExpr *group, u64 pid) {
 static void dot_expr(Expr *expr, u64 pid) {
   switch (expr->type) {
     case EXPR_LITERAL: return dot_literal(expr->literal, pid);
+    case EXPR_VARIABLE: return dot_variable(expr->variable, pid);
     case EXPR_UNARY: return dot_unary(expr->unary, pid);
     case EXPR_BINARY: return dot_binary(expr->binary, pid);
     case EXPR_GROUP: return dot_group(expr->group, pid);

@@ -47,6 +47,7 @@ void yyerror(YYLTYPE *location, const char *message) {}
 %destructor { ast_free_bool_literal($$); } <boolean>
 %destructor { ast_free_expr($$); } <expression>
 %destructor { ast_free_literal($$); } <literal>
+%destructor { ast_free_variable($$); } <variable>
 %destructor { ast_free_unary($$); } <unary>
 %destructor { ast_free_binary($$); } <binary>
 %destructor { ast_free_group($$); } <group>
@@ -96,7 +97,7 @@ void yyerror(YYLTYPE *location, const char *message) {}
 %token <token>    IMPORT
 
 // Identifiers
-%token <string>   IDENTIFIER
+%token <token>    IDENTIFIER
 
 // Literals
 %token <integer>  INTEGER
@@ -111,6 +112,7 @@ void yyerror(YYLTYPE *location, const char *message) {}
 
 %type <expression>        expression
 %type <literal>           literal
+%type <variable>          variable
 %type <unary>             unary
 %type <binary>            binary
 %type <group>             group
@@ -139,6 +141,7 @@ expression_list: expression                 { $$ = parse_expr_list($1, NULL); }
   ;
 
 expression: literal                         { $$ = parse_literal_expr($1); }
+  | variable                                { $$ = parse_variable_expr($1); }
   | unary                                   { $$ = parse_unary_expr($1); }
   | binary                                  { $$ = parse_binary_expr($1); }
   | group                                   { $$ = parse_group_expr($1); }
@@ -149,6 +152,9 @@ literal: INTEGER                            { $$ = parse_integer_literal($1); }
   | STRING                                  { $$ = parse_string_literal($1); }
   | BOOL                                    { $$ = parse_boolean_literal($1); }
   ;
+
+variable: IDENTIFIER                        { $$ = parse_identifier_variable($1); }
+  | expression DOT IDENTIFIER               { $$ = parse_struct_member_variable($1, $2, $3); }
 
 unary: BANG expression                      { $$ = parse_unary($1, $2); }
   | NOT expression                          { $$ = parse_unary($1, $2); }

@@ -100,6 +100,8 @@ CompilationStatus lex_boolean_literal() {
 
 CompilationStatus lex_identifier() {
   Token *token = fe_create_token(IDENTIFIER);
+  token->semantic_value->token = _token_meta(token);
+
   fe_push_token(token);
   fe_free_token(token);
   return IN_PROGRESS;

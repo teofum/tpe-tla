@@ -1,0 +1,19 @@
+// Test variable access modes
+
+// Plain identifiers
+foo
+bar == 5
+xyz < bar + 1
+
+// Struct members
+book.isbn
+listing.creator.display_name
+book.title == "Book Title"
+
+// Any expression as struct member
+"hello".upper
+5.floor
+5.7.floor
+(5.7).floor
+5 + 7.floor
+(5 + 7).floor

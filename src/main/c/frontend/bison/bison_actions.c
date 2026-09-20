@@ -10,6 +10,11 @@ Expr *parse_literal_expr(LiteralExpr *literal) {
   return ast_expr_literal(literal);
 }
 
+Expr *parse_variable_expr(VariableExpr *var) {
+  fe_parser_log(LOG_DEBUG, "Variable Expr");
+  return ast_expr_variable(var);
+}
+
 Expr *parse_unary_expr(UnaryExpr *unary) {
   fe_parser_log(LOG_DEBUG, "Unary Expr");
   return ast_expr_unary(unary);
@@ -45,6 +50,19 @@ LiteralExpr *parse_string_literal(StringLiteral *s) {
 LiteralExpr *parse_boolean_literal(BooleanLiteral *b) {
   fe_parser_log(LOG_DEBUG, "Boolean Literal %s", b->meta->lexeme);
   return ast_literal_boolean(b);
+}
+
+// -----------------------------------------------------------------------------
+
+VariableExpr *parse_identifier_variable(TokenMeta *id) {
+  fe_parser_log(LOG_DEBUG, "Identifier Variable %s", id->lexeme);
+  return ast_variable_identifier(id);
+}
+
+VariableExpr *parse_struct_member_variable(Expr *struct_expr, TokenMeta *op, TokenMeta *id) {
+  fe_parser_log(LOG_DEBUG, "Struct Member %s", id->lexeme);
+  ast_free_meta(op);
+  return ast_variable_struct_member(struct_expr, id);
 }
 
 // -----------------------------------------------------------------------------

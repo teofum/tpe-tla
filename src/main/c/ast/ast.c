@@ -18,6 +18,7 @@ Expr *f_name(T *p_name) {                         \
 }                                                 \
 
 AST_EXPR_FUNC(ast_expr_literal, LiteralExpr, EXPR_LITERAL, literal)
+AST_EXPR_FUNC(ast_expr_variable, VariableExpr, EXPR_VARIABLE, variable)
 AST_EXPR_FUNC(ast_expr_unary, UnaryExpr, EXPR_UNARY, unary)
 AST_EXPR_FUNC(ast_expr_binary, BinaryExpr, EXPR_BINARY, binary)
 AST_EXPR_FUNC(ast_expr_group, GroupExpr, EXPR_GROUP, group)
@@ -62,6 +63,37 @@ LiteralExpr *ast_literal_boolean(BooleanLiteral *b) {
   };
 
   return literal;
+}
+
+// -----------------------------------------------------------------------------
+
+VariableExpr *ast_variable_identifier(TokenMeta *id) {
+  IdentifierVariable *id_var = new(IdentifierVariable);
+  *id_var = (IdentifierVariable){ .meta = id };
+
+  VariableExpr *var = new(VariableExpr);
+  *var = (VariableExpr){
+    .type = V_IDENTIFIER,
+    .identifier = id_var,
+  };
+
+  return var;
+}
+
+VariableExpr *ast_variable_struct_member(Expr *struct_expr, TokenMeta *id) {
+  StructMemberVariable *struct_var = new(StructMemberVariable);
+  *struct_var = (StructMemberVariable){
+    struct_expr = struct_expr,
+    .meta = id,
+  };
+
+  VariableExpr *var = new(VariableExpr);
+  *var = (VariableExpr){
+    .type = V_STRUCT_MEMBER,
+    .struct_member = struct_var,
+  };
+
+  return var;
 }
 
 // -----------------------------------------------------------------------------
@@ -136,6 +168,7 @@ void ast_free_expr(Expr *expr) {
 
   switch (expr->type) {
     case EXPR_LITERAL: ast_free_literal(expr->literal); break;
+    case EXPR_VARIABLE: ast_free_variable(expr->variable); break;
     case EXPR_UNARY: ast_free_unary(expr->unary); break;
     case EXPR_BINARY: ast_free_binary(expr->binary); break;
     case EXPR_GROUP: ast_free_group(expr->group); break;
@@ -155,6 +188,16 @@ void ast_free_literal(LiteralExpr *literal) {
     case L_BOOL: ast_free_bool_literal(literal->boolean); break;
   }
   free(literal);
+}
+
+void ast_free_variable(VariableExpr *var) {
+  if (!var) return;
+
+  switch (var->type) {
+    case V_IDENTIFIER: ast_free_identifier_variable(var->identifier); break;
+    case V_STRUCT_MEMBER: ast_free_struct_member_variable(var->struct_member); break;
+  }
+  free(var);
 }
 
 void ast_free_unary(UnaryExpr *unary) {
@@ -208,6 +251,21 @@ void ast_free_bool_literal(BooleanLiteral *l) {
 
   ast_free_meta(l->meta);
   free(l);
+}
+
+void ast_free_identifier_variable(IdentifierVariable *v) {
+  if (!v) return;
+
+  ast_free_meta(v->meta);
+  free(v);
+}
+
+void ast_free_struct_member_variable(StructMemberVariable *v) {
+  if (!v) return;
+
+  ast_free_expr(v->struct_expr);
+  ast_free_meta(v->meta);
+  free(v);
 }
 
 void ast_free_meta(TokenMeta *meta) {
