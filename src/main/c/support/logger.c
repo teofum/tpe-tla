@@ -31,12 +31,12 @@ static const char *log_level_str[] = {
   [LOG_FATAL] = "[" FATAL_COLOR "FATAL" RESET "]",
 };
 
-Logger *logger_create(const char *name, FILE *out_file) {
+Logger *logger_create(const char *name, FILE *out_file, LogLevel level) {
   Logger *logger = new (Logger);
   *logger = (Logger){
     .name = malloc(1 + strlen(name)),
     .out_file = out_file,
-    .level = LOG_ALL,
+    .level = level,
   };
   strcpy(logger->name, name);
 

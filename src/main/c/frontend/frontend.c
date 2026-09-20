@@ -18,7 +18,8 @@ void fe_init() {
   yylex_init(&f->scanner);
   f->parser = yypstate_new();
   f->location = new (YYLTYPE);
-  f->logger = logger_create("Frontend", stderr);
+  f->scan_logger = logger_create("Scanner", stderr, LOG_ALL);
+  f->parse_logger = logger_create("Parser", stderr, LOG_ALL);
 
   flex_enter_context(f, 0);
 }
@@ -30,7 +31,8 @@ void fe_shutdown() {
   if (f->scanner) yylex_destroy(f->scanner);
   if (f->parser) yypstate_delete(f->parser);
   if (f->location) free(f->location);
-  if (f->logger) logger_free(f->logger);
+  if (f->scan_logger) logger_free(f->scan_logger);
+  if (f->parse_logger) logger_free(f->parse_logger);
   free(f);
 
   f = NULL;
@@ -84,7 +86,7 @@ static const char *token_label_str[] = {
 
 static void _log_token(Token *token, LogLevel level) {
   if (token->label == END) {
-    fe_log(level, "%s @ %u:%u",
+    fe_scanner_log(level, "%s @ %u:%u",
       token_label_str[token->label],
       token->location.first_line,
       token->location.first_column
@@ -92,7 +94,7 @@ static void _log_token(Token *token, LogLevel level) {
     return;
   }
 
-  fe_log(level, "%s '%s' @ %u:%u-%u:%u",
+  fe_scanner_log(level, "%s '%s' @ %u:%u-%u:%u",
     token_label_str[token->label],
     token->lexeme,
     token->location.first_line,
@@ -150,9 +152,16 @@ CompilationStatus fe_parse() {
   return status;
 }
 
-void fe_log(LogLevel level, const char *const format, ...) {
+void fe_scanner_log(LogLevel level, const char *const format, ...) {
   va_list args;
   va_start(args, format);
-  logger_logv(f->logger, level, format, args);
+  logger_logv(f->scan_logger, level, format, args);
+  va_end(args);
+}
+
+void fe_parser_log(LogLevel level, const char *const format, ...) {
+  va_list args;
+  va_start(args, format);
+  logger_logv(f->parse_logger, level, format, args);
   va_end(args);
 }

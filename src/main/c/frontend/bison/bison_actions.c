@@ -1,8 +1,10 @@
 #include <ast/ast.h>
+#include <frontend/frontend.h>
 #include <support/types.h>
 #include <support/util.h>
 
 #include "bison_actions.h"
+#include "support/str.h"
 
 Expr *parse_literal_expr(LiteralExpr *literal) {
   Expr *expr = new(Expr);
@@ -11,6 +13,7 @@ Expr *parse_literal_expr(LiteralExpr *literal) {
     .literal = literal,
   };
 
+  fe_parser_log(LOG_DEBUG, "Literal Expr");
   return expr;
 }
 
@@ -21,6 +24,7 @@ LiteralExpr *parse_integer_literal(i64 i) {
     .int_value = i,
   };
 
+  fe_parser_log(LOG_DEBUG, "Integer Literal %lld", i);
   return literal;
 }
 
@@ -31,6 +35,7 @@ LiteralExpr *parse_float_literal(f64 f) {
    .float_value = f,
  };
 
+ fe_parser_log(LOG_DEBUG, "Float Literal %f", f);
  return literal;
 }
 
@@ -41,6 +46,9 @@ LiteralExpr *parse_string_literal(str s) {
    .string_value = s,
  };
 
+ char *cstring = str_to_cstring(s);
+ fe_parser_log(LOG_DEBUG, "String Literal '%s'", cstring);
+ free(cstring);
  return literal;
 }
 
@@ -51,6 +59,7 @@ LiteralExpr *parse_boolean_literal(bool b) {
    .bool_value = b,
  };
 
+ fe_parser_log(LOG_DEBUG, "Boolean Literal %s", b ? "true" : "false");
  return literal;
 }
 
@@ -65,6 +74,7 @@ ExprList *parse_expr_list(Expr *head, ExprList *tail) {
     list->len = 1;
   }
 
+  fe_parser_log(LOG_DEBUG, "Expr List (len=%u)", list->len);
   return list;
 }
 
@@ -80,5 +90,6 @@ Program *parse_program(ExprList *exprs) {
     exprs = exprs->tail;
   }
 
+  fe_parser_log(LOG_DEBUG, "Program (len=%u)", prog->len);
   return prog;
 }

@@ -28,7 +28,8 @@ typedef struct {
   void *location;
   void *parser;
   void *scanner;
-  Logger *logger;
+  Logger *scan_logger;
+  Logger *parse_logger;
 } Frontend;
 
 void fe_init();
@@ -44,6 +45,7 @@ void fe_leave_context();
 
 CompilationStatus fe_parse();
 
-void fe_log(LogLevel level, const char *const format, ...);
+void fe_scanner_log(LogLevel level, const char *const format, ...);
+void fe_parser_log(LogLevel level, const char *const format, ...);
 
 #endif

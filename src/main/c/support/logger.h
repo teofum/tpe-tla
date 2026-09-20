@@ -15,7 +15,7 @@ typedef enum {
 
 typedef struct Logger Logger;
 
-Logger *logger_create(const char *name, FILE *out_file);
+Logger *logger_create(const char *name, FILE *out_file, LogLevel level);
 void logger_free(Logger *logger);
 
 void logger_logv(Logger *logger, LogLevel level, const char *const format, va_list args);
