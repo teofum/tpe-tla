@@ -81,10 +81,10 @@ VariableExpr *ast_variable_identifier(TokenMeta *id) {
   return var;
 }
 
-VariableExpr *ast_variable_struct_member(Expr *struct_expr, TokenMeta *id) {
+VariableExpr *ast_variable_struct_member(VariableExpr *struct_expr, TokenMeta *id) {
   StructMemberVariable *struct_var = new(StructMemberVariable);
   *struct_var = (StructMemberVariable){
-    struct_expr = struct_expr,
+    .struct_expr = struct_expr,
     .meta = id,
   };
 
@@ -92,6 +92,22 @@ VariableExpr *ast_variable_struct_member(Expr *struct_expr, TokenMeta *id) {
   *var = (VariableExpr){
     .type = V_STRUCT_MEMBER,
     .struct_member = struct_var,
+  };
+
+  return var;
+}
+
+VariableExpr *ast_variable_indexed(VariableExpr *container, Expr *index) {
+  IndexedVariable *idx_var = new(IndexedVariable);
+  *idx_var = (IndexedVariable){
+    .container = container,
+    .index = index,
+  };
+
+  VariableExpr *var = new(VariableExpr);
+  *var = (VariableExpr){
+    .type = V_INDEX,
+    .indexed = idx_var,
   };
 
   return var;
@@ -208,6 +224,7 @@ void ast_free_variable(VariableExpr *var) {
   switch (var->type) {
     case V_IDENTIFIER: ast_free_identifier_variable(var->identifier); break;
     case V_STRUCT_MEMBER: ast_free_struct_member_variable(var->struct_member); break;
+    case V_INDEX: ast_free_indexed_variable(var->indexed); break;
   }
   free(var);
 }
@@ -283,8 +300,16 @@ void ast_free_identifier_variable(IdentifierVariable *v) {
 void ast_free_struct_member_variable(StructMemberVariable *v) {
   if (!v) return;
 
-  ast_free_expr(v->struct_expr);
+  ast_free_variable(v->struct_expr);
   ast_free_meta(v->meta);
+  free(v);
+}
+
+void ast_free_indexed_variable(IndexedVariable *v) {
+  if (!v) return;
+
+  ast_free_variable(v->container);
+  ast_free_expr(v->index);
   free(v);
 }
 

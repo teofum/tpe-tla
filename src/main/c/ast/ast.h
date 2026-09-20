@@ -28,8 +28,7 @@ typedef enum {
 typedef enum {
   V_IDENTIFIER,
   V_STRUCT_MEMBER,
-  V_LIST_INDEX,
-  V_MAP_INDEX,
+  V_INDEX,
 } VariableType;
 
 typedef enum {
@@ -74,6 +73,7 @@ typedef struct BooleanLiteral BooleanLiteral;
 
 typedef struct IdentifierVariable IdentifierVariable;
 typedef struct StructMemberVariable StructMemberVariable;
+typedef struct IndexedVariable IndexedVariable;
 
 typedef struct Program Program;
 typedef struct ExprList ExprList;
@@ -115,6 +115,7 @@ struct VariableExpr {
   union {
     IdentifierVariable *identifier;
     StructMemberVariable *struct_member;
+    IndexedVariable *indexed;
   };
 };
 
@@ -191,8 +192,13 @@ struct IdentifierVariable {
 };
 
 struct StructMemberVariable {
-  Expr *struct_expr;
+  VariableExpr *struct_expr;
   TokenMeta *meta;
+};
+
+struct IndexedVariable {
+  VariableExpr *container;
+  Expr *index;
 };
 
 // -----------------------------------------------------------------------------
@@ -223,7 +229,8 @@ LiteralExpr *ast_literal_string(StringLiteral *s);
 LiteralExpr *ast_literal_boolean(BooleanLiteral *b);
 
 VariableExpr *ast_variable_identifier(TokenMeta *id);
-VariableExpr *ast_variable_struct_member(Expr *struct_expr, TokenMeta *id);
+VariableExpr *ast_variable_struct_member(VariableExpr *struct_expr, TokenMeta *id);
+VariableExpr *ast_variable_indexed(VariableExpr *container, Expr *index);
 
 UnaryExpr *ast_unary(TokenMeta *op, Expr *expr);
 BinaryExpr *ast_binary(Expr *left, TokenMeta *op, Expr *right);
@@ -248,6 +255,7 @@ void ast_free_bool_literal(BooleanLiteral *l);
 
 void ast_free_identifier_variable(IdentifierVariable *v);
 void ast_free_struct_member_variable(StructMemberVariable *v);
+void ast_free_indexed_variable(IndexedVariable *v);
 
 void ast_free_meta(TokenMeta *meta);
 void ast_free_expr_list(ExprList *list, bool free_exprs);

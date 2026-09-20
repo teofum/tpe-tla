@@ -64,10 +64,17 @@ VariableExpr *parse_identifier_variable(TokenMeta *id) {
   return ast_variable_identifier(id);
 }
 
-VariableExpr *parse_struct_member_variable(Expr *struct_expr, TokenMeta *op, TokenMeta *id) {
+VariableExpr *parse_struct_member_variable(VariableExpr *struct_expr, TokenMeta *op, TokenMeta *id) {
   fe_parser_log(LOG_DEBUG, "Struct Member %s", id->lexeme);
   ast_free_meta(op);
   return ast_variable_struct_member(struct_expr, id);
+}
+
+VariableExpr *parse_indexed_variable(VariableExpr *container, TokenMeta *open, Expr *index, TokenMeta *close) {
+  fe_parser_log(LOG_DEBUG, "Indexed variable");
+  ast_free_meta(open);
+  ast_free_meta(close);
+  return ast_variable_indexed(container, index);
 }
 
 // -----------------------------------------------------------------------------

@@ -29,8 +29,7 @@
   [ ] Variable expressions
     [x] Named variables (identifiers)
     [x] Struct members
-    [ ] List/tuple access
-    [ ] Map access
+    [x] List/tuple/map access
   [x] Grouping expressions (parentheses)
   [x] Unary expressions
   [x] Binary expressions

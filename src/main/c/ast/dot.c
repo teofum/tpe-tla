@@ -85,7 +85,13 @@ static void dot_variable(VariableExpr *var, u64 pid) {
     case V_STRUCT_MEMBER:
       label = new_array(char, 256);
       snprintf(label, 256, "Struct Member\\n%s", var->struct_member->meta->lexeme);
-      dot_expr(var->struct_member->struct_expr, id);
+      dot_variable(var->struct_member->struct_expr, id);
+      break;
+    case V_INDEX:
+      label = new_array(char, 6);
+      snprintf(label, 6, "Index");
+      dot_variable(var->indexed->container, id);
+      dot_expr(var->indexed->index, id);
       break;
   }
 

@@ -17,7 +17,8 @@ LiteralExpr *parse_string_literal(StringLiteral *s);
 LiteralExpr *parse_boolean_literal(BooleanLiteral *b);
 
 VariableExpr *parse_identifier_variable(TokenMeta *id);
-VariableExpr *parse_struct_member_variable(Expr *struct_expr, TokenMeta *op, TokenMeta *id);
+VariableExpr *parse_struct_member_variable(VariableExpr *struct_expr, TokenMeta *op, TokenMeta *id);
+VariableExpr *parse_indexed_variable(VariableExpr *container, TokenMeta *open, Expr *index, TokenMeta *close);
 
 UnaryExpr *parse_unary(TokenMeta *op, Expr *expr);
 BinaryExpr *parse_binary(Expr *left, TokenMeta *op, Expr *right);

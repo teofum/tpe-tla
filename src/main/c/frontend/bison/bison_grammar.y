@@ -134,6 +134,7 @@ void yyerror(YYLTYPE *location, const char *message) {
 %left PLUS MINUS
 %left STAR SLASH
 %left BANG
+%left DOT
 
 %%
 
@@ -159,7 +160,8 @@ literal: INTEGER                            { $$ = parse_integer_literal($1); }
   ;
 
 variable: IDENTIFIER                        { $$ = parse_identifier_variable($1); }
-  | expression DOT IDENTIFIER               { $$ = parse_struct_member_variable($1, $2, $3); }
+  | variable DOT IDENTIFIER                 { $$ = parse_struct_member_variable($1, $2, $3); }
+  | variable SQUARE_L expression SQUARE_R   { $$ = parse_indexed_variable($1, $2, $3, $4); }
   ;
 
 unary: BANG expression                      { $$ = parse_unary($1, $2); }

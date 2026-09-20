@@ -10,10 +10,7 @@ book.isbn
 listing.creator.display_name
 book.title == "Book Title"
 
-// Any expression as struct member
-"hello".upper
-5.floor
-5.7.floor
-(5.7).floor
-5 + 7.floor
-(5 + 7).floor
+// Indexed variables
+foo[5]
+foo[bar.baz]
+foo.bar["hello" + ", world!"].baz
