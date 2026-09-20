@@ -11,6 +11,16 @@ Expr *parse_literal_expr(LiteralExpr *literal) {
   return ast_expr_literal(literal);
 }
 
+Expr *parse_unary_expr(UnaryExpr *unary) {
+  fe_parser_log(LOG_DEBUG, "Unary Expr");
+  return ast_expr_unary(unary);
+}
+
+Expr *parse_binary_expr(BinaryExpr *binary) {
+  fe_parser_log(LOG_DEBUG, "Binary Expr");
+  return ast_expr_binary(binary);
+}
+
 LiteralExpr *parse_integer_literal(i64 i) {
   fe_parser_log(LOG_DEBUG, "Integer Literal %lld", i);
   return ast_literal_integer(i);
@@ -31,6 +41,16 @@ LiteralExpr *parse_string_literal(str s) {
 LiteralExpr *parse_boolean_literal(bool b) {
   fe_parser_log(LOG_DEBUG, "Boolean Literal %s", b ? "true" : "false");
   return ast_literal_boolean(b);
+}
+
+UnaryExpr *parse_unary(TokenLabel op, Expr *expr) {
+  fe_parser_log(LOG_DEBUG, "Unary %d", op);
+  return ast_unary(op, expr);
+}
+
+BinaryExpr *parse_binary(Expr *left, TokenLabel op, Expr *right) {
+  fe_parser_log(LOG_DEBUG, "Binary %d", op);
+  return ast_binary(left, op, right);
 }
 
 ExprList *parse_expr_list(Expr *head, ExprList *tail) {

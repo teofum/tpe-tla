@@ -1,22 +1,30 @@
 #include <stdlib.h>
 #include <support/types.h>
 #include <support/util.h>
+#include <support/str.h>
 
 #include "ast.h"
-#include "support/str.h"
 
-Expr *ast_expr_literal(LiteralExpr *literal) {
-  Expr *expr = new(Expr);
-  *expr = (Expr){
-    .type = EXPR_LITERAL,
-    .literal = literal,
-  };
+// -----------------------------------------------------------------------------
 
-  return expr;
-}
+#define AST_EXPR_FUNC(f_name, T, expr_t, p_name)  \
+Expr *f_name(T *p_name) {                         \
+  Expr *expr = new(Expr);                         \
+  *expr = (Expr){                                 \
+    .type = expr_t,                               \
+    .p_name = p_name,                             \
+  };                                              \
+  return expr;                                    \
+}                                                 \
+
+AST_EXPR_FUNC(ast_expr_literal, LiteralExpr, EXPR_LITERAL, literal)
+AST_EXPR_FUNC(ast_expr_unary, UnaryExpr, EXPR_UNARY, unary)
+AST_EXPR_FUNC(ast_expr_binary, BinaryExpr, EXPR_BINARY, binary)
+
+// -----------------------------------------------------------------------------
 
 LiteralExpr *ast_literal_integer(i64 i) {
-  LiteralExpr* literal = new(LiteralExpr);
+  LiteralExpr *literal = new(LiteralExpr);
   *literal = (LiteralExpr){
     .type = L_INTEGER,
     .int_value = i,
@@ -26,7 +34,7 @@ LiteralExpr *ast_literal_integer(i64 i) {
 }
 
 LiteralExpr *ast_literal_float(f64 f) {
-  LiteralExpr* literal = new(LiteralExpr);
+  LiteralExpr *literal = new(LiteralExpr);
   *literal = (LiteralExpr){
     .type = L_FLOAT,
     .float_value = f,
@@ -36,7 +44,7 @@ LiteralExpr *ast_literal_float(f64 f) {
 }
 
 LiteralExpr *ast_literal_string(str s) {
-  LiteralExpr* literal = new(LiteralExpr);
+  LiteralExpr *literal = new(LiteralExpr);
   *literal = (LiteralExpr){
     .type = L_STRING,
     .string_value = s,
@@ -46,7 +54,7 @@ LiteralExpr *ast_literal_string(str s) {
 }
 
 LiteralExpr *ast_literal_boolean(bool b) {
-  LiteralExpr* literal = new(LiteralExpr);
+  LiteralExpr *literal = new(LiteralExpr);
   *literal = (LiteralExpr){
     .type = L_BOOL,
     .bool_value = b,
@@ -55,6 +63,30 @@ LiteralExpr *ast_literal_boolean(bool b) {
   return literal;
 }
 
+// -----------------------------------------------------------------------------
+
+UnaryExpr *ast_unary(TokenLabel op, Expr *expr) {
+  UnaryExpr *unary = new(UnaryExpr);
+  *unary = (UnaryExpr){
+    .op = op,
+    .expr = expr,
+  };
+
+  return unary;
+}
+
+BinaryExpr *ast_binary(Expr *left, TokenLabel op, Expr *right) {
+  BinaryExpr *binary = new(BinaryExpr);
+  *binary = (BinaryExpr){
+    .left = left,
+    .op = op,
+    .right = right,
+  };
+
+  return binary;
+}
+
+// -----------------------------------------------------------------------------
 
 ExprList *ast_expr_list(Expr *head, ExprList *tail) {
   ExprList* list = new(ExprList);
@@ -89,11 +121,15 @@ Program *ast_program(ExprList *exprs) {
   return prog;
 }
 
+// -----------------------------------------------------------------------------
+
 void ast_free_expr(Expr *expr) {
   if (!expr) return;
 
   switch (expr->type) {
-    case EXPR_LITERAL: ast_free_literal(expr->literal);
+    case EXPR_LITERAL: ast_free_literal(expr->literal); break;
+    case EXPR_UNARY: ast_free_unary(expr->unary); break;
+    case EXPR_BINARY: ast_free_binary(expr->binary); break;
     // TODO other types
   }
 
@@ -105,6 +141,21 @@ void ast_free_literal(LiteralExpr *literal) {
 
   if (literal->type == L_STRING) str_free(literal->string_value);
   free(literal);
+}
+
+void ast_free_unary(UnaryExpr *unary) {
+  if (!unary) return;
+
+  ast_free_expr(unary->expr);
+  free(unary);
+}
+
+void ast_free_binary(BinaryExpr *binary) {
+  if (!binary) return;
+
+  ast_free_expr(binary->left);
+  ast_free_expr(binary->right);
+  free(binary);
 }
 
 void ast_free_expr_list(ExprList *list, bool free_exprs) {

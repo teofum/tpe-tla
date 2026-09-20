@@ -101,6 +101,9 @@ id_char         [a-zA-Z0-9_-]
 "nil"                         { return lex_keyword(NIL); }
 "is"                          { return lex_keyword(IS); }
 "of"                          { return lex_keyword(OF); }
+"and"                         { return lex_keyword(AND); }
+"or"                          { return lex_keyword(OR); }
+"not"                         { return lex_keyword(NOT); }
 "struct"                      { return lex_keyword(STRUCT); }
 "union"                       { return lex_keyword(UNION); }
 "enum"                        { return lex_keyword(ENUM); }

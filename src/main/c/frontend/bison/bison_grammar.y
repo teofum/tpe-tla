@@ -78,6 +78,9 @@ void yyerror(YYLTYPE *location, const char *message) {}
 %token <token>    NIL
 %token <token>    IS
 %token <token>    OF
+%token <token>    AND
+%token <token>    OR
+%token <token>    NOT
 %token <token>    STRUCT
 %token <token>    UNION
 %token <token>    ENUM
@@ -100,26 +103,59 @@ void yyerror(YYLTYPE *location, const char *message) {}
 
 %type <expression>        expression
 %type <literal>           literal
+%type <unary>             unary
+%type <binary>            binary
 
 %type <program>           program
 %type <expression_list>   expression_list
 
+// Precedence
+%right EQUAL
+%left OR
+%left AND
+%left NOT
+%left EQUAL_EQUAL BANG_EQUAL
+%nonassoc GREATER_EQUAL LESS_EQUAL GREATER LESS
+%left PLUS MINUS
+%left STAR SLASH
+%left BANG
+
 %%
 
-program: expression_list END        { $$ = parse_program($1); }
+program: expression_list END                { $$ = parse_program($1); }
   ;
 
-expression_list: expression         { $$ = parse_expr_list($1, NULL); }
-  | expression_list expression      { $$ = parse_expr_list($2, $1); }
+expression_list: expression                 { $$ = parse_expr_list($1, NULL); }
+  | expression_list expression              { $$ = parse_expr_list($2, $1); }
   ;
 
-expression: literal                 { $$ = parse_literal_expr($1); }
+expression: literal                         { $$ = parse_literal_expr($1); }
+  | unary                                   { $$ = parse_unary_expr($1); }
+  | binary                                  { $$ = parse_binary_expr($1); }
   ;
 
-literal: INTEGER                    { $$ = parse_integer_literal($1); }
-  | FLOAT                           { $$ = parse_float_literal($1); }
-  | STRING                          { $$ = parse_string_literal($1); }
-  | BOOL                            { $$ = parse_boolean_literal($1); }
+unary: BANG expression                      { $$ = parse_unary($1, $2); }
+  | NOT expression                          { $$ = parse_unary($1, $2); }
+  ;
+
+binary: expression PLUS expression          { $$ = parse_binary($1, $2, $3); }
+  | expression MINUS expression             { $$ = parse_binary($1, $2, $3); }
+  | expression STAR expression              { $$ = parse_binary($1, $2, $3); }
+  | expression SLASH expression             { $$ = parse_binary($1, $2, $3); }
+  | expression GREATER_EQUAL expression     { $$ = parse_binary($1, $2, $3); }
+  | expression GREATER expression           { $$ = parse_binary($1, $2, $3); }
+  | expression LESS_EQUAL expression        { $$ = parse_binary($1, $2, $3); }
+  | expression LESS expression              { $$ = parse_binary($1, $2, $3); }
+  | expression EQUAL_EQUAL expression       { $$ = parse_binary($1, $2, $3); }
+  | expression BANG_EQUAL expression        { $$ = parse_binary($1, $2, $3); }
+  | expression AND expression               { $$ = parse_binary($1, $2, $3); }
+  | expression OR expression                { $$ = parse_binary($1, $2, $3); }
+  ;
+
+literal: INTEGER                            { $$ = parse_integer_literal($1); }
+  | FLOAT                                   { $$ = parse_float_literal($1); }
+  | STRING                                  { $$ = parse_string_literal($1); }
+  | BOOL                                    { $$ = parse_boolean_literal($1); }
   ;
 
 %%

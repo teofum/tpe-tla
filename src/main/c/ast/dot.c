@@ -3,10 +3,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <ast/ast.h>
+#include <frontend/frontend.h>
+#include <support/str.h>
+#include <support/types.h>
+#include <support/util.h>
+
 #include "dot.h"
-#include "ast/ast.h"
-#include "support/str.h"
-#include "support/util.h"
 
 // Internals
 static FILE *_of = NULL;
@@ -38,6 +41,8 @@ static void _edge(u64 id1, u64 id2) {
   _printfln("%llu -> %llu;", id1, id2);
 }
 
+static void dot_expr(Expr *expr, u64 pid);
+
 static void dot_literal(LiteralExpr *literal, u64 pid) {
   u64 id = next_id();
   char *label;
@@ -45,7 +50,7 @@ static void dot_literal(LiteralExpr *literal, u64 pid) {
   switch (literal->type) {
     case L_INTEGER:
       label = new_array(char, 256);
-      snprintf(label, 256, "Integer Literal\\n%lld", literal->int_value);
+      snprintf(label, 256, "Integer Literal\\n%lld", (long long)literal->int_value);
       break;
     case L_FLOAT:
       label = new_array(char, 256);
@@ -68,9 +73,26 @@ static void dot_literal(LiteralExpr *literal, u64 pid) {
   free(label);
 }
 
+static void dot_unary(UnaryExpr *unary, u64 pid) {
+  u64 id = next_id();
+  _node(id, TOKEN_LABEL_STR[unary->op]);
+  _edge(pid, id);
+  dot_expr(unary->expr, id);
+}
+
+static void dot_binary(BinaryExpr *binary, u64 pid) {
+  u64 id = next_id();
+  _node(id, TOKEN_LABEL_STR[binary->op]);
+  _edge(pid, id);
+  dot_expr(binary->left, id);
+  dot_expr(binary->right, id);
+}
+
 static void dot_expr(Expr *expr, u64 pid) {
   switch (expr->type) {
     case EXPR_LITERAL: return dot_literal(expr->literal, pid);
+    case EXPR_UNARY: return dot_unary(expr->unary, pid);
+    case EXPR_BINARY: return dot_binary(expr->binary, pid);
   }
 }
 

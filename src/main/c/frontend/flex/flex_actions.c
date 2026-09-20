@@ -11,6 +11,8 @@
 
 CompilationStatus lex_operator(TokenLabel label) {
   Token *token = fe_create_token(label);
+  token->semantic_value->token = label;
+
   fe_push_token(token);
   fe_free_token(token);
   return IN_PROGRESS;
@@ -18,6 +20,8 @@ CompilationStatus lex_operator(TokenLabel label) {
 
 CompilationStatus lex_keyword(TokenLabel label) {
   Token *token = fe_create_token(label);
+  token->semantic_value->token = label;
+
   fe_push_token(token);
   fe_free_token(token);
   return IN_PROGRESS;

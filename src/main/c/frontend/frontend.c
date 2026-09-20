@@ -41,7 +41,7 @@ void fe_shutdown() {
   cs = NULL;
 }
 
-static const char *token_label_str[] = {
+const char *TOKEN_LABEL_STR[] = {
   [PAREN_L] = "Paren_L",
   [PAREN_R] = "Paren_R",
   [SQUARE_L] = "Square_L",
@@ -72,6 +72,9 @@ static const char *token_label_str[] = {
   [NIL] = "Nil",
   [IS] = "Is",
   [OF] = "Of",
+  [AND] = "And",
+  [OR] = "Or",
+  [NOT] = "Not",
   [STRUCT] = "Struct",
   [UNION] = "Union",
   [ENUM] = "Enum",
@@ -90,7 +93,7 @@ static const char *token_label_str[] = {
 static void _log_token(Token *token, LogLevel level) {
   if (token->label == END) {
     fe_scanner_log(level, "%s @ %u:%u",
-      token_label_str[token->label],
+      TOKEN_LABEL_STR[token->label],
       token->location.first_line,
       token->location.first_column
     );
@@ -98,7 +101,7 @@ static void _log_token(Token *token, LogLevel level) {
   }
 
   fe_scanner_log(level, "%s '%s' @ %u:%u-%u:%u",
-    token_label_str[token->label],
+    TOKEN_LABEL_STR[token->label],
     token->lexeme,
     token->location.first_line,
     token->location.first_column,
