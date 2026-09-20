@@ -28,7 +28,17 @@ typedef enum {
 typedef enum {
   V_IDENTIFIER,
   V_STRUCT_MEMBER,
+  V_LIST_INDEX,
+  V_MAP_INDEX,
 } VariableType;
+
+typedef enum {
+  T_IDENTIFIER,
+  T_STRUCT,
+  T_UNION,
+  T_LIST,
+  T_MAP,
+} TypeType;
 
 typedef struct {
   int first_line;

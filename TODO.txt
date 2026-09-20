@@ -1,0 +1,65 @@
+#=== Frontend =================================================================#
+
+[x] Project structure and build
+[x] Flex setup
+[x] Bison setup
+[x] Logging
+[x] AST debugging with graphviz
+
+/--- Scanner ------------------------------------------------------------------/
+[x] Simple tokens (operators, keywords)
+[x] Literals
+[x] Identifiers
+[x] Line comments
+[x] Block comments
+
+/--- Parser -------------------------------------------------------------------/
+[x] Base expression node
+  [ ] Literal expressions
+    [x] Integers
+    [x] Floats
+    [x] Strings
+    [x] Booleans
+    [ ] Nil
+    [ ] Structs
+    [ ] Enums (identifiers)
+    [ ] Lists
+    [ ] Tuples
+    [ ] Maps
+  [ ] Variable expressions
+    [x] Named variables (identifiers)
+    [x] Struct members
+    [ ] List/tuple access
+    [ ] Map access
+  [x] Grouping expressions (parentheses)
+  [x] Unary expressions
+  [x] Binary expressions
+  [x] Assignment expressions
+  [ ] Declaration expressions
+  [ ] If expressions
+  [ ] For expressions
+  [ ] Block expressions
+  [ ] Function calls
+  [ ] Import expressions
+[ ] Type expression
+  [ ] Simple (identifier) types
+  [ ] Structs
+  [ ] Unions
+  [ ] Enums
+  [ ] Lists
+  [ ] Tuples
+  [ ] Maps
+  [ ] Optional
+  [ ] Functions
+[ ] Type definitions
+  [ ] Type aliases
+  [ ] Structs
+  [ ] Unions
+  [ ] Enums
+[ ] Function definitions
+[x] Expression lists
+[x] Program
+
+#=== Backend ==================================================================#
+
+not yet
