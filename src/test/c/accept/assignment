@@ -1,0 +1,6 @@
+// Simple assignment
+foo = 5
+
+// Struct member
+my_struct.foo = 5 + 6
+my_struct.bar = my_struct.foo + 1

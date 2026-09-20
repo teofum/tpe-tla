@@ -124,12 +124,12 @@ struct BinaryExpr {
 };
 
 struct AssignmentExpr {
-  Expr *left;
+  VariableExpr *left;
   Expr *right;
 };
 
 struct DeclarationExpr {
-  Expr *left;
+  IdentifierVariable *left;
   Expr *right;
   Expr *type; // TODO TypeExpr
 };
@@ -205,6 +205,7 @@ Expr *ast_expr_variable(VariableExpr *var);
 Expr *ast_expr_unary(UnaryExpr *unary);
 Expr *ast_expr_binary(BinaryExpr *binary);
 Expr *ast_expr_group(GroupExpr *group);
+Expr *ast_expr_assignment(AssignmentExpr *assign);
 
 LiteralExpr *ast_literal_integer(IntegerLiteral *i);
 LiteralExpr *ast_literal_float(FloatLiteral *f);
@@ -217,6 +218,7 @@ VariableExpr *ast_variable_struct_member(Expr *struct_expr, TokenMeta *id);
 UnaryExpr *ast_unary(TokenMeta *op, Expr *expr);
 BinaryExpr *ast_binary(Expr *left, TokenMeta *op, Expr *right);
 GroupExpr *ast_group(Expr *expr);
+AssignmentExpr *ast_assignment(VariableExpr *left, Expr *right);
 
 ExprList *ast_expr_list(Expr *head, ExprList *tail);
 Program *ast_program(ExprList *exprs);
@@ -227,6 +229,7 @@ void ast_free_variable(VariableExpr *var);
 void ast_free_unary(UnaryExpr *unary);
 void ast_free_binary(BinaryExpr *binary);
 void ast_free_group(GroupExpr *group);
+void ast_free_assignment(AssignmentExpr *assign);
 
 void ast_free_int_literal(IntegerLiteral *l);
 void ast_free_float_literal(FloatLiteral *l);

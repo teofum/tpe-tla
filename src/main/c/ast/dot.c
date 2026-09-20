@@ -34,7 +34,7 @@ static void _printfln(const char *fmt, ...) {
 }
 
 static void _node(u64 id, const char *label) {
-  _printfln("%llu [label=\"%s\"];", id, label);
+  _printfln("%llu [shape=box,label=\"%s\"];", id, label);
 }
 
 static void _edge(u64 id1, u64 id2) {
@@ -116,6 +116,14 @@ static void dot_group(GroupExpr *group, u64 pid) {
   dot_expr(group->inner_expr, id);
 }
 
+static void dot_assignment(AssignmentExpr *assign, u64 pid) {
+  u64 id = next_id();
+  _node(id, "=");
+  _edge(pid, id);
+  dot_variable(assign->left, id);
+  dot_expr(assign->right, id);
+}
+
 static void dot_expr(Expr *expr, u64 pid) {
   switch (expr->type) {
     case EXPR_LITERAL: return dot_literal(expr->literal, pid);
@@ -123,6 +131,7 @@ static void dot_expr(Expr *expr, u64 pid) {
     case EXPR_UNARY: return dot_unary(expr->unary, pid);
     case EXPR_BINARY: return dot_binary(expr->binary, pid);
     case EXPR_GROUP: return dot_group(expr->group, pid);
+    case EXPR_ASSIGNMENT: return dot_assignment(expr->assignment, pid);
   }
 }
 

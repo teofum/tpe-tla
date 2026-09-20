@@ -7,7 +7,9 @@
 #include "bison_actions.h"
 #include "bison_parser.h"
 
-void yyerror(YYLTYPE *location, const char *message) {}
+void yyerror(YYLTYPE *location, const char *message) {
+  printf("wank\n");
+}
 
 %}
 
@@ -51,6 +53,7 @@ void yyerror(YYLTYPE *location, const char *message) {}
 %destructor { ast_free_unary($$); } <unary>
 %destructor { ast_free_binary($$); } <binary>
 %destructor { ast_free_group($$); } <group>
+%destructor { ast_free_assignment($$); } <assignment>
 %destructor { ast_free_expr_list($$, true); } <expression_list>
 %destructor { ast_free_program($$); } <program>
 
@@ -116,6 +119,7 @@ void yyerror(YYLTYPE *location, const char *message) {}
 %type <unary>             unary
 %type <binary>            binary
 %type <group>             group
+%type <assignment>        assignment
 
 %type <program>           program
 %type <expression_list>   expression_list
@@ -145,6 +149,7 @@ expression: literal                         { $$ = parse_literal_expr($1); }
   | unary                                   { $$ = parse_unary_expr($1); }
   | binary                                  { $$ = parse_binary_expr($1); }
   | group                                   { $$ = parse_group_expr($1); }
+  | assignment                              { $$ = parse_assignment_expr($1); }
   ;
 
 literal: INTEGER                            { $$ = parse_integer_literal($1); }
@@ -176,6 +181,9 @@ binary: expression PLUS expression          { $$ = parse_binary($1, $2, $3); }
   ;
 
 group: PAREN_L expression PAREN_R           { $$ = parse_group($1, $2, $3); }
+  ;
+
+assignment: variable EQUAL expression       { $$ = parse_assignment($1, $2, $3); }
   ;
 
 %%

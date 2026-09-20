@@ -22,6 +22,7 @@ AST_EXPR_FUNC(ast_expr_variable, VariableExpr, EXPR_VARIABLE, variable)
 AST_EXPR_FUNC(ast_expr_unary, UnaryExpr, EXPR_UNARY, unary)
 AST_EXPR_FUNC(ast_expr_binary, BinaryExpr, EXPR_BINARY, binary)
 AST_EXPR_FUNC(ast_expr_group, GroupExpr, EXPR_GROUP, group)
+AST_EXPR_FUNC(ast_expr_assignment, AssignmentExpr, EXPR_ASSIGNMENT, assignment)
 
 // -----------------------------------------------------------------------------
 
@@ -126,6 +127,16 @@ GroupExpr *ast_group(Expr *expr) {
   return group;
 }
 
+AssignmentExpr *ast_assignment(VariableExpr *left, Expr *right) {
+  AssignmentExpr *assign = new(AssignmentExpr);
+  *assign = (AssignmentExpr){
+    .left = left,
+    .right = right,
+  };
+
+  return assign;
+}
+
 // -----------------------------------------------------------------------------
 
 ExprList *ast_expr_list(Expr *head, ExprList *tail) {
@@ -172,6 +183,7 @@ void ast_free_expr(Expr *expr) {
     case EXPR_UNARY: ast_free_unary(expr->unary); break;
     case EXPR_BINARY: ast_free_binary(expr->binary); break;
     case EXPR_GROUP: ast_free_group(expr->group); break;
+    case EXPR_ASSIGNMENT: ast_free_assignment(expr->assignment); break;
     // TODO other types
   }
 
@@ -222,6 +234,14 @@ void ast_free_group(GroupExpr *group) {
 
   ast_free_expr(group->inner_expr);
   free(group);
+}
+
+void ast_free_assignment(AssignmentExpr *assign) {
+  if (!assign) return;
+
+  ast_free_variable(assign->left);
+  ast_free_expr(assign->right);
+  free(assign);
 }
 
 void ast_free_int_literal(IntegerLiteral *l) {

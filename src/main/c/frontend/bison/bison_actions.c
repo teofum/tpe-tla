@@ -30,6 +30,11 @@ Expr *parse_group_expr(GroupExpr *group) {
   return ast_expr_group(group);
 }
 
+Expr *parse_assignment_expr(AssignmentExpr *assign) {
+  fe_parser_log(LOG_DEBUG, "Assignment Expr");
+  return ast_expr_assignment(assign);
+}
+
 // -----------------------------------------------------------------------------
 
 LiteralExpr *parse_integer_literal(IntegerLiteral *i) {
@@ -82,6 +87,12 @@ GroupExpr *parse_group(TokenMeta *open, Expr *expr, TokenMeta *close) {
   ast_free_meta(open);
   ast_free_meta(close);
   return ast_group(expr);
+}
+
+AssignmentExpr *parse_assignment(VariableExpr *left, TokenMeta *op, Expr *right) {
+  fe_parser_log(LOG_DEBUG, "Assignment");
+  ast_free_meta(op);
+  return ast_assignment(left, right);
 }
 
 // -----------------------------------------------------------------------------
