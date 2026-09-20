@@ -27,6 +27,8 @@ typedef struct {
 
 // -----------------------------------------------------------------------------
 
+typedef i32 TokenLabel;
+
 typedef u32 FlexContext;
 
 typedef enum {

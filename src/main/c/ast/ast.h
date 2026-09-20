@@ -1,7 +1,6 @@
 #ifndef AST_HEADER
 #define AST_HEADER
 
-#include <frontend/frontend.h>
 #include <support/types.h>
 
 typedef enum {
@@ -38,6 +37,10 @@ typedef struct BlockExpr BlockExpr;
 
 typedef struct Program Program;
 typedef struct ExprList ExprList;
+
+typedef struct {
+  Program *ast;
+} CompilerState;
 
 struct Expr {
   ExprType type;
@@ -110,7 +113,7 @@ struct ForExpr {
 
 struct BlockExpr {
   u32 len;
-  Expr *exprs;
+  Expr **exprs;
 };
 
 struct ExprList {
@@ -121,7 +124,22 @@ struct ExprList {
 
 struct Program {
   u32 len;
-  Expr *exprs;
+  Expr **exprs;
 };
+
+Expr *ast_expr_literal(LiteralExpr *literal);
+
+LiteralExpr *ast_literal_integer(i64 i);
+LiteralExpr *ast_literal_float(f64 f);
+LiteralExpr *ast_literal_string(str s);
+LiteralExpr *ast_literal_boolean(bool b);
+
+ExprList *ast_expr_list(Expr *head, ExprList *tail);
+Program *ast_program(ExprList *exprs);
+
+void ast_free_expr(Expr *expr);
+void ast_free_literal(LiteralExpr *literal);
+void ast_free_expr_list(ExprList *list, bool free_exprs);
+void ast_free_program(Program *program);
 
 #endif

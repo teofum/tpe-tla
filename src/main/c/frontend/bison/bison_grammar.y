@@ -40,6 +40,11 @@ void yyerror(YYLTYPE *location, const char *message) {}
   ExprList *expression_list;
 }
 
+%destructor { ast_free_expr($$); } <expression>
+%destructor { ast_free_literal($$); } <literal>
+%destructor { ast_free_expr_list($$, true); } <expression_list>
+%destructor { ast_free_program($$); } <program>
+
 // Symbols
 %token <token>    PAREN_L
 %token <token>    PAREN_R

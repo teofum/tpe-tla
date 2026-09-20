@@ -1,10 +1,9 @@
 #ifndef FRONTEND_HEADER
 #define FRONTEND_HEADER
 
+#include <ast/ast.h>
 #include <support/types.h>
 #include <support/logger.h>
-
-typedef i32 TokenLabel;
 
 typedef struct {
   int first_line;
@@ -32,16 +31,17 @@ typedef struct {
   Logger *parse_logger;
 } Frontend;
 
-void fe_init();
+void fe_init(CompilerState *compiler_state);
 void fe_shutdown();
 
 Token *fe_create_token(TokenLabel label);
 void fe_free_token(Token *token);
 
 CompilationStatus fe_push_token(Token *token);
-
 void fe_enter_context(FlexContext ctx);
 void fe_leave_context();
+
+void fe_set_ast(Program *ast);
 
 CompilationStatus fe_parse();
 

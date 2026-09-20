@@ -12,8 +12,9 @@
 #include <support/logger.h>
 
 static Frontend *f = NULL;
+static CompilerState *cs = NULL;
 
-void fe_init() {
+void fe_init(CompilerState *compiler_state) {
   f = new (Frontend);
   yylex_init(&f->scanner);
   f->parser = yypstate_new();
@@ -22,8 +23,9 @@ void fe_init() {
   f->parse_logger = logger_create("Parser", stderr, LOG_ALL);
 
   flex_enter_context(f, 0);
-}
 
+  cs = compiler_state;
+}
 
 void fe_shutdown() {
   if (!f) return;
@@ -36,6 +38,7 @@ void fe_shutdown() {
   free(f);
 
   f = NULL;
+  cs = NULL;
 }
 
 static const char *token_label_str[] = {
@@ -135,6 +138,10 @@ void fe_enter_context(FlexContext ctx) {
 
 void fe_leave_context() {
   flex_leave_context(f);
+}
+
+void fe_set_ast(Program *ast) {
+  cs->ast = ast;
 }
 
 static FlexContext _ctx() {
