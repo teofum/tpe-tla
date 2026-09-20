@@ -155,6 +155,7 @@ literal: INTEGER                            { $$ = parse_integer_literal($1); }
 
 variable: IDENTIFIER                        { $$ = parse_identifier_variable($1); }
   | expression DOT IDENTIFIER               { $$ = parse_struct_member_variable($1, $2, $3); }
+  ;
 
 unary: BANG expression                      { $$ = parse_unary($1, $2); }
   | NOT expression                          { $$ = parse_unary($1, $2); }
@@ -175,5 +176,6 @@ binary: expression PLUS expression          { $$ = parse_binary($1, $2, $3); }
   ;
 
 group: PAREN_L expression PAREN_R           { $$ = parse_group($1, $2, $3); }
+  ;
 
 %%
