@@ -23,6 +23,7 @@ AST_EXPR_FUNC(ast_expr_unary, UnaryExpr, EXPR_UNARY, unary)
 AST_EXPR_FUNC(ast_expr_binary, BinaryExpr, EXPR_BINARY, binary)
 AST_EXPR_FUNC(ast_expr_group, GroupExpr, EXPR_GROUP, group)
 AST_EXPR_FUNC(ast_expr_assignment, AssignmentExpr, EXPR_ASSIGNMENT, assignment)
+AST_EXPR_FUNC(ast_expr_decl, DeclarationExpr, EXPR_DECLARATION, declaration)
 
 // -----------------------------------------------------------------------------
 
@@ -68,14 +69,14 @@ LiteralExpr *ast_literal_boolean(BooleanLiteral *b) {
 
 // -----------------------------------------------------------------------------
 
-VariableExpr *ast_variable_identifier(TokenMeta *id) {
-  IdentifierVariable *id_var = new(IdentifierVariable);
-  *id_var = (IdentifierVariable){ .meta = id };
+VariableExpr *ast_variable_named(TokenMeta *id) {
+  NamedVariable *named_var = new(NamedVariable);
+  *named_var = (NamedVariable){ .meta = id };
 
   VariableExpr *var = new(VariableExpr);
   *var = (VariableExpr){
-    .type = V_IDENTIFIER,
-    .identifier = id_var,
+    .type = V_NAMED,
+    .named = named_var,
   };
 
   return var;
@@ -153,6 +154,32 @@ AssignmentExpr *ast_assignment(VariableExpr *left, Expr *right) {
   return assign;
 }
 
+DeclarationExpr *ast_declaration(TokenMeta *id, Type *type, Expr *expr) {
+  DeclarationExpr *decl = new(DeclarationExpr);
+  *decl = (DeclarationExpr){
+    .left = id,
+    .right = expr,
+    .type = type,
+  };
+
+  return decl;
+}
+
+// -----------------------------------------------------------------------------
+
+Type *ast_type_named(TokenMeta *id) {
+  NamedType *named_type = new(NamedType);
+  *named_type = (NamedType){ .meta = id };
+
+  Type *type = new(Type);
+  *type = (Type){
+    .type = T_NAMED,
+    .named = named_type,
+  };
+
+  return type;
+}
+
 // -----------------------------------------------------------------------------
 
 ExprList *ast_expr_list(Expr *head, ExprList *tail) {
@@ -200,6 +227,7 @@ void ast_free_expr(Expr *expr) {
     case EXPR_BINARY: ast_free_binary(expr->binary); break;
     case EXPR_GROUP: ast_free_group(expr->group); break;
     case EXPR_ASSIGNMENT: ast_free_assignment(expr->assignment); break;
+    case EXPR_DECLARATION: ast_free_decl(expr->declaration); break;
     // TODO other types
   }
 
@@ -222,7 +250,7 @@ void ast_free_variable(VariableExpr *var) {
   if (!var) return;
 
   switch (var->type) {
-    case V_IDENTIFIER: ast_free_identifier_variable(var->identifier); break;
+    case V_NAMED: ast_free_named_variable(var->named); break;
     case V_STRUCT_MEMBER: ast_free_struct_member_variable(var->struct_member); break;
     case V_INDEX: ast_free_indexed_variable(var->indexed); break;
   }
@@ -261,6 +289,15 @@ void ast_free_assignment(AssignmentExpr *assign) {
   free(assign);
 }
 
+void ast_free_decl(DeclarationExpr *decl) {
+  if (!decl) return;
+
+  ast_free_meta(decl->left);
+  ast_free_expr(decl->right);
+  ast_free_type(decl->type);
+  free(decl);
+}
+
 void ast_free_int_literal(IntegerLiteral *l) {
   if (!l) return;
 
@@ -290,7 +327,7 @@ void ast_free_bool_literal(BooleanLiteral *l) {
   free(l);
 }
 
-void ast_free_identifier_variable(IdentifierVariable *v) {
+void ast_free_named_variable(NamedVariable *v) {
   if (!v) return;
 
   ast_free_meta(v->meta);
@@ -311,6 +348,22 @@ void ast_free_indexed_variable(IndexedVariable *v) {
   ast_free_variable(v->container);
   ast_free_expr(v->index);
   free(v);
+}
+
+void ast_free_type(Type *t) {
+  if (!t) return;
+
+  switch (t->type) {
+    case T_NAMED: ast_free_named_type(t->named); break;
+  }
+  free(t);
+}
+
+void ast_free_named_type(NamedType *t) {
+  if (!t) return;
+
+  ast_free_meta(t->meta);
+  free(t);
 }
 
 void ast_free_meta(TokenMeta *meta) {

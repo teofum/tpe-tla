@@ -78,9 +78,9 @@ static void dot_variable(VariableExpr *var, u64 pid) {
   char *label;
 
   switch (var->type) {
-    case V_IDENTIFIER:
+    case V_NAMED:
       label = new_array(char, 256);
-      snprintf(label, 256, "Variable\\n%s", var->identifier->meta->lexeme);
+      snprintf(label, 256, "Variable\\n%s", var->named->meta->lexeme);
       break;
     case V_STRUCT_MEMBER:
       label = new_array(char, 256);
@@ -130,6 +130,32 @@ static void dot_assignment(AssignmentExpr *assign, u64 pid) {
   dot_expr(assign->right, id);
 }
 
+static void dot_type(Type *type, u64 pid) {
+  u64 id = next_id();
+  char *label;
+
+  switch (type->type) {
+    case T_NAMED:
+      label = new_array(char, 256);
+      snprintf(label, 256, "Type\\n%s", type->named->meta->lexeme);
+      break;
+  }
+
+  _node(id, label);
+  _edge(pid, id);
+  free(label);
+}
+
+static void dot_decl(DeclarationExpr *decl, u64 pid) {
+  u64 id = next_id();
+  char label[256];
+  snprintf(label, 256, "Declaration\\n%s", decl->left->lexeme);
+  _node(id, label);
+  _edge(pid, id);
+  if (decl->type) dot_type(decl->type, id);
+  dot_expr(decl->right, id);
+}
+
 static void dot_expr(Expr *expr, u64 pid) {
   switch (expr->type) {
     case EXPR_LITERAL: return dot_literal(expr->literal, pid);
@@ -138,6 +164,7 @@ static void dot_expr(Expr *expr, u64 pid) {
     case EXPR_BINARY: return dot_binary(expr->binary, pid);
     case EXPR_GROUP: return dot_group(expr->group, pid);
     case EXPR_ASSIGNMENT: return dot_assignment(expr->assignment, pid);
+    case EXPR_DECLARATION: return dot_decl(expr->declaration, pid);
   }
 }
 

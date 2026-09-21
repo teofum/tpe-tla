@@ -26,7 +26,7 @@
     [ ] Lists
     [ ] Tuples
     [ ] Maps
-  [ ] Variable expressions
+  [x] Variable expressions
     [x] Named variables (identifiers)
     [x] Struct members
     [x] List/tuple/map access

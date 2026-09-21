@@ -26,13 +26,13 @@ typedef enum {
 } LiteralType;
 
 typedef enum {
-  V_IDENTIFIER,
+  V_NAMED,
   V_STRUCT_MEMBER,
   V_INDEX,
 } VariableType;
 
 typedef enum {
-  T_IDENTIFIER,
+  T_NAMED,
   T_STRUCT,
   T_UNION,
   T_LIST,
@@ -71,9 +71,12 @@ typedef struct FloatLiteral FloatLiteral;
 typedef struct StringLiteral StringLiteral;
 typedef struct BooleanLiteral BooleanLiteral;
 
-typedef struct IdentifierVariable IdentifierVariable;
+typedef struct NamedVariable NamedVariable;
 typedef struct StructMemberVariable StructMemberVariable;
 typedef struct IndexedVariable IndexedVariable;
+
+typedef struct Type Type;
+typedef struct NamedType NamedType;
 
 typedef struct Program Program;
 typedef struct ExprList ExprList;
@@ -113,7 +116,7 @@ struct LiteralExpr {
 struct VariableExpr {
   VariableType type;
   union {
-    IdentifierVariable *identifier;
+    NamedVariable *named;
     StructMemberVariable *struct_member;
     IndexedVariable *indexed;
   };
@@ -140,9 +143,9 @@ struct AssignmentExpr {
 };
 
 struct DeclarationExpr {
-  IdentifierVariable *left;
+  TokenMeta *left;
   Expr *right;
-  Expr *type; // TODO TypeExpr
+  Type *type;
 };
 
 struct IfExpr {
@@ -187,7 +190,7 @@ struct BooleanLiteral {
 
 // -----------------------------------------------------------------------------
 
-struct IdentifierVariable {
+struct NamedVariable {
   TokenMeta *meta;
 };
 
@@ -199,6 +202,19 @@ struct StructMemberVariable {
 struct IndexedVariable {
   VariableExpr *container;
   Expr *index;
+};
+
+// -----------------------------------------------------------------------------
+
+struct Type {
+  TypeType type;
+  union {
+    NamedType *named;
+  };
+};
+
+struct NamedType {
+  TokenMeta *meta;
 };
 
 // -----------------------------------------------------------------------------
@@ -222,20 +238,25 @@ Expr *ast_expr_unary(UnaryExpr *unary);
 Expr *ast_expr_binary(BinaryExpr *binary);
 Expr *ast_expr_group(GroupExpr *group);
 Expr *ast_expr_assignment(AssignmentExpr *assign);
+Expr *ast_expr_decl(DeclarationExpr *decl);
 
 LiteralExpr *ast_literal_integer(IntegerLiteral *i);
 LiteralExpr *ast_literal_float(FloatLiteral *f);
 LiteralExpr *ast_literal_string(StringLiteral *s);
 LiteralExpr *ast_literal_boolean(BooleanLiteral *b);
 
-VariableExpr *ast_variable_identifier(TokenMeta *id);
+VariableExpr *ast_variable_named(TokenMeta *id);
 VariableExpr *ast_variable_struct_member(VariableExpr *struct_expr, TokenMeta *id);
 VariableExpr *ast_variable_indexed(VariableExpr *container, Expr *index);
+
+DeclarationExpr *ast_declaration(TokenMeta *id, Type *type, Expr *expr);
 
 UnaryExpr *ast_unary(TokenMeta *op, Expr *expr);
 BinaryExpr *ast_binary(Expr *left, TokenMeta *op, Expr *right);
 GroupExpr *ast_group(Expr *expr);
 AssignmentExpr *ast_assignment(VariableExpr *left, Expr *right);
+
+Type *ast_type_named(TokenMeta *id);
 
 ExprList *ast_expr_list(Expr *head, ExprList *tail);
 Program *ast_program(ExprList *exprs);
@@ -247,15 +268,19 @@ void ast_free_unary(UnaryExpr *unary);
 void ast_free_binary(BinaryExpr *binary);
 void ast_free_group(GroupExpr *group);
 void ast_free_assignment(AssignmentExpr *assign);
+void ast_free_decl(DeclarationExpr *decl);
 
 void ast_free_int_literal(IntegerLiteral *l);
 void ast_free_float_literal(FloatLiteral *l);
 void ast_free_string_literal(StringLiteral *l);
 void ast_free_bool_literal(BooleanLiteral *l);
 
-void ast_free_identifier_variable(IdentifierVariable *v);
+void ast_free_named_variable(NamedVariable *v);
 void ast_free_struct_member_variable(StructMemberVariable *v);
 void ast_free_indexed_variable(IndexedVariable *v);
+
+void ast_free_type(Type *t);
+void ast_free_named_type(NamedType *t);
 
 void ast_free_meta(TokenMeta *meta);
 void ast_free_expr_list(ExprList *list, bool free_exprs);

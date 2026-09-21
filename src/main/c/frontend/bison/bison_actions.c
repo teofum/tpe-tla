@@ -35,6 +35,11 @@ Expr *parse_assignment_expr(AssignmentExpr *assign) {
   return ast_expr_assignment(assign);
 }
 
+Expr *parse_declaration_expr(DeclarationExpr *decl) {
+  fe_parser_log(LOG_DEBUG, "Declaration Expr");
+  return ast_expr_decl(decl);
+}
+
 // -----------------------------------------------------------------------------
 
 LiteralExpr *parse_integer_literal(IntegerLiteral *i) {
@@ -59,9 +64,9 @@ LiteralExpr *parse_boolean_literal(BooleanLiteral *b) {
 
 // -----------------------------------------------------------------------------
 
-VariableExpr *parse_identifier_variable(TokenMeta *id) {
-  fe_parser_log(LOG_DEBUG, "Identifier Variable %s", id->lexeme);
-  return ast_variable_identifier(id);
+VariableExpr *parse_named_variable(TokenMeta *id) {
+  fe_parser_log(LOG_DEBUG, "Named Variable %s", id->lexeme);
+  return ast_variable_named(id);
 }
 
 VariableExpr *parse_struct_member_variable(VariableExpr *struct_expr, TokenMeta *op, TokenMeta *id) {
@@ -100,6 +105,20 @@ AssignmentExpr *parse_assignment(VariableExpr *left, TokenMeta *op, Expr *right)
   fe_parser_log(LOG_DEBUG, "Assignment");
   ast_free_meta(op);
   return ast_assignment(left, right);
+}
+
+DeclarationExpr *parse_declaration(TokenMeta *left, TokenMeta *l_op, Type *type, TokenMeta *r_op, Expr *right) {
+  fe_parser_log(LOG_DEBUG, "Declaration for %s", left->lexeme);
+  ast_free_meta(l_op);
+  ast_free_meta(r_op);
+  return ast_declaration(left, type, right);
+}
+
+// -----------------------------------------------------------------------------
+
+Type *parse_named_type(TokenMeta *id) {
+  fe_parser_log(LOG_DEBUG, "Named Type %s", id->lexeme);
+  return ast_type_named(id);
 }
 
 // -----------------------------------------------------------------------------
