@@ -11,6 +11,7 @@ Expr *parse_binary_expr(BinaryExpr *binary);
 Expr *parse_group_expr(GroupExpr *group);
 Expr *parse_assignment_expr(AssignmentExpr *assign);
 Expr *parse_declaration_expr(DeclarationExpr *decl);
+Expr *parse_block_expr(BlockExpr *exprs);
 
 LiteralExpr *parse_integer_literal(IntegerLiteral *i);
 LiteralExpr *parse_float_literal(FloatLiteral *f);
@@ -26,6 +27,7 @@ BinaryExpr *parse_binary(Expr *left, TokenMeta *op, Expr *right);
 GroupExpr *parse_group(TokenMeta *open, Expr *expr, TokenMeta *close);
 AssignmentExpr *parse_assignment(VariableExpr *left, TokenMeta *op, Expr *right);
 DeclarationExpr *parse_declaration(TokenMeta *left, TokenMeta *l_op, Type *type, TokenMeta *r_op, Expr *right);
+BlockExpr *parse_block(TokenMeta *open, ExprList *exprs, TokenMeta *close);
 
 Type *parse_named_type(TokenMeta *id);
 

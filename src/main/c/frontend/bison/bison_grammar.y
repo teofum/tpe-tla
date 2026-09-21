@@ -36,7 +36,7 @@ void yyerror(YYLTYPE *location, const char *message) {
   DeclarationExpr *declaration;
   IfExpr *if_expr;
   ForExpr *for_expr;
-  BlockExpr *block_expr;
+  BlockExpr *block;
 
   Type *type;
 
@@ -125,6 +125,7 @@ void yyerror(YYLTYPE *location, const char *message) {
 %type <group>             group
 %type <assignment>        assignment
 %type <declaration>       declaration
+%type <block>             block
 
 %type <type>              type
 
@@ -159,6 +160,7 @@ expression: literal                                     { $$ = parse_literal_exp
   | group                                               { $$ = parse_group_expr($1); }
   | assignment                                          { $$ = parse_assignment_expr($1); }
   | declaration                                         { $$ = parse_declaration_expr($1); }
+  | block                                               { $$ = parse_block_expr($1); }
   ;
 
 literal: INTEGER                                        { $$ = parse_integer_literal($1); }
@@ -198,6 +200,9 @@ assignment: variable EQUAL expression                   { $$ = parse_assignment(
 
 declaration: IDENTIFIER COLON type EQUAL expression     { $$ = parse_declaration($1, $2, $3, $4, $5); }
   | IDENTIFIER COLON EQUAL expression                   { $$ = parse_declaration($1, $2, NULL, $3, $4); }
+  ;
+
+block: CURLY_L expression_list CURLY_R                  { $$ = parse_block($1, $2, $3); }
   ;
 
 type: IDENTIFIER                                        { $$ = parse_named_type($1); }

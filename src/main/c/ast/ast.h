@@ -99,7 +99,7 @@ struct Expr {
     DeclarationExpr *declaration;
     IfExpr *if_expr;
     ForExpr *for_expr;
-    BlockExpr *block_expr;
+    BlockExpr *block;
   };
 };
 
@@ -239,6 +239,7 @@ Expr *ast_expr_binary(BinaryExpr *binary);
 Expr *ast_expr_group(GroupExpr *group);
 Expr *ast_expr_assignment(AssignmentExpr *assign);
 Expr *ast_expr_decl(DeclarationExpr *decl);
+Expr *ast_expr_block(BlockExpr *block);
 
 LiteralExpr *ast_literal_integer(IntegerLiteral *i);
 LiteralExpr *ast_literal_float(FloatLiteral *f);
@@ -255,6 +256,7 @@ UnaryExpr *ast_unary(TokenMeta *op, Expr *expr);
 BinaryExpr *ast_binary(Expr *left, TokenMeta *op, Expr *right);
 GroupExpr *ast_group(Expr *expr);
 AssignmentExpr *ast_assignment(VariableExpr *left, Expr *right);
+BlockExpr *ast_block(ExprList *exprs);
 
 Type *ast_type_named(TokenMeta *id);
 
@@ -269,6 +271,7 @@ void ast_free_binary(BinaryExpr *binary);
 void ast_free_group(GroupExpr *group);
 void ast_free_assignment(AssignmentExpr *assign);
 void ast_free_decl(DeclarationExpr *decl);
+void ast_free_block(BlockExpr *block);
 
 void ast_free_int_literal(IntegerLiteral *l);
 void ast_free_float_literal(FloatLiteral *l);

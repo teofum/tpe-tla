@@ -1,0 +1,11 @@
+// Blocks group expressions and define a scope
+{
+  x: int = 5
+  x = 6
+  foo.bar[2] + x
+}
+
+{
+  y := 7
+  y
+}

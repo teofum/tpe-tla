@@ -37,7 +37,7 @@
   [x] Declaration expressions
   [ ] If expressions
   [ ] For expressions
-  [ ] Block expressions
+  [x] Block expressions
   [ ] Function calls
   [ ] Import expressions
 [ ] Type expression
@@ -50,13 +50,13 @@
   [ ] Maps
   [ ] Optional
   [ ] Functions
-[ ] Type definitions
+[ ] Statements
+  [ ] Expression statements
+  [ ] Declarations
   [ ] Type aliases
-  [ ] Structs
-  [ ] Unions
-  [ ] Enums
-[ ] Function definitions
+  [ ] Function definitions
 [x] Expression lists
+[x] Statement lists
 [x] Program
 
 #=== Backend ==================================================================#

@@ -24,6 +24,7 @@ AST_EXPR_FUNC(ast_expr_binary, BinaryExpr, EXPR_BINARY, binary)
 AST_EXPR_FUNC(ast_expr_group, GroupExpr, EXPR_GROUP, group)
 AST_EXPR_FUNC(ast_expr_assignment, AssignmentExpr, EXPR_ASSIGNMENT, assignment)
 AST_EXPR_FUNC(ast_expr_decl, DeclarationExpr, EXPR_DECLARATION, declaration)
+AST_EXPR_FUNC(ast_expr_block, BlockExpr, EXPR_BLOCK, block)
 
 // -----------------------------------------------------------------------------
 
@@ -165,6 +166,25 @@ DeclarationExpr *ast_declaration(TokenMeta *id, Type *type, Expr *expr) {
   return decl;
 }
 
+BlockExpr *ast_block(ExprList *exprs) {
+  BlockExpr* block = new(BlockExpr);
+  *block = (BlockExpr){
+    .len = exprs->len,
+    .exprs = new_array(Expr *, exprs->len),
+  };
+
+  ExprList *tail = exprs;
+  for (u32 i = 0; tail != NULL && i < block->len; i++) {
+    block->exprs[block->len - i - 1] = tail->head;
+    tail = tail->tail;
+  }
+
+  // We consumed the expression list, so free its memory without freeing the
+  // actual expressions, which we now own
+  ast_free_expr_list(exprs, false);
+  return block;
+}
+
 // -----------------------------------------------------------------------------
 
 Type *ast_type_named(TokenMeta *id) {
@@ -228,6 +248,7 @@ void ast_free_expr(Expr *expr) {
     case EXPR_GROUP: ast_free_group(expr->group); break;
     case EXPR_ASSIGNMENT: ast_free_assignment(expr->assignment); break;
     case EXPR_DECLARATION: ast_free_decl(expr->declaration); break;
+    case EXPR_BLOCK: ast_free_block(expr->block); break;
     // TODO other types
   }
 
@@ -296,6 +317,16 @@ void ast_free_decl(DeclarationExpr *decl) {
   ast_free_expr(decl->right);
   ast_free_type(decl->type);
   free(decl);
+}
+
+void ast_free_block(BlockExpr *block) {
+  if (!block) return;
+
+  for (u32 i = 0; i < block->len; i++) {
+    ast_free_expr(block->exprs[i]);
+  }
+  free(block->exprs);
+  free(block);
 }
 
 void ast_free_int_literal(IntegerLiteral *l) {

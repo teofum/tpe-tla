@@ -40,6 +40,11 @@ Expr *parse_declaration_expr(DeclarationExpr *decl) {
   return ast_expr_decl(decl);
 }
 
+Expr *parse_block_expr(BlockExpr *block) {
+  fe_parser_log(LOG_DEBUG, "Block Expr (len=%u)", block->len);
+  return ast_expr_block(block);
+}
+
 // -----------------------------------------------------------------------------
 
 LiteralExpr *parse_integer_literal(IntegerLiteral *i) {
@@ -112,6 +117,14 @@ DeclarationExpr *parse_declaration(TokenMeta *left, TokenMeta *l_op, Type *type,
   ast_free_meta(l_op);
   ast_free_meta(r_op);
   return ast_declaration(left, type, right);
+}
+
+BlockExpr *parse_block(TokenMeta *open, ExprList *exprs, TokenMeta *close) {
+  BlockExpr *block = ast_block(exprs);
+  fe_parser_log(LOG_DEBUG, "Block (len=%u)", block->len);
+  ast_free_meta(open);
+  ast_free_meta(close);
+  return block;
 }
 
 // -----------------------------------------------------------------------------

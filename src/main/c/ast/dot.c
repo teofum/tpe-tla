@@ -156,6 +156,15 @@ static void dot_decl(DeclarationExpr *decl, u64 pid) {
   dot_expr(decl->right, id);
 }
 
+static void dot_block(BlockExpr *block, u64 pid) {
+  u64 id = next_id();
+  _node(id, "Block");
+  _edge(pid, id);
+  for (u32 i = 0; i < block->len; i++) {
+    dot_expr(block->exprs[i], id);
+  }
+}
+
 static void dot_expr(Expr *expr, u64 pid) {
   switch (expr->type) {
     case EXPR_LITERAL: return dot_literal(expr->literal, pid);
@@ -165,6 +174,7 @@ static void dot_expr(Expr *expr, u64 pid) {
     case EXPR_GROUP: return dot_group(expr->group, pid);
     case EXPR_ASSIGNMENT: return dot_assignment(expr->assignment, pid);
     case EXPR_DECLARATION: return dot_decl(expr->declaration, pid);
+    case EXPR_BLOCK: return dot_block(expr->block, pid);
   }
 }
 
