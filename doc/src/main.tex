@@ -58,9 +58,9 @@ prestaciones y funcionalidades:
 \subsection{Variables}
 
 El lenguaje permitirá definir variables con un \textit{scope} localizado al
-bloque más cercano (con reglas similares a e.g. C). Cada variable tiene un tipo
-y un valor; las variables deberán ser inicializadas explícitamente al definirlas
-y no hacerlo será un error.
+bloque más cercano con reglas similares a otros lenguajes imperativos (e.g. C).
+Cada variable tiene un tipo y un valor; las variables deberán ser inicializadas
+explícitamente al definirlas y no hacerlo será un error.
 
 También se podrán definir constantes, con semántica idéntica a una variable con
 la excepción de que no pueden ser modificadas una vez definidas. Se permitirá la
@@ -70,11 +70,14 @@ nunca dentro del mismo \textit{scope}.
 \paragraph{Ejemplos de sintaxis}
 \small
 \begin{verbatim}
-x: int = 5           // Declara la variable "x" con tipo "int" y valor 5
-y := 5               // Se infiere el tipo "int" del literal 5
-z := "Hello, world!" // Se infiere el tipo "string" del literal
-z_2 := z             // Inicializar con otra variable toma su tipo de datos
-x_2: int = z         // ERROR: z es de tipo "string"
+  x: int = 5           // Declara la variable "x" con tipo "int" y valor 5
+  y := 5               // Se infiere el tipo "int" del literal 5
+  z := "Hello, world!" // Se infiere el tipo "string" del literal
+  z_2 := z             // Inicializar con otra variable toma su tipo de datos
+  x_2: int = z         // ERROR: z es de tipo "string"
+
+  x :: 5               // Declara una constante "x", se infiere tipo "int"
+  x = 6                // ERROR: no se puede asignar una constante
 \end{verbatim}
 \normalsize
 
@@ -120,15 +123,15 @@ Los tipos de datos de usuario se definen con el operador \texttt{is}:
 
 \small
 \begin{verbatim}
-# Struct usuario con campos int, string y opcional(string)
-User is struct {
-  id: int,
-  username, first_name, last_name: string,
-  profile_image_url: string?,
-}
+  # Struct usuario con campos int, string y opcional(string)
+  User is struct {
+    id: int,
+    username, first_name, last_name: string,
+    profile_image_url: string?,
+  }
 
-# Lista de elementos que pueden tomar uno de cuatro tipos
-Article is []union { Paragraph, Image, Quote, CodeBlock }
+  # Lista de elementos que pueden tomar uno de cuatro tipos
+  Article is []union { Paragraph, Image, Quote, CodeBlock }
 \end{verbatim}
 \normalsize
 
@@ -139,9 +142,9 @@ cuerpo de función que contiene su código:
 
 \small
 \begin{verbatim}
-display_name is function(user: User) -> string {
-  concat(" ", user.first_name, user.last_name)
-}
+  display_name is function(user: User) -> string {
+    concat(" ", user.first_name, user.last_name)
+  }
 \end{verbatim}
 \normalsize
 
@@ -153,11 +156,11 @@ Un componente es sencillamente una función que retorna el tipo \texttt{element}
 
 \small
 \begin{verbatim}
-user_avatar is function(user: User) -> element {
-  div.flex.flex-row.gap-4.items-center {
-    // ...
+  user_avatar is function(user: User) -> element {
+    div.flex.flex-row.gap-4.items-center {
+      // ...
+    }
   }
-}
 \end{verbatim}
 \normalsize
 
@@ -168,13 +171,13 @@ de parámetros por completo.
 
 \small
 \begin{verbatim}
-hello is function(name: string = "world") -> string {
-  "Hello, ${name}!"
-}
+  hello is function(name: string = "world") -> string {
+    "Hello, ${name}!"
+  }
 
-name := display_name(user)
-str1 := hello(name)        // "Hello, <users's name>!"
-str2 := hello              // "Hello, world!"
+  name := display_name(user)
+  str1 := hello(name)        // "Hello, <users's name>!"
+  str2 := hello              // "Hello, world!"
 \end{verbatim}
 \normalsize
 
@@ -191,11 +194,11 @@ escritura de código markup:
 
 \small
 \begin{verbatim}
-// Sin sintaxis especial de llamada
-div(class = "flex flex-row gap-4 items-center", id = "myDiv")
+  // Sin sintaxis especial de llamada
+  div(class = "flex flex-row gap-4 items-center", id = "myDiv")
 
-// Con sintaxis especial de llamada
-div.flex.flex-row.gap-4.items-center#myDiv
+  // Con sintaxis especial de llamada
+  div.flex.flex-row.gap-4.items-center#myDiv
 \end{verbatim}
 \normalsize
 
@@ -209,18 +212,21 @@ lugar donde la función tenga la palabra reservada \texttt{compose}:
 
 \small
 \begin{verbatim}
-twice is function -> <string, string> {
-  compose
-  compose
-}
+  twice is function -> <string, string> {
+    compose
+    compose
+  }
 
-foo := twice "Hello"    // <"Hello", "Hello">
-bar := twice {
-  who := "world"
-  "Hello ${who}!"
-}                       // <"Hello, world!", "Hello, world!">
+  foo := twice "Hello"    // <"Hello", "Hello">
+  bar := twice {
+    who := "world"
+    "Hello ${who}!"
+  }                       // <"Hello, world!", "Hello, world!">
 \end{verbatim}
 \normalsize
+
+Una función admite composición únicamente si contiene la palabra
+\texttt{compose}; de no tenerla pasar una composición es un error.
 
 Un bloque de código pasado para composición captura el \textit{scope} de la
 llamada a función; es decir, tiene acceso a las variables del lugar donde se
@@ -275,26 +281,26 @@ retorne \texttt{[]T} y la función tenga como tipo de retorno una tupla de
 \paragraph{Ejemplos}
 \small
 \begin{verbatim}
-// Retorna string ("Hello, world!")
-{
-  greeting := "Hello, "
-  greeting = greeting + "world!"
-  greeting
-}
+  // Retorna string ("Hello, world!")
+  {
+    greeting := "Hello, "
+    greeting = greeting + "world!"
+    greeting
+  }
 
-// Retorna []int ([42, 505, 77])
-{
-  42
-  500 + 5
-  77
-}
+  // Retorna []int ([42, 505, 77])
+  {
+    42
+    500 + 5
+    77
+  }
 
-// Retorna <int, string> (<42, "Hello, world!">)
-{
-  (80 + 4) / 2
-  who := "world"
-  "Hello, ${who}!"
-}
+  // Retorna <int, string> (<42, "Hello, world!">)
+  {
+    (80 + 4) / 2
+    who := "world"
+    "Hello, ${who}!"
+  }
 \end{verbatim}
 \normalsize
 
@@ -305,12 +311,12 @@ parámetro en tiempo de compilación mediante la palabra reservada \texttt{var}:
 
 \small
 \begin{verbatim}
-// Al invocar el compiler se pasa --var title:"Book Inventory"
-page_title := var title default "Data Table"
+  // Al invocar el compiler se pasa --var title:"Book Inventory"
+  page_title := var title default "Data Table"
 
-// Al invocar el compiler se pasa --var src:"books.csv"
-// No tiene default, si no se le da un valor es error de compilación
-csv_source := var csv
+  // Al invocar el compiler se pasa --var src:"books.csv"
+  // No tiene default, si no se le da un valor es error de compilación
+  csv_source := var csv
 \end{verbatim}
 \normalsize
 
@@ -364,11 +370,11 @@ archivo fuente. Esta variable se puede combinar con \texttt{import}:
 \pagebreak
 \small
 \begin{verbatim}
-// Ejemplo CSV
-headers, rows := import csv content_path
+  // Ejemplo CSV
+  headers, rows := import csv content_path
 
-// Ejemplo MD
-article := import md with components content_path
+  // Ejemplo MD
+  article := import md with components content_path
 \end{verbatim}
 \normalsize
 
