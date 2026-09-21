@@ -26,6 +26,9 @@ void yyerror(YYLTYPE *location, const char *message) {
 	StringLiteral *string;
 	BooleanLiteral *boolean;
 
+	Stmt *statement;
+  DeclarationStmt *declaration;
+
 	Expr *expression;
 	LiteralExpr *literal;
   VariableExpr *variable;
@@ -33,7 +36,6 @@ void yyerror(YYLTYPE *location, const char *message) {
   UnaryExpr *unary;
   BinaryExpr *binary;
   AssignmentExpr *assignment;
-  DeclarationExpr *declaration;
   IfExpr *if_expr;
   ForExpr *for_expr;
   BlockExpr *block;
@@ -41,7 +43,7 @@ void yyerror(YYLTYPE *location, const char *message) {
   Type *type;
 
   Program *program;
-  ExprList *expression_list;
+  StmtList *statement_list;
 }
 
 %destructor { ast_free_meta($$); } <token>
@@ -117,6 +119,9 @@ void yyerror(YYLTYPE *location, const char *message) {
 %token <token>    UNKNOWN
 %token <token>    END
 
+%type <statement>         statement
+%type <declaration>       declaration
+
 %type <expression>        expression
 %type <literal>           literal
 %type <variable>          variable
@@ -124,13 +129,12 @@ void yyerror(YYLTYPE *location, const char *message) {
 %type <binary>            binary
 %type <group>             group
 %type <assignment>        assignment
-%type <declaration>       declaration
 %type <block>             block
 
 %type <type>              type
 
 %type <program>           program
-%type <expression_list>   expression_list
+%type <statement_list>    statement_list
 
 // Precedence
 %right EQUAL
@@ -146,11 +150,15 @@ void yyerror(YYLTYPE *location, const char *message) {
 
 %%
 
-program: expression_list END                            { $$ = parse_program($1); }
+program: statement_list END                             { $$ = parse_program($1); }
   ;
 
-expression_list: expression                             { $$ = parse_expr_list($1, NULL); }
-  | expression_list expression                          { $$ = parse_expr_list($2, $1); }
+statement_list: statement                               { $$ = parse_stmt_list($1, NULL); }
+  | statement_list statement                            { $$ = parse_stmt_list($2, $1); }
+  ;
+
+statement: expression                                   { $$ = parse_expr_stmt($1); }
+  | declaration                                         { $$ = parse_declaration_stmt($1); }
   ;
 
 expression: literal                                     { $$ = parse_literal_expr($1); }
@@ -159,7 +167,6 @@ expression: literal                                     { $$ = parse_literal_exp
   | binary                                              { $$ = parse_binary_expr($1); }
   | group                                               { $$ = parse_group_expr($1); }
   | assignment                                          { $$ = parse_assignment_expr($1); }
-  | declaration                                         { $$ = parse_declaration_expr($1); }
   | block                                               { $$ = parse_block_expr($1); }
   ;
 
@@ -202,7 +209,8 @@ declaration: IDENTIFIER COLON type EQUAL expression     { $$ = parse_declaration
   | IDENTIFIER COLON EQUAL expression                   { $$ = parse_declaration($1, $2, NULL, $3, $4); }
   ;
 
-block: CURLY_L expression_list CURLY_R                  { $$ = parse_block($1, $2, $3); }
+block: CURLY_L statement_list expression CURLY_R        { $$ = parse_block($1, $2, $3, $4); }
+  | CURLY_L expression CURLY_R                          { $$ = parse_block($1, NULL, $2, $3); }
   ;
 
 type: IDENTIFIER                                        { $$ = parse_named_type($1); }

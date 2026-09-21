@@ -7,6 +7,34 @@
 
 // -----------------------------------------------------------------------------
 
+#define AST_STMT_FUNC(f_name, T, stmt_t, p_name)  \
+Stmt *f_name(T *p_name) {                         \
+  Stmt *stmt = new(Stmt);                         \
+  *stmt = (Stmt){                                 \
+    .type = stmt_t,                               \
+    .p_name = p_name,                             \
+  };                                              \
+  return stmt;                                    \
+}                                                 \
+
+AST_STMT_FUNC(ast_stmt_expr, Expr, STMT_EXPR, expr)
+AST_STMT_FUNC(ast_stmt_decl, DeclarationStmt, STMT_DECLARATION, decl)
+
+// -----------------------------------------------------------------------------
+
+DeclarationStmt *ast_declaration(TokenMeta *id, Type *type, Expr *expr) {
+  DeclarationStmt *decl = new(DeclarationStmt);
+  *decl = (DeclarationStmt){
+    .left = id,
+    .right = expr,
+    .type = type,
+  };
+
+  return decl;
+}
+
+// -----------------------------------------------------------------------------
+
 #define AST_EXPR_FUNC(f_name, T, expr_t, p_name)  \
 Expr *f_name(T *p_name) {                         \
   Expr *expr = new(Expr);                         \
@@ -23,50 +51,24 @@ AST_EXPR_FUNC(ast_expr_unary, UnaryExpr, EXPR_UNARY, unary)
 AST_EXPR_FUNC(ast_expr_binary, BinaryExpr, EXPR_BINARY, binary)
 AST_EXPR_FUNC(ast_expr_group, GroupExpr, EXPR_GROUP, group)
 AST_EXPR_FUNC(ast_expr_assignment, AssignmentExpr, EXPR_ASSIGNMENT, assignment)
-AST_EXPR_FUNC(ast_expr_decl, DeclarationExpr, EXPR_DECLARATION, declaration)
 AST_EXPR_FUNC(ast_expr_block, BlockExpr, EXPR_BLOCK, block)
 
 // -----------------------------------------------------------------------------
 
-LiteralExpr *ast_literal_integer(IntegerLiteral *i) {
-  LiteralExpr *literal = new(LiteralExpr);
-  *literal = (LiteralExpr){
-    .type = L_INTEGER,
-    .integer = i,
-  };
+#define AST_LITERAL_FUNC(f_name, T, literal_t, p_name)  \
+LiteralExpr *f_name(T *p_name) {                        \
+  LiteralExpr *literal = new(LiteralExpr);              \
+  *literal = (LiteralExpr){                             \
+    .type = literal_t,                                  \
+    .p_name = p_name,                                   \
+  };                                                    \
+  return literal;                                       \
+}                                                       \
 
-  return literal;
-}
-
-LiteralExpr *ast_literal_float(FloatLiteral *f) {
-  LiteralExpr *literal = new(LiteralExpr);
-  *literal = (LiteralExpr){
-    .type = L_FLOAT,
-    .floating = f,
-  };
-
-  return literal;
-}
-
-LiteralExpr *ast_literal_string(StringLiteral *s) {
-  LiteralExpr *literal = new(LiteralExpr);
-  *literal = (LiteralExpr){
-    .type = L_STRING,
-    .string = s,
-  };
-
-  return literal;
-}
-
-LiteralExpr *ast_literal_boolean(BooleanLiteral *b) {
-  LiteralExpr *literal = new(LiteralExpr);
-  *literal = (LiteralExpr){
-    .type = L_BOOL,
-    .boolean = b,
-  };
-
-  return literal;
-}
+AST_LITERAL_FUNC(ast_literal_integer, IntegerLiteral, L_INTEGER, integer)
+AST_LITERAL_FUNC(ast_literal_float, FloatLiteral, L_FLOAT, floating)
+AST_LITERAL_FUNC(ast_literal_string, StringLiteral, L_STRING, string)
+AST_LITERAL_FUNC(ast_literal_boolean, BooleanLiteral, L_BOOL, boolean)
 
 // -----------------------------------------------------------------------------
 
@@ -155,33 +157,24 @@ AssignmentExpr *ast_assignment(VariableExpr *left, Expr *right) {
   return assign;
 }
 
-DeclarationExpr *ast_declaration(TokenMeta *id, Type *type, Expr *expr) {
-  DeclarationExpr *decl = new(DeclarationExpr);
-  *decl = (DeclarationExpr){
-    .left = id,
-    .right = expr,
-    .type = type,
-  };
-
-  return decl;
-}
-
-BlockExpr *ast_block(ExprList *exprs) {
+BlockExpr *ast_block(StmtList *statements, Expr *final) {
   BlockExpr* block = new(BlockExpr);
   *block = (BlockExpr){
-    .len = exprs->len,
-    .exprs = new_array(Expr *, exprs->len),
+    .len = statements->len + 1,
+    .statements = new_array(Stmt *, statements->len + 1),
   };
 
-  ExprList *tail = exprs;
-  for (u32 i = 0; tail != NULL && i < block->len; i++) {
-    block->exprs[block->len - i - 1] = tail->head;
+  StmtList *tail = statements;
+  for (u32 i = 0; tail != NULL && i < statements->len; i++) {
+    block->statements[statements->len - i - 1] = tail->head;
     tail = tail->tail;
   }
 
+  block->statements[block->len - 1] = ast_stmt_expr(final);
+
   // We consumed the expression list, so free its memory without freeing the
   // actual expressions, which we now own
-  ast_free_expr_list(exprs, false);
+  ast_free_stmt_list(statements, false);
   return block;
 }
 
@@ -202,8 +195,8 @@ Type *ast_type_named(TokenMeta *id) {
 
 // -----------------------------------------------------------------------------
 
-ExprList *ast_expr_list(Expr *head, ExprList *tail) {
-  ExprList* list = new(ExprList);
+StmtList *ast_stmt_list(Stmt *head, StmtList *tail) {
+  StmtList* list = new(StmtList);
   list->head = head;
   if (tail) {
     list->tail = tail;
@@ -216,26 +209,46 @@ ExprList *ast_expr_list(Expr *head, ExprList *tail) {
   return list;
 }
 
-Program *ast_program(ExprList *exprs) {
+Program *ast_program(StmtList *statements) {
   Program* prog = new(Program);
   *prog = (Program){
-    .len = exprs->len,
-    .exprs = new_array(Expr *, exprs->len),
+    .len = statements->len,
+    .statements = new_array(Stmt *, statements->len),
   };
 
-  ExprList *tail = exprs;
+  StmtList *tail = statements;
   for (u32 i = 0; tail != NULL && i < prog->len; i++) {
-    prog->exprs[prog->len - i - 1] = tail->head;
+    prog->statements[prog->len - i - 1] = tail->head;
     tail = tail->tail;
   }
 
   // We consumed the expression list, so free its memory without freeing the
   // actual expressions, which we now own
-  ast_free_expr_list(exprs, false);
+  ast_free_stmt_list(statements, false);
   return prog;
 }
 
 // -----------------------------------------------------------------------------
+
+void ast_free_stmt(Stmt *stmt) {
+  if (!stmt) return;
+
+  switch (stmt->type) {
+    case STMT_EXPR: ast_free_expr(stmt->expr); break;
+    case STMT_DECLARATION: ast_free_decl(stmt->decl); break;
+  }
+
+  free(stmt);
+}
+
+void ast_free_decl(DeclarationStmt *decl) {
+  if (!decl) return;
+
+  ast_free_meta(decl->left);
+  ast_free_expr(decl->right);
+  ast_free_type(decl->type);
+  free(decl);
+}
 
 void ast_free_expr(Expr *expr) {
   if (!expr) return;
@@ -247,7 +260,6 @@ void ast_free_expr(Expr *expr) {
     case EXPR_BINARY: ast_free_binary(expr->binary); break;
     case EXPR_GROUP: ast_free_group(expr->group); break;
     case EXPR_ASSIGNMENT: ast_free_assignment(expr->assignment); break;
-    case EXPR_DECLARATION: ast_free_decl(expr->declaration); break;
     case EXPR_BLOCK: ast_free_block(expr->block); break;
     // TODO other types
   }
@@ -310,22 +322,13 @@ void ast_free_assignment(AssignmentExpr *assign) {
   free(assign);
 }
 
-void ast_free_decl(DeclarationExpr *decl) {
-  if (!decl) return;
-
-  ast_free_meta(decl->left);
-  ast_free_expr(decl->right);
-  ast_free_type(decl->type);
-  free(decl);
-}
-
 void ast_free_block(BlockExpr *block) {
   if (!block) return;
 
   for (u32 i = 0; i < block->len; i++) {
-    ast_free_expr(block->exprs[i]);
+    ast_free_stmt(block->statements[i]);
   }
-  free(block->exprs);
+  free(block->statements);
   free(block);
 }
 
@@ -404,11 +407,11 @@ void ast_free_meta(TokenMeta *meta) {
   free(meta);
 }
 
-void ast_free_expr_list(ExprList *list, bool free_exprs) {
+void ast_free_stmt_list(StmtList *list, bool free_stmts) {
   if (!list) return;
 
-  if (free_exprs) ast_free_expr(list->head);
-  ast_free_expr_list(list->tail, free_exprs);
+  if (free_stmts) ast_free_stmt(list->head);
+  ast_free_stmt_list(list->tail, free_stmts);
 
   free(list);
 }
@@ -417,8 +420,8 @@ void ast_free_program(Program *program) {
   if (!program) return;
 
   for (u32 i = 0; i < program->len; i++) {
-    ast_free_expr(program->exprs[i]);
+    ast_free_stmt(program->statements[i]);
   }
-  free(program->exprs);
+  free(program->statements);
   free(program);
 }

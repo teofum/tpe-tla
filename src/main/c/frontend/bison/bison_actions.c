@@ -5,6 +5,25 @@
 
 #include "bison_actions.h"
 
+Stmt *parse_expr_stmt(Expr *expr) {
+  fe_parser_log(LOG_DEBUG, "Expression Stmt");
+  return ast_stmt_expr(expr);
+}
+
+Stmt *parse_declaration_stmt(DeclarationStmt *decl) {
+  fe_parser_log(LOG_DEBUG, "Declaration Stmt");
+  return ast_stmt_decl(decl);
+}
+
+DeclarationStmt *parse_declaration(TokenMeta *left, TokenMeta *l_op, Type *type, TokenMeta *r_op, Expr *right) {
+  fe_parser_log(LOG_DEBUG, "Declaration for %s", left->lexeme);
+  ast_free_meta(l_op);
+  ast_free_meta(r_op);
+  return ast_declaration(left, type, right);
+}
+
+// -----------------------------------------------------------------------------
+
 Expr *parse_literal_expr(LiteralExpr *literal) {
   fe_parser_log(LOG_DEBUG, "Literal Expr");
   return ast_expr_literal(literal);
@@ -33,11 +52,6 @@ Expr *parse_group_expr(GroupExpr *group) {
 Expr *parse_assignment_expr(AssignmentExpr *assign) {
   fe_parser_log(LOG_DEBUG, "Assignment Expr");
   return ast_expr_assignment(assign);
-}
-
-Expr *parse_declaration_expr(DeclarationExpr *decl) {
-  fe_parser_log(LOG_DEBUG, "Declaration Expr");
-  return ast_expr_decl(decl);
 }
 
 Expr *parse_block_expr(BlockExpr *block) {
@@ -112,15 +126,8 @@ AssignmentExpr *parse_assignment(VariableExpr *left, TokenMeta *op, Expr *right)
   return ast_assignment(left, right);
 }
 
-DeclarationExpr *parse_declaration(TokenMeta *left, TokenMeta *l_op, Type *type, TokenMeta *r_op, Expr *right) {
-  fe_parser_log(LOG_DEBUG, "Declaration for %s", left->lexeme);
-  ast_free_meta(l_op);
-  ast_free_meta(r_op);
-  return ast_declaration(left, type, right);
-}
-
-BlockExpr *parse_block(TokenMeta *open, ExprList *exprs, TokenMeta *close) {
-  BlockExpr *block = ast_block(exprs);
+BlockExpr *parse_block(TokenMeta *open, StmtList *statements, Expr *final, TokenMeta *close) {
+  BlockExpr *block = ast_block(statements, final);
   fe_parser_log(LOG_DEBUG, "Block (len=%u)", block->len);
   ast_free_meta(open);
   ast_free_meta(close);
@@ -136,14 +143,14 @@ Type *parse_named_type(TokenMeta *id) {
 
 // -----------------------------------------------------------------------------
 
-ExprList *parse_expr_list(Expr *head, ExprList *tail) {
-  ExprList* list = ast_expr_list(head, tail);
-  fe_parser_log(LOG_DEBUG, "Expr List (len=%u)", list->len);
+StmtList *parse_stmt_list(Stmt *head, StmtList *tail) {
+  StmtList* list = ast_stmt_list(head, tail);
+  fe_parser_log(LOG_DEBUG, "Stmt List (len=%u)", list->len);
   return list;
 }
 
-Program *parse_program(ExprList *exprs) {
-  Program *prog = ast_program(exprs);
+Program *parse_program(StmtList *statements) {
+  Program *prog = ast_program(statements);
   fe_parser_log(LOG_DEBUG, "Program (len=%u)", prog->len);
   fe_set_ast(prog);
   return prog;
