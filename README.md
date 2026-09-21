@@ -1,4 +1,4 @@
-[![✗](https://github.com/Alpha-Theta-Gamma-Mu/Flex-Bison-Compiler/actions/workflows/ci.yaml/badge.svg?branch=development)](https://github.com/Alpha-Theta-Gamma-Mu/Flex-Bison-Compiler/actions/workflows/ci.yaml)
+[![✗](https://github.com/teofum/tpe-tla/actions/workflows/ci.yaml/badge.svg?branch=development)](https://github.com/teofum/tpe-tla/actions/workflows/ci.yaml)
 
 # Flex-Bison-Compiler
 
