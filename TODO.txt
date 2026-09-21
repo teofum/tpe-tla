@@ -34,14 +34,14 @@
   [x] Unary expressions
   [x] Binary expressions
   [x] Assignment expressions
-  [ ] Declaration expressions
+  [x] Declaration expressions
   [ ] If expressions
   [ ] For expressions
   [ ] Block expressions
   [ ] Function calls
   [ ] Import expressions
 [ ] Type expression
-  [ ] Simple (identifier) types
+  [x] Simple (identifier) types
   [ ] Structs
   [ ] Unions
   [ ] Enums

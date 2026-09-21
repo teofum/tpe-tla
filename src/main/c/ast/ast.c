@@ -205,7 +205,7 @@ Program *ast_program(ExprList *exprs) {
 
   ExprList *tail = exprs;
   for (u32 i = 0; tail != NULL && i < prog->len; i++) {
-    prog->exprs[i] = tail->head;
+    prog->exprs[prog->len - i - 1] = tail->head;
     tail = tail->tail;
   }
 
