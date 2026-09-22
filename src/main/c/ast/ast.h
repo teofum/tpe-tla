@@ -8,6 +8,7 @@
 typedef enum {
   STMT_EXPR,
   STMT_DECLARATION,
+  STMT_TYPE_ALIAS,
 } StmtType;
 
 typedef enum {
@@ -61,6 +62,7 @@ typedef struct {
 typedef struct Stmt Stmt;
 typedef struct ExprStmt ExprStmt;
 typedef struct DeclarationStmt DeclarationStmt;
+typedef struct TypeAliasStmt TypeAliasStmt;
 
 typedef struct Expr Expr;
 typedef struct LiteralExpr LiteralExpr;
@@ -99,12 +101,18 @@ struct Stmt {
   union {
     Expr *expr;
     DeclarationStmt *decl;
+    TypeAliasStmt *type_alias;
   };
 };
 
 struct DeclarationStmt {
   TokenMeta *left;
   Expr *right;
+  Type *type;
+};
+
+struct TypeAliasStmt {
+  TokenMeta *alias;
   Type *type;
 };
 
@@ -250,8 +258,10 @@ struct Program {
 
 Stmt *ast_stmt_expr(Expr *expr);
 Stmt *ast_stmt_decl(DeclarationStmt *decl);
+Stmt *ast_stmt_alias(TypeAliasStmt *alias);
 
 DeclarationStmt *ast_declaration(TokenMeta *id, Type *type, Expr *expr);
+TypeAliasStmt *ast_type_alias(TokenMeta *id, Type *type);
 
 Expr *ast_expr_literal(LiteralExpr *literal);
 Expr *ast_expr_variable(VariableExpr *var);
@@ -289,6 +299,7 @@ Program *ast_program(StmtList *statements);
 
 void ast_free_stmt(Stmt *stmt);
 void ast_free_decl(DeclarationStmt *decl);
+void ast_free_alias(TypeAliasStmt *alias);
 
 void ast_free_expr(Expr *expr);
 void ast_free_literal(LiteralExpr *literal);

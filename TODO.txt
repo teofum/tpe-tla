@@ -53,7 +53,7 @@
 [ ] Statements
   [x] Expression statements
   [x] Declarations
-  [ ] Type aliases
+  [x] Type aliases
   [ ] Function definitions
 [x] Expression lists
 [x] Statement lists

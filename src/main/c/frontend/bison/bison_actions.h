@@ -6,8 +6,10 @@
 
 Stmt *parse_expr_stmt(Expr *expr);
 Stmt *parse_declaration_stmt(DeclarationStmt *decl);
+Stmt *parse_type_alias_stmt(TypeAliasStmt *alias);
 
 DeclarationStmt *parse_declaration(TokenMeta *left, TokenMeta *l_op, Type *type, TokenMeta *r_op, Expr *right);
+TypeAliasStmt *parse_type_alias(TokenMeta *left, TokenMeta *is, Type *right);
 
 Expr *parse_literal_expr(LiteralExpr *literal);
 Expr *parse_variable_expr(VariableExpr *var);

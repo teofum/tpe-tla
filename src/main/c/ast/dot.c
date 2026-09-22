@@ -217,10 +217,20 @@ static void dot_decl(DeclarationStmt *decl, u64 pid) {
   dot_expr(decl->right, id);
 }
 
+static void dot_alias(TypeAliasStmt *alias, u64 pid) {
+  u64 id = next_id();
+  char label[256];
+  snprintf(label, 256, "Type alias\\n%s", alias->alias->lexeme);
+  _node(id, label, NODE_STMT);
+  _edge(pid, id);
+  dot_type(alias->type, id);
+}
+
 static void dot_stmt(Stmt *stmt, u64 pid) {
   switch (stmt->type) {
     case STMT_EXPR: return dot_expr(stmt->expr, pid);
     case STMT_DECLARATION: return dot_decl(stmt->decl, pid);
+    case STMT_TYPE_ALIAS: return dot_alias(stmt->type_alias, pid);
   }
 }
 

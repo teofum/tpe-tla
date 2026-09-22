@@ -28,6 +28,7 @@ void yyerror(YYLTYPE *location, const char *message) {
 
 	Stmt *statement;
   DeclarationStmt *declaration;
+  TypeAliasStmt *type_alias;
 
 	Expr *expression;
 	LiteralExpr *literal;
@@ -51,6 +52,7 @@ void yyerror(YYLTYPE *location, const char *message) {
 %destructor { ast_free_float_literal($$); } <floating>
 %destructor { ast_free_string_literal($$); } <string>
 %destructor { ast_free_bool_literal($$); } <boolean>
+%destructor { ast_free_stmt($$); } <statement>
 %destructor { ast_free_expr($$); } <expression>
 %destructor { ast_free_literal($$); } <literal>
 %destructor { ast_free_variable($$); } <variable>
@@ -59,7 +61,10 @@ void yyerror(YYLTYPE *location, const char *message) {
 %destructor { ast_free_group($$); } <group>
 %destructor { ast_free_assignment($$); } <assignment>
 %destructor { ast_free_if($$); } <if_expr>
+%destructor { ast_free_for($$); } <for_expr>
+%destructor { ast_free_block($$); } <block>
 %destructor { ast_free_decl($$); } <declaration>
+%destructor { ast_free_alias($$); } <type_alias>
 %destructor { ast_free_type($$); } <type>
 %destructor { ast_free_stmt_list($$, true); } <statement_list>
 %destructor { ast_free_program($$); } <program>
@@ -122,6 +127,7 @@ void yyerror(YYLTYPE *location, const char *message) {
 
 %type <statement>         statement
 %type <declaration>       declaration
+%type <type_alias>        type_alias
 
 %type <expression>        expression
 %type <literal>           literal
@@ -165,6 +171,14 @@ statement_list: statement                                           { $$ = parse
 
 statement: expression                                               { $$ = parse_expr_stmt($1); }
   | declaration                                                     { $$ = parse_declaration_stmt($1); }
+  | type_alias                                                      { $$ = parse_type_alias_stmt($1); }
+  ;
+
+declaration: IDENTIFIER COLON type EQUAL expression                 { $$ = parse_declaration($1, $2, $3, $4, $5); }
+  | IDENTIFIER COLON EQUAL expression                               { $$ = parse_declaration($1, $2, NULL, $3, $4); }
+  ;
+
+type_alias: IDENTIFIER IS type                                      { $$ = parse_type_alias($1, $2, $3); }
   ;
 
 expression: literal                                                 { $$ = parse_literal_expr($1); }
@@ -219,10 +233,6 @@ if_expr: IF expression expression ELSE expression                   { $$ = parse
 
 for_expr: FOR IDENTIFIER COMMA IDENTIFIER IN expression expression  { $$ = parse_for($1, $2, $3, $4, $5, $6, $7); }
   | FOR IDENTIFIER IN expression expression                         { $$ = parse_for($1, $2, NULL, NULL, $3, $4, $5); }
-  ;
-
-declaration: IDENTIFIER COLON type EQUAL expression                 { $$ = parse_declaration($1, $2, $3, $4, $5); }
-  | IDENTIFIER COLON EQUAL expression                               { $$ = parse_declaration($1, $2, NULL, $3, $4); }
   ;
 
 block: CURLY_L statement_list expression CURLY_R                    { $$ = parse_block($1, $2, $3, $4); }

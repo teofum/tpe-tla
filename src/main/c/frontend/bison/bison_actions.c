@@ -15,11 +15,22 @@ Stmt *parse_declaration_stmt(DeclarationStmt *decl) {
   return ast_stmt_decl(decl);
 }
 
+Stmt *parse_type_alias_stmt(TypeAliasStmt *alias) {
+  fe_parser_log(LOG_DEBUG, "Type Alias Stmt");
+  return ast_stmt_alias(alias);
+}
+
 DeclarationStmt *parse_declaration(TokenMeta *left, TokenMeta *l_op, Type *type, TokenMeta *r_op, Expr *right) {
   fe_parser_log(LOG_DEBUG, "Declaration for %s", left->lexeme);
   ast_free_meta(l_op);
   ast_free_meta(r_op);
   return ast_declaration(left, type, right);
+}
+
+TypeAliasStmt *parse_type_alias(TokenMeta *left, TokenMeta *is, Type *right) {
+  fe_parser_log(LOG_DEBUG, "Type alias for %s", left->lexeme);
+  ast_free_meta(is);
+  return ast_type_alias(left, right);
 }
 
 // -----------------------------------------------------------------------------

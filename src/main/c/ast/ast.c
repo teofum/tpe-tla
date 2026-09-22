@@ -19,6 +19,7 @@ Stmt *f_name(T *p_name) {                         \
 
 AST_STMT_FUNC(ast_stmt_expr, Expr, STMT_EXPR, expr)
 AST_STMT_FUNC(ast_stmt_decl, DeclarationStmt, STMT_DECLARATION, decl)
+AST_STMT_FUNC(ast_stmt_alias, TypeAliasStmt, STMT_TYPE_ALIAS, type_alias)
 
 // -----------------------------------------------------------------------------
 
@@ -31,6 +32,16 @@ DeclarationStmt *ast_declaration(TokenMeta *id, Type *type, Expr *expr) {
   };
 
   return decl;
+}
+
+TypeAliasStmt *ast_type_alias(TokenMeta *id, Type *type) {
+  TypeAliasStmt *alias = new(TypeAliasStmt);
+  *alias = (TypeAliasStmt){
+    .alias = id,
+    .type = type,
+  };
+
+  return alias;
 }
 
 // -----------------------------------------------------------------------------
@@ -263,6 +274,7 @@ void ast_free_stmt(Stmt *stmt) {
   switch (stmt->type) {
     case STMT_EXPR: ast_free_expr(stmt->expr); break;
     case STMT_DECLARATION: ast_free_decl(stmt->decl); break;
+    case STMT_TYPE_ALIAS: ast_free_alias(stmt->type_alias); break;
   }
 
   free(stmt);
@@ -275,6 +287,14 @@ void ast_free_decl(DeclarationStmt *decl) {
   ast_free_expr(decl->right);
   ast_free_type(decl->type);
   free(decl);
+}
+
+void ast_free_alias(TypeAliasStmt *alias) {
+  if (!alias) return;
+
+  ast_free_meta(alias->alias);
+  ast_free_type(alias->type);
+  free(alias);
 }
 
 void ast_free_expr(Expr *expr) {

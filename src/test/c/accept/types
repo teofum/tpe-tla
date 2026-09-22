@@ -1,0 +1,3 @@
+my_int is int
+
+foo: my_int = 5
