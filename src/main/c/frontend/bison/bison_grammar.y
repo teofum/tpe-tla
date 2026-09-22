@@ -159,6 +159,8 @@ void yyerror(YYLTYPE *location, const char *message) {}
 %left OR
 %left AND
 %left NOT
+%left QUESTION_MARK
+%left SQUARE_L SQUARE_R
 %left EQUAL_EQUAL BANG_EQUAL
 %nonassoc GREATER_EQUAL LESS_EQUAL GREATER LESS
 %left PLUS MINUS
@@ -252,6 +254,7 @@ type: IDENTIFIER                                                    { $$ = parse
   | STRUCT CURLY_L struct_field_list COMMA CURLY_R                  { $$ = parse_struct_type($1, $2, $3, $5, $4); }
   | UNION CURLY_L type_list CURLY_R                                 { $$ = parse_union_type($1, $2, $3, $4, NULL); }
   | UNION CURLY_L type_list COMMA CURLY_R                           { $$ = parse_union_type($1, $2, $3, $5, $4); }
+  | type QUESTION_MARK                                              { $$ = parse_optional_type($1, $2); }
   | NIL                                                             { $$ = parse_nil_type($1); }
   ;
 

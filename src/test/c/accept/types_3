@@ -1,3 +1,8 @@
 KeyType is union { int, string, float, bool }
 
 MaybeInt is union { int, nil }
+
+MaybeInt is int?
+
+foo: int? = 5
+bar: []int? = 5

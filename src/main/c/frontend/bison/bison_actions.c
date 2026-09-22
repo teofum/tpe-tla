@@ -180,6 +180,15 @@ Type *parse_union_type(TokenMeta *kw, TokenMeta *open, TypeList *types, TokenMet
   return ast_type_union(types);
 }
 
+Type *parse_optional_type(Type *type, TokenMeta *question) {
+  fe_parser_log(LOG_DEBUG, "Optional");
+  ast_free_meta(question);
+
+  // Optional types don't exist in the AST or backend; it's simply syntax sugar for a {T, nil} union
+  TypeList *types = ast_type_list(type, ast_type_list(ast_type_nil(), NULL));
+  return ast_type_union(types);
+}
+
 Type *parse_nil_type(TokenMeta *tok) {
   fe_parser_log(LOG_DEBUG, "Nil Type");
   ast_free_meta(tok);
