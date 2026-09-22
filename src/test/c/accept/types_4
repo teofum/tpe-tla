@@ -1,0 +1,3 @@
+MyTuple is <int, []int, string?>
+
+foo: <int, int> = 5

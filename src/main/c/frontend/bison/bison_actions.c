@@ -189,6 +189,14 @@ Type *parse_optional_type(Type *type, TokenMeta *question) {
   return ast_type_union(types);
 }
 
+Type *parse_tuple_type(TokenMeta *open, TypeList *types, TokenMeta *close, TokenMeta *trailing) {
+  fe_parser_log(LOG_DEBUG, "Tuple");
+  ast_free_meta(open);
+  ast_free_meta(close);
+  ast_free_meta(trailing);
+  return ast_type_tuple(types);
+}
+
 Type *parse_nil_type(TokenMeta *tok) {
   fe_parser_log(LOG_DEBUG, "Nil Type");
   ast_free_meta(tok);

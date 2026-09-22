@@ -255,6 +255,8 @@ type: IDENTIFIER                                                    { $$ = parse
   | UNION CURLY_L type_list CURLY_R                                 { $$ = parse_union_type($1, $2, $3, $4, NULL); }
   | UNION CURLY_L type_list COMMA CURLY_R                           { $$ = parse_union_type($1, $2, $3, $5, $4); }
   | type QUESTION_MARK                                              { $$ = parse_optional_type($1, $2); }
+  | LESS type_list GREATER                                          { $$ = parse_tuple_type($1, $2, $3, NULL); }
+  | LESS type_list COMMA GREATER                                    { $$ = parse_tuple_type($1, $2, $4, $3); }
   | NIL                                                             { $$ = parse_nil_type($1); }
   ;
 

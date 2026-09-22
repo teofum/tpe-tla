@@ -98,6 +98,12 @@ static void dot_type(Type *type, u64 pid) {
         dot_type(type->union_type->types[i], id);
       }
       break;
+    case T_TUPLE:
+      snprintf(label, 8, "Tuple");
+      for (u32 i = 0; i < type->tuple->len; i++) {
+        dot_type(type->tuple->types[i], id);
+      }
+      break;
     case T_NIL:
       snprintf(label, 4, "Nil");
       break;

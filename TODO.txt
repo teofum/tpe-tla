@@ -44,13 +44,12 @@
   [x] Simple (identifier) types
   [x] Nil
   [x] Structs
-  [ ] Unions
+  [x] Unions
   [ ] Enums
   [x] Lists
-  [ ] Tuples
+  [x] Tuples
   [x] Maps
-  [ ] Optional
-  [ ] Functions
+  [x] Optional
 [ ] Statements
   [x] Expression statements
   [x] Declarations

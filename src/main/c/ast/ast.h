@@ -52,6 +52,7 @@ typedef enum {
   T_UNION,
   T_LIST,
   T_MAP,
+  T_TUPLE,
   T_NIL,
 } TypeType;
 
@@ -102,6 +103,7 @@ typedef struct MapType MapType;
 typedef struct StructField StructField;
 typedef struct StructType StructType;
 typedef struct UnionType UnionType;
+typedef struct TupleType TupleType;
 
 typedef struct Program Program;
 
@@ -259,6 +261,7 @@ struct Type {
     MapType *map;
     StructType *struct_type;
     UnionType *union_type;
+    TupleType *tuple;
   };
 };
 
@@ -281,6 +284,11 @@ struct StructType {
 };
 
 struct UnionType {
+  u32 len;
+  Type **types;
+};
+
+struct TupleType {
   u32 len;
   Type **types;
 };
@@ -339,6 +347,7 @@ Type *ast_type_array(Type *item_type);
 Type *ast_type_map(Type *key_type, Type *value_type);
 Type *ast_type_struct(StructFieldList *fields);
 Type *ast_type_union(TypeList *types);
+Type *ast_type_tuple(TypeList *types);
 Type *ast_type_nil();
 
 StructField *ast_struct_field(TokenMeta *id, Type *type, Expr *default_value);
@@ -378,6 +387,7 @@ void ast_free_map_type(MapType *t);
 void ast_free_struct_field(StructField *f);
 void ast_free_struct_type(StructType *t);
 void ast_free_union_type(UnionType *t);
+void ast_free_tuple_type(TupleType *t);
 
 void ast_free_meta(TokenMeta *meta);
 void ast_free_program(Program *program);

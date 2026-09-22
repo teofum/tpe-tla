@@ -44,6 +44,7 @@ Type *parse_map_type(TokenMeta *open, Type *key, TokenMeta *close, Type *value);
 Type *parse_struct_type(TokenMeta *kw, TokenMeta *open, StructFieldList *fields, TokenMeta *close, TokenMeta *trailing);
 Type *parse_union_type(TokenMeta *kw, TokenMeta *open, TypeList *types, TokenMeta *close, TokenMeta *trailing);
 Type *parse_optional_type(Type *type, TokenMeta *question);
+Type *parse_tuple_type(TokenMeta *open, TypeList *types, TokenMeta *close, TokenMeta *trailing);
 Type *parse_nil_type(TokenMeta *tok);
 
 StructFieldList *parse_struct_field_list(StructField *head, TokenMeta *comma, StructFieldList *tail);

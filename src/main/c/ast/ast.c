@@ -291,6 +291,16 @@ Type *ast_type_union(TypeList *types) {
   return type;
 }
 
+Type *ast_type_tuple(TypeList *types) {
+  TupleType* tuple = new(TupleType);
+  _consume_type_list(types, &tuple->types, &tuple->len);
+
+  Type *type = new(Type);
+  *type = (Type){ .type = T_TUPLE, .tuple = tuple };
+
+  return type;
+}
+
 Type *ast_type_nil() {
   Type *type = new(Type);
   *type = (Type){ .type = T_NIL };
@@ -511,6 +521,7 @@ void ast_free_type(Type *t) {
     case T_MAP: ast_free_map_type(t->map); break;
     case T_STRUCT: ast_free_struct_type(t->struct_type); break;
     case T_UNION: ast_free_union_type(t->union_type); break;
+    case T_TUPLE: ast_free_tuple_type(t->tuple); break;
     case T_NIL: break;
   }
   free(t);
@@ -558,6 +569,16 @@ void ast_free_struct_type(StructType *t) {
 }
 
 void ast_free_union_type(UnionType *t) {
+  if (!t) return;
+
+  for (u32 i = 0; i < t->len; i++) {
+    ast_free_type(t->types[i]);
+  }
+  free(t->types);
+  free(t);
+}
+
+void ast_free_tuple_type(TupleType *t) {
   if (!t) return;
 
   for (u32 i = 0; i < t->len; i++) {
