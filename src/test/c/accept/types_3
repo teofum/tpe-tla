@@ -1,0 +1,3 @@
+KeyType is union { int, string, float, bool }
+
+MaybeInt is union { int, nil }

@@ -88,8 +88,14 @@ static void dot_type(Type *type, u64 pid) {
       break;
     case T_STRUCT:
       snprintf(label, 8, "Struct");
-      for (u32 i = 0; i < type->structured->len; i++) {
-        dot_struct_field(type->structured->fields[i], id);
+      for (u32 i = 0; i < type->struct_type->len; i++) {
+        dot_struct_field(type->struct_type->fields[i], id);
+      }
+      break;
+    case T_UNION:
+      snprintf(label, 8, "Union");
+      for (u32 i = 0; i < type->union_type->len; i++) {
+        dot_type(type->union_type->types[i], id);
       }
       break;
     case T_NIL:

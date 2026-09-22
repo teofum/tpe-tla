@@ -39,6 +39,7 @@ static void _consume_##name##_list(T##List *list, T ***items, u32 *len) { \
 
 AST_LIST_IMPL(Stmt, stmt)
 AST_LIST_IMPL(StructField, struct_field)
+AST_LIST_IMPL(Type, type)
 
 // -----------------------------------------------------------------------------
 
@@ -247,7 +248,7 @@ Type *ast_type_named(TokenMeta *id) {
   return type;
 }
 
-Type *ast_type_list(Type *item_type) {
+Type *ast_type_array(Type *item_type) {
   ListType *list = new(ListType);
   *list = (ListType){ .item_type = item_type };
 
@@ -271,11 +272,21 @@ Type *ast_type_map(Type *key_type, Type *value_type) {
 }
 
 Type *ast_type_struct(StructFieldList *fields) {
-  StructType* structured = new(StructType);
-  _consume_struct_field_list(fields, &structured->fields, &structured->len);
+  StructType* struct_type = new(StructType);
+  _consume_struct_field_list(fields, &struct_type->fields, &struct_type->len);
 
   Type *type = new(Type);
-  *type = (Type){ .type = T_STRUCT, .structured = structured };
+  *type = (Type){ .type = T_STRUCT, .struct_type = struct_type };
+
+  return type;
+}
+
+Type *ast_type_union(TypeList *types) {
+  UnionType* union_type = new(UnionType);
+  _consume_type_list(types, &union_type->types, &union_type->len);
+
+  Type *type = new(Type);
+  *type = (Type){ .type = T_UNION, .union_type = union_type };
 
   return type;
 }
@@ -498,7 +509,8 @@ void ast_free_type(Type *t) {
     case T_NAMED: ast_free_named_type(t->named); break;
     case T_LIST: ast_free_list_type(t->list); break;
     case T_MAP: ast_free_map_type(t->map); break;
-    case T_STRUCT: ast_free_struct_type(t->structured); break;
+    case T_STRUCT: ast_free_struct_type(t->struct_type); break;
+    case T_UNION: ast_free_union_type(t->union_type); break;
     case T_NIL: break;
   }
   free(t);
@@ -542,6 +554,16 @@ void ast_free_struct_type(StructType *t) {
     ast_free_struct_field(t->fields[i]);
   }
   free(t->fields);
+  free(t);
+}
+
+void ast_free_union_type(UnionType *t) {
+  if (!t) return;
+
+  for (u32 i = 0; i < t->len; i++) {
+    ast_free_type(t->types[i]);
+  }
+  free(t->types);
   free(t);
 }
 

@@ -45,6 +45,7 @@ void yyerror(YYLTYPE *location, const char *message) {}
   Program *program;
   StmtList *statement_list;
   StructFieldList *struct_field_list;
+  TypeList *type_list;
 }
 
 %destructor { ast_free_meta($$); } <token>
@@ -148,6 +149,7 @@ void yyerror(YYLTYPE *location, const char *message) {}
 %type <program>           program
 %type <statement_list>    statement_list
 %type <struct_field_list> struct_field_list
+%type <type_list>         type_list
 
 // Precedence
 %left FOR IN
@@ -248,6 +250,8 @@ type: IDENTIFIER                                                    { $$ = parse
   | SQUARE_L type SQUARE_R type                                     { $$ = parse_map_type($1, $2, $3, $4); }
   | STRUCT CURLY_L struct_field_list CURLY_R                        { $$ = parse_struct_type($1, $2, $3, $4, NULL); }
   | STRUCT CURLY_L struct_field_list COMMA CURLY_R                  { $$ = parse_struct_type($1, $2, $3, $5, $4); }
+  | UNION CURLY_L type_list CURLY_R                                 { $$ = parse_union_type($1, $2, $3, $4, NULL); }
+  | UNION CURLY_L type_list COMMA CURLY_R                           { $$ = parse_union_type($1, $2, $3, $5, $4); }
   | NIL                                                             { $$ = parse_nil_type($1); }
   ;
 
@@ -257,6 +261,10 @@ struct_field_list: struct_field                                     { $$ = parse
 
 struct_field: IDENTIFIER COLON type                                 { $$ = parse_struct_field($1, $2, $3, NULL, NULL); }
   | IDENTIFIER COLON type EQUAL expression                          { $$ = parse_struct_field($1, $2, $3, $4, $5); }
+  ;
+
+type_list: type                                                     { $$ = parse_type_list($1, NULL, NULL); }
+  | type_list COMMA type                                            { $$ = parse_type_list($3, $2, $1); }
   ;
 
 %%

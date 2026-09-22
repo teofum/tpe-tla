@@ -8,3 +8,13 @@ Book is struct {
   authors: []Author,
   stock: int = 0,
 }
+
+// Nested structs
+Book is struct {
+  isbn: string,
+  title: string,
+  authors: []struct {
+    name: string,
+  },
+  stock: int = 0,
+}

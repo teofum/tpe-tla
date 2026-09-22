@@ -152,7 +152,7 @@ Type *parse_list_type(TokenMeta *open, TokenMeta *close, Type *item) {
   fe_parser_log(LOG_DEBUG, "List Type");
   ast_free_meta(open);
   ast_free_meta(close);
-  return ast_type_list(item);
+  return ast_type_array(item);
 }
 
 Type *parse_map_type(TokenMeta *open, Type *key, TokenMeta *close, Type *value) {
@@ -171,6 +171,15 @@ Type *parse_struct_type(TokenMeta *kw, TokenMeta *open, StructFieldList *fields,
   return ast_type_struct(fields);
 }
 
+Type *parse_union_type(TokenMeta *kw, TokenMeta *open, TypeList *types, TokenMeta *close, TokenMeta *trailing) {
+  fe_parser_log(LOG_DEBUG, "Union");
+  ast_free_meta(kw);
+  ast_free_meta(open);
+  ast_free_meta(close);
+  ast_free_meta(trailing);
+  return ast_type_union(types);
+}
+
 Type *parse_nil_type(TokenMeta *tok) {
   fe_parser_log(LOG_DEBUG, "Nil Type");
   ast_free_meta(tok);
@@ -182,6 +191,13 @@ Type *parse_nil_type(TokenMeta *tok) {
 StructFieldList *parse_struct_field_list(StructField *head, TokenMeta *comma, StructFieldList *tail) {
   StructFieldList* list = ast_struct_field_list(head, tail);
   fe_parser_log(LOG_DEBUG, "Struct Field List (len=%u)", list->len);
+  ast_free_meta(comma);
+  return list;
+}
+
+TypeList *parse_type_list(Type *head, TokenMeta *comma, TypeList *tail) {
+  TypeList* list = ast_type_list(head, tail);
+  fe_parser_log(LOG_DEBUG, "Type List (len=%u)", list->len);
   ast_free_meta(comma);
   return list;
 }

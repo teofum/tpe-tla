@@ -101,11 +101,13 @@ typedef struct ListType ListType;
 typedef struct MapType MapType;
 typedef struct StructField StructField;
 typedef struct StructType StructType;
+typedef struct UnionType UnionType;
 
 typedef struct Program Program;
 
 AST_LIST(Stmt, stmt);
 AST_LIST(StructField, struct_field);
+AST_LIST(Type, type);
 
 // -----------------------------------------------------------------------------
 
@@ -255,7 +257,8 @@ struct Type {
     NamedType *named;
     ListType *list;
     MapType *map;
-    StructType *structured;
+    StructType *struct_type;
+    UnionType *union_type;
   };
 };
 
@@ -275,6 +278,11 @@ struct MapType {
 struct StructType {
   u32 len;
   StructField **fields;
+};
+
+struct UnionType {
+  u32 len;
+  Type **types;
 };
 
 struct StructField {
@@ -327,9 +335,10 @@ ForExpr *ast_for(TokenMeta *var, TokenMeta *idx, Expr *iterable, Expr *body);
 BlockExpr *ast_block(StmtList *statements, Expr *final);
 
 Type *ast_type_named(TokenMeta *id);
-Type *ast_type_list(Type *item_type);
+Type *ast_type_array(Type *item_type);
 Type *ast_type_map(Type *key_type, Type *value_type);
 Type *ast_type_struct(StructFieldList *fields);
+Type *ast_type_union(TypeList *types);
 Type *ast_type_nil();
 
 StructField *ast_struct_field(TokenMeta *id, Type *type, Expr *default_value);
@@ -368,6 +377,7 @@ void ast_free_list_type(ListType *t);
 void ast_free_map_type(MapType *t);
 void ast_free_struct_field(StructField *f);
 void ast_free_struct_type(StructType *t);
+void ast_free_union_type(UnionType *t);
 
 void ast_free_meta(TokenMeta *meta);
 void ast_free_program(Program *program);
