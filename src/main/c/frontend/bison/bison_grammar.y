@@ -7,9 +7,7 @@
 #include "bison_actions.h"
 #include "bison_parser.h"
 
-void yyerror(YYLTYPE *location, const char *message) {
-  printf("wank\n");
-}
+void yyerror(YYLTYPE *location, const char *message) {}
 
 %}
 
@@ -42,9 +40,11 @@ void yyerror(YYLTYPE *location, const char *message) {
   BlockExpr *block;
 
   Type *type;
+  StructField *struct_field;
 
   Program *program;
   StmtList *statement_list;
+  StructFieldList *struct_field_list;
 }
 
 %destructor { ast_free_meta($$); } <token>
@@ -67,6 +67,8 @@ void yyerror(YYLTYPE *location, const char *message) {
 %destructor { ast_free_alias($$); } <type_alias>
 %destructor { ast_free_type($$); } <type>
 %destructor { ast_free_stmt_list($$, true); } <statement_list>
+%destructor { ast_free_struct_field_list($$, true); } <struct_field_list>
+%destructor { ast_free_struct_field($$); } <struct_field>
 %destructor { ast_free_program($$); } <program>
 
 // Symbols
@@ -141,9 +143,11 @@ void yyerror(YYLTYPE *location, const char *message) {
 %type <block>             block
 
 %type <type>              type
+%type <struct_field>      struct_field
 
 %type <program>           program
 %type <statement_list>    statement_list
+%type <struct_field_list> struct_field_list
 
 // Precedence
 %left FOR IN
@@ -242,7 +246,17 @@ block: CURLY_L statement_list expression CURLY_R                    { $$ = parse
 type: IDENTIFIER                                                    { $$ = parse_named_type($1); }
   | SQUARE_L SQUARE_R type                                          { $$ = parse_list_type($1, $2, $3); }
   | SQUARE_L type SQUARE_R type                                     { $$ = parse_map_type($1, $2, $3, $4); }
+  | STRUCT CURLY_L struct_field_list CURLY_R                        { $$ = parse_struct_type($1, $2, $3, $4, NULL); }
+  | STRUCT CURLY_L struct_field_list COMMA CURLY_R                  { $$ = parse_struct_type($1, $2, $3, $5, $4); }
   | NIL                                                             { $$ = parse_nil_type($1); }
+  ;
+
+struct_field_list: struct_field                                     { $$ = parse_struct_field_list($1, NULL, NULL); }
+  | struct_field_list COMMA struct_field                            { $$ = parse_struct_field_list($3, $2, $1); }
+  ;
+
+struct_field: IDENTIFIER COLON type                                 { $$ = parse_struct_field($1, $2, $3, NULL, NULL); }
+  | IDENTIFIER COLON type EQUAL expression                          { $$ = parse_struct_field($1, $2, $3, $4, $5); }
   ;
 
 %%

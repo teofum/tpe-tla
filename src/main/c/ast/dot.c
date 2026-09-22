@@ -14,14 +14,14 @@
 typedef enum {
   NODE_ROOT,
   NODE_STMT,
-  NODE_EXPR,
+  NODE_BASE,
   NODE_TYPE,
 } NodeType;
 
 static const char *attrs_for_type[] = {
   [NODE_ROOT] = ",style=filled,fillcolor=\"#a0c0ff\"",
+  [NODE_BASE] = ",style=filled",
   [NODE_STMT] = ",style=filled,fillcolor=\"#a0ffc0\"",
-  [NODE_EXPR] = ",style=filled",
   [NODE_TYPE] = ",style=filled,fillcolor=\"#ffc0ff\"",
 };
 
@@ -57,36 +57,48 @@ static void _edge(u64 id1, u64 id2) {
 
 static void dot_stmt(Stmt *stmt, u64 pid);
 static void dot_expr(Expr *expr, u64 pid);
+static void dot_type(Type *type, u64 pid);
+
+static void dot_struct_field(StructField *field, u64 pid) {
+  u64 id = next_id();
+  char label[256];
+  snprintf(label, 256, "%s", field->name->lexeme);
+  _node(id, label, NODE_BASE);
+  _edge(pid, id);
+  dot_type(field->type, id);
+  if (field->default_value) dot_expr(field->default_value, id);
+}
 
 static void dot_type(Type *type, u64 pid) {
   u64 id = next_id();
-  char *label;
+  char label[256];
 
   switch (type->type) {
     case T_NAMED:
-      label = new_array(char, 256);
       snprintf(label, 256, "%s", type->named->meta->lexeme);
       break;
     case T_LIST:
-      label = new_array(char, 8);
       snprintf(label, 8, "List of");
       dot_type(type->list->item_type, id);
       break;
     case T_MAP:
-      label = new_array(char, 8);
       snprintf(label, 8, "Map of");
       dot_type(type->map->key_type, id);
       dot_type(type->map->value_type, id);
       break;
+    case T_STRUCT:
+      snprintf(label, 8, "Struct");
+      for (u32 i = 0; i < type->structured->len; i++) {
+        dot_struct_field(type->structured->fields[i], id);
+      }
+      break;
     case T_NIL:
-      label = new_array(char, 4);
       snprintf(label, 4, "Nil");
       break;
   }
 
   _node(id, label, NODE_TYPE);
   _edge(pid, id);
-  free(label);
 }
 
 static void dot_literal(LiteralExpr *literal, u64 pid) {
@@ -114,7 +126,7 @@ static void dot_literal(LiteralExpr *literal, u64 pid) {
       break;
   }
 
-  _node(id, label, NODE_EXPR);
+  _node(id, label, NODE_BASE);
   _edge(pid, id);
   free(label);
 }
@@ -141,21 +153,21 @@ static void dot_variable(VariableExpr *var, u64 pid) {
       break;
   }
 
-  _node(id, label, NODE_EXPR);
+  _node(id, label, NODE_BASE);
   _edge(pid, id);
   free(label);
 }
 
 static void dot_unary(UnaryExpr *unary, u64 pid) {
   u64 id = next_id();
-  _node(id, unary->op->lexeme, NODE_EXPR);
+  _node(id, unary->op->lexeme, NODE_BASE);
   _edge(pid, id);
   dot_expr(unary->expr, id);
 }
 
 static void dot_binary(BinaryExpr *binary, u64 pid) {
   u64 id = next_id();
-  _node(id, binary->op->lexeme, NODE_EXPR);
+  _node(id, binary->op->lexeme, NODE_BASE);
   _edge(pid, id);
   dot_expr(binary->left, id);
   dot_expr(binary->right, id);
@@ -163,14 +175,14 @@ static void dot_binary(BinaryExpr *binary, u64 pid) {
 
 static void dot_group(GroupExpr *group, u64 pid) {
   u64 id = next_id();
-  _node(id, "Group", NODE_EXPR);
+  _node(id, "Group", NODE_BASE);
   _edge(pid, id);
   dot_expr(group->inner_expr, id);
 }
 
 static void dot_assignment(AssignmentExpr *assign, u64 pid) {
   u64 id = next_id();
-  _node(id, "=", NODE_EXPR);
+  _node(id, "=", NODE_BASE);
   _edge(pid, id);
   dot_variable(assign->left, id);
   dot_expr(assign->right, id);
@@ -178,7 +190,7 @@ static void dot_assignment(AssignmentExpr *assign, u64 pid) {
 
 static void dot_if(IfExpr *if_expr, u64 pid) {
   u64 id = next_id();
-  _node(id, if_expr->false_branch == NULL ? "If" : "If/Else", NODE_EXPR);
+  _node(id, if_expr->false_branch == NULL ? "If" : "If/Else", NODE_BASE);
   _edge(pid, id);
   dot_expr(if_expr->condition, id);
   dot_expr(if_expr->true_branch, id);
@@ -193,7 +205,7 @@ static void dot_for(ForExpr *for_expr, u64 pid) {
   } else {
     snprintf(label, 256, "For %s In", for_expr->var_id->lexeme);
   }
-  _node(id, label, NODE_EXPR);
+  _node(id, label, NODE_BASE);
   _edge(pid, id);
   dot_expr(for_expr->iterable, id);
   dot_expr(for_expr->body, id);
@@ -201,7 +213,7 @@ static void dot_for(ForExpr *for_expr, u64 pid) {
 
 static void dot_block(BlockExpr *block, u64 pid) {
   u64 id = next_id();
-  _node(id, "Block", NODE_EXPR);
+  _node(id, "Block", NODE_BASE);
   _edge(pid, id);
   for (u32 i = 0; i < block->len; i++) {
     dot_stmt(block->statements[i], id);

@@ -162,19 +162,41 @@ Type *parse_map_type(TokenMeta *open, Type *key, TokenMeta *close, Type *value) 
   return ast_type_map(key, value);
 }
 
+Type *parse_struct_type(TokenMeta *kw, TokenMeta *open, StructFieldList *fields, TokenMeta *close, TokenMeta *trailing) {
+  fe_parser_log(LOG_DEBUG, "Struct");
+  ast_free_meta(kw);
+  ast_free_meta(open);
+  ast_free_meta(close);
+  ast_free_meta(trailing);
+  return ast_type_struct(fields);
+}
+
 Type *parse_nil_type(TokenMeta *tok) {
   fe_parser_log(LOG_DEBUG, "Nil Type");
   ast_free_meta(tok);
   return ast_type_nil();
 }
 
-
 // -----------------------------------------------------------------------------
+
+StructFieldList *parse_struct_field_list(StructField *head, TokenMeta *comma, StructFieldList *tail) {
+  StructFieldList* list = ast_struct_field_list(head, tail);
+  fe_parser_log(LOG_DEBUG, "Struct Field List (len=%u)", list->len);
+  ast_free_meta(comma);
+  return list;
+}
 
 StmtList *parse_stmt_list(Stmt *head, StmtList *tail) {
   StmtList* list = ast_stmt_list(head, tail);
   fe_parser_log(LOG_DEBUG, "Stmt List (len=%u)", list->len);
   return list;
+}
+
+StructField *parse_struct_field(TokenMeta *id, TokenMeta *colon, Type *type, TokenMeta *eq, Expr *default_value) {
+  fe_parser_log(LOG_DEBUG, "Struct Field %s", id->lexeme);
+  ast_free_meta(colon);
+  ast_free_meta(eq);
+  return ast_struct_field(id, type, default_value);
 }
 
 Program *parse_program(StmtList *statements) {

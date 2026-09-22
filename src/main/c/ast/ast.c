@@ -7,6 +7,41 @@
 
 // -----------------------------------------------------------------------------
 
+#define AST_LIST_IMPL(T, name)                                            \
+T##List *ast_##name##_list(T *head, T##List *tail) {                      \
+  T##List* list = new(T##List);                                           \
+  list->head = head;                                                      \
+  if (tail) {                                                             \
+    list->tail = tail;                                                    \
+    list->len = tail->len + 1;                                            \
+  } else {                                                                \
+    list->tail = NULL;                                                    \
+    list->len = 1;                                                        \
+  }                                                                       \
+  return list;                                                            \
+}                                                                         \
+void ast_free_##name##_list(T##List *list, bool free_items) {             \
+  if (!list) return;                                                      \
+  if (free_items) ast_free_##name(list->head);                            \
+  ast_free_##name##_list(list->tail, free_items);                         \
+  free(list);                                                             \
+}                                                                         \
+static void _consume_##name##_list(T##List *list, T ***items, u32 *len) { \
+  *items = new_array(T *, list->len);                                     \
+  *len = list->len;                                                       \
+  T##List *tail = list;                                                   \
+  for (u32 i = 0; tail != NULL && i < *len; i++) {                        \
+    (*items)[*len - i - 1] = tail->head;                                  \
+    tail = tail->tail;                                                    \
+  }                                                                       \
+  ast_free_##name##_list(list, false);                                    \
+}                                                                         \
+
+AST_LIST_IMPL(Stmt, stmt)
+AST_LIST_IMPL(StructField, struct_field)
+
+// -----------------------------------------------------------------------------
+
 #define AST_STMT_FUNC(f_name, T, stmt_t, p_name)  \
 Stmt *f_name(T *p_name) {                         \
   Stmt *stmt = new(Stmt);                         \
@@ -194,25 +229,9 @@ ForExpr *ast_for(TokenMeta *var, TokenMeta *idx, Expr *iterable, Expr *body) {
 }
 
 BlockExpr *ast_block(StmtList *statements, Expr *final) {
-  u32 len = statements ? statements->len + 1 : 1;
-
+  StmtList *all_statements = ast_stmt_list(ast_stmt_expr(final), statements);
   BlockExpr* block = new(BlockExpr);
-  *block = (BlockExpr){
-    .len = len,
-    .statements = new_array(Stmt *, len),
-  };
-
-  StmtList *tail = statements;
-  for (u32 i = 0; tail != NULL && i < len - 1; i++) {
-    block->statements[len - i - 2] = tail->head;
-    tail = tail->tail;
-  }
-
-  block->statements[block->len - 1] = ast_stmt_expr(final);
-
-  // We consumed the expression list, so free its memory without freeing the
-  // actual expressions, which we now own
-  ast_free_stmt_list(statements, false);
+  _consume_stmt_list(all_statements, &block->statements, &block->len);
   return block;
 }
 
@@ -251,6 +270,16 @@ Type *ast_type_map(Type *key_type, Type *value_type) {
   return type;
 }
 
+Type *ast_type_struct(StructFieldList *fields) {
+  StructType* structured = new(StructType);
+  _consume_struct_field_list(fields, &structured->fields, &structured->len);
+
+  Type *type = new(Type);
+  *type = (Type){ .type = T_STRUCT, .structured = structured };
+
+  return type;
+}
+
 Type *ast_type_nil() {
   Type *type = new(Type);
   *type = (Type){ .type = T_NIL };
@@ -258,39 +287,22 @@ Type *ast_type_nil() {
   return type;
 }
 
-
 // -----------------------------------------------------------------------------
 
-StmtList *ast_stmt_list(Stmt *head, StmtList *tail) {
-  StmtList* list = new(StmtList);
-  list->head = head;
-  if (tail) {
-    list->tail = tail;
-    list->len = tail->len + 1;
-  } else {
-    list->tail = NULL;
-    list->len = 1;
-  }
+StructField *ast_struct_field(TokenMeta *id, Type *type, Expr *default_value) {
+  StructField *field = new(StructField);
+  *field = (StructField){
+    .name = id,
+    .type = type,
+    .default_value = default_value,
+  };
 
-  return list;
+  return field;
 }
 
 Program *ast_program(StmtList *statements) {
   Program* prog = new(Program);
-  *prog = (Program){
-    .len = statements->len,
-    .statements = new_array(Stmt *, statements->len),
-  };
-
-  StmtList *tail = statements;
-  for (u32 i = 0; tail != NULL && i < prog->len; i++) {
-    prog->statements[prog->len - i - 1] = tail->head;
-    tail = tail->tail;
-  }
-
-  // We consumed the expression list, so free its memory without freeing the
-  // actual expressions, which we now own
-  ast_free_stmt_list(statements, false);
+  _consume_stmt_list(statements, &prog->statements, &prog->len);
   return prog;
 }
 
@@ -486,6 +498,7 @@ void ast_free_type(Type *t) {
     case T_NAMED: ast_free_named_type(t->named); break;
     case T_LIST: ast_free_list_type(t->list); break;
     case T_MAP: ast_free_map_type(t->map); break;
+    case T_STRUCT: ast_free_struct_type(t->structured); break;
     case T_NIL: break;
   }
   free(t);
@@ -513,20 +526,30 @@ void ast_free_map_type(MapType *t) {
   free(t);
 }
 
+void ast_free_struct_field(StructField *f) {
+  if (!f) return;
+
+  ast_free_meta(f->name);
+  ast_free_type(f->type);
+  ast_free_expr(f->default_value);
+  free(f);
+}
+
+void ast_free_struct_type(StructType *t) {
+  if (!t) return;
+
+  for (u32 i = 0; i < t->len; i++) {
+    ast_free_struct_field(t->fields[i]);
+  }
+  free(t->fields);
+  free(t);
+}
+
 void ast_free_meta(TokenMeta *meta) {
   if (!meta) return;
 
   free(meta->lexeme);
   free(meta);
-}
-
-void ast_free_stmt_list(StmtList *list, bool free_stmts) {
-  if (!list) return;
-
-  if (free_stmts) ast_free_stmt(list->head);
-  ast_free_stmt_list(list->tail, free_stmts);
-
-  free(list);
 }
 
 void ast_free_program(Program *program) {

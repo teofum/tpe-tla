@@ -3,6 +3,16 @@
 
 #include <support/types.h>
 
+#define AST_LIST(T, name)                                     \
+typedef struct T##List T##List;                               \
+struct T##List {                                              \
+  u32 len;                                                    \
+  T *head;                                                    \
+  T##List *tail;                                              \
+};                                                            \
+T##List *ast_##name##_list(T *head, T##List *tail);           \
+void ast_free_##name##_list(T##List *list, bool free_items);  \
+
 // -----------------------------------------------------------------------------
 
 typedef enum {
@@ -89,9 +99,15 @@ typedef struct Type Type;
 typedef struct NamedType NamedType;
 typedef struct ListType ListType;
 typedef struct MapType MapType;
+typedef struct StructField StructField;
+typedef struct StructType StructType;
 
 typedef struct Program Program;
-typedef struct StmtList StmtList;
+
+AST_LIST(Stmt, stmt);
+AST_LIST(StructField, struct_field);
+
+// -----------------------------------------------------------------------------
 
 typedef struct {
   Program *ast;
@@ -239,6 +255,7 @@ struct Type {
     NamedType *named;
     ListType *list;
     MapType *map;
+    StructType *structured;
   };
 };
 
@@ -255,13 +272,18 @@ struct MapType {
   Type *value_type;
 };
 
-// -----------------------------------------------------------------------------
-
-struct StmtList {
+struct StructType {
   u32 len;
-  Stmt *head;
-  StmtList *tail;
+  StructField **fields;
 };
+
+struct StructField {
+  TokenMeta *name;
+  Type *type;
+  Expr *default_value;
+};
+
+// -----------------------------------------------------------------------------
 
 struct Program {
   u32 len;
@@ -307,9 +329,11 @@ BlockExpr *ast_block(StmtList *statements, Expr *final);
 Type *ast_type_named(TokenMeta *id);
 Type *ast_type_list(Type *item_type);
 Type *ast_type_map(Type *key_type, Type *value_type);
+Type *ast_type_struct(StructFieldList *fields);
 Type *ast_type_nil();
 
-StmtList *ast_stmt_list(Stmt *head, StmtList *tail);
+StructField *ast_struct_field(TokenMeta *id, Type *type, Expr *default_value);
+
 Program *ast_program(StmtList *statements);
 
 // -----------------------------------------------------------------------------
@@ -342,9 +366,10 @@ void ast_free_type(Type *t);
 void ast_free_named_type(NamedType *t);
 void ast_free_list_type(ListType *t);
 void ast_free_map_type(MapType *t);
+void ast_free_struct_field(StructField *f);
+void ast_free_struct_type(StructType *t);
 
 void ast_free_meta(TokenMeta *meta);
-void ast_free_stmt_list(StmtList *list, bool free_exprs);
 void ast_free_program(Program *program);
 
 #endif

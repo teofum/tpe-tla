@@ -1,0 +1,10 @@
+Author is struct {
+  name: string,
+}
+
+Book is struct {
+  isbn: string,
+  title: string,
+  authors: []Author,
+  stock: int = 0,
+}

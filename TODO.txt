@@ -43,7 +43,7 @@
 [ ] Type expression
   [x] Simple (identifier) types
   [x] Nil
-  [ ] Structs
+  [x] Structs
   [ ] Unions
   [ ] Enums
   [x] Lists

@@ -41,9 +41,13 @@ BlockExpr *parse_block(TokenMeta *open, StmtList *statements, Expr *final, Token
 Type *parse_named_type(TokenMeta *id);
 Type *parse_list_type(TokenMeta *open, TokenMeta *close, Type *item);
 Type *parse_map_type(TokenMeta *open, Type *key, TokenMeta *close, Type *value);
+Type *parse_struct_type(TokenMeta *kw, TokenMeta *open, StructFieldList *fields, TokenMeta *close, TokenMeta *trailing);
 Type *parse_nil_type(TokenMeta *tok);
 
+StructFieldList *parse_struct_field_list(StructField *head, TokenMeta *comma, StructFieldList *tail);
 StmtList *parse_stmt_list(Stmt *head, StmtList *tail);
+
+StructField *parse_struct_field(TokenMeta *id, TokenMeta *colon, Type *type, TokenMeta *eq, Expr *default_value);
 Program *parse_program(StmtList *statements);
 
 #endif
