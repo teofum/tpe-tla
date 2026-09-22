@@ -259,6 +259,7 @@ Expr *ast_expr_unary(UnaryExpr *unary);
 Expr *ast_expr_binary(BinaryExpr *binary);
 Expr *ast_expr_group(GroupExpr *group);
 Expr *ast_expr_assignment(AssignmentExpr *assign);
+Expr *ast_expr_if(IfExpr *if_expr);
 Expr *ast_expr_block(BlockExpr *block);
 
 LiteralExpr *ast_literal_integer(IntegerLiteral *i);
@@ -274,6 +275,7 @@ UnaryExpr *ast_unary(TokenMeta *op, Expr *expr);
 BinaryExpr *ast_binary(Expr *left, TokenMeta *op, Expr *right);
 GroupExpr *ast_group(Expr *expr);
 AssignmentExpr *ast_assignment(VariableExpr *left, Expr *right);
+IfExpr *ast_if(Expr *condition, Expr *true_branch, Expr *false_branch);
 BlockExpr *ast_block(StmtList *statements, Expr *final);
 
 Type *ast_type_named(TokenMeta *id);
@@ -293,6 +295,7 @@ void ast_free_unary(UnaryExpr *unary);
 void ast_free_binary(BinaryExpr *binary);
 void ast_free_group(GroupExpr *group);
 void ast_free_assignment(AssignmentExpr *assign);
+void ast_free_if(IfExpr *if_expr);
 void ast_free_block(BlockExpr *block);
 
 void ast_free_int_literal(IntegerLiteral *l);

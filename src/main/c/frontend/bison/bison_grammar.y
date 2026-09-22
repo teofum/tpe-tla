@@ -58,9 +58,10 @@ void yyerror(YYLTYPE *location, const char *message) {
 %destructor { ast_free_binary($$); } <binary>
 %destructor { ast_free_group($$); } <group>
 %destructor { ast_free_assignment($$); } <assignment>
+%destructor { ast_free_if($$); } <if_expr>
 %destructor { ast_free_decl($$); } <declaration>
 %destructor { ast_free_type($$); } <type>
-%destructor { ast_free_expr_list($$, true); } <expression_list>
+%destructor { ast_free_stmt_list($$, true); } <statement_list>
 %destructor { ast_free_program($$); } <program>
 
 // Symbols
@@ -129,6 +130,7 @@ void yyerror(YYLTYPE *location, const char *message) {
 %type <binary>            binary
 %type <group>             group
 %type <assignment>        assignment
+%type <if_expr>           if_expr
 %type <block>             block
 
 %type <type>              type
@@ -137,6 +139,8 @@ void yyerror(YYLTYPE *location, const char *message) {
 %type <statement_list>    statement_list
 
 // Precedence
+%left IF
+%left ELSE
 %right EQUAL
 %left OR
 %left AND
@@ -167,6 +171,7 @@ expression: literal                                     { $$ = parse_literal_exp
   | binary                                              { $$ = parse_binary_expr($1); }
   | group                                               { $$ = parse_group_expr($1); }
   | assignment                                          { $$ = parse_assignment_expr($1); }
+  | if_expr                                             { $$ = parse_if_expr($1); }
   | block                                               { $$ = parse_block_expr($1); }
   ;
 
@@ -203,6 +208,10 @@ group: PAREN_L expression PAREN_R                       { $$ = parse_group($1, $
   ;
 
 assignment: variable EQUAL expression                   { $$ = parse_assignment($1, $2, $3); }
+  ;
+
+if_expr: IF expression expression ELSE expression       { $$ = parse_if($1, $2, $3, $4, $5); }
+  | IF expression expression                            { $$ = parse_if($1, $2, $3, NULL, NULL); }
   ;
 
 declaration: IDENTIFIER COLON type EQUAL expression     { $$ = parse_declaration($1, $2, $3, $4, $5); }

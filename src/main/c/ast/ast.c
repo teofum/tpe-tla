@@ -51,6 +51,7 @@ AST_EXPR_FUNC(ast_expr_unary, UnaryExpr, EXPR_UNARY, unary)
 AST_EXPR_FUNC(ast_expr_binary, BinaryExpr, EXPR_BINARY, binary)
 AST_EXPR_FUNC(ast_expr_group, GroupExpr, EXPR_GROUP, group)
 AST_EXPR_FUNC(ast_expr_assignment, AssignmentExpr, EXPR_ASSIGNMENT, assignment)
+AST_EXPR_FUNC(ast_expr_if, IfExpr, EXPR_IF, if_expr)
 AST_EXPR_FUNC(ast_expr_block, BlockExpr, EXPR_BLOCK, block)
 
 // -----------------------------------------------------------------------------
@@ -157,16 +158,29 @@ AssignmentExpr *ast_assignment(VariableExpr *left, Expr *right) {
   return assign;
 }
 
+IfExpr *ast_if(Expr *condition, Expr *true_branch, Expr *false_branch) {
+  IfExpr *if_expr = new(IfExpr);
+  *if_expr = (IfExpr){
+    .condition = condition,
+    .true_branch = true_branch,
+    .false_branch = false_branch,
+  };
+
+  return if_expr;
+}
+
 BlockExpr *ast_block(StmtList *statements, Expr *final) {
+  u32 len = statements ? statements->len + 1 : 1;
+
   BlockExpr* block = new(BlockExpr);
   *block = (BlockExpr){
-    .len = statements->len + 1,
-    .statements = new_array(Stmt *, statements->len + 1),
+    .len = len,
+    .statements = new_array(Stmt *, len),
   };
 
   StmtList *tail = statements;
-  for (u32 i = 0; tail != NULL && i < statements->len; i++) {
-    block->statements[statements->len - i - 1] = tail->head;
+  for (u32 i = 0; tail != NULL && i < len - 1; i++) {
+    block->statements[len - i - 2] = tail->head;
     tail = tail->tail;
   }
 
@@ -260,6 +274,7 @@ void ast_free_expr(Expr *expr) {
     case EXPR_BINARY: ast_free_binary(expr->binary); break;
     case EXPR_GROUP: ast_free_group(expr->group); break;
     case EXPR_ASSIGNMENT: ast_free_assignment(expr->assignment); break;
+    case EXPR_IF: ast_free_if(expr->if_expr); break;
     case EXPR_BLOCK: ast_free_block(expr->block); break;
     // TODO other types
   }
@@ -320,6 +335,15 @@ void ast_free_assignment(AssignmentExpr *assign) {
   ast_free_variable(assign->left);
   ast_free_expr(assign->right);
   free(assign);
+}
+
+void ast_free_if(IfExpr *if_expr) {
+  if (!if_expr) return;
+
+  ast_free_expr(if_expr->condition);
+  ast_free_expr(if_expr->true_branch);
+  ast_free_expr(if_expr->false_branch);
+  free(if_expr);
 }
 
 void ast_free_block(BlockExpr *block) {

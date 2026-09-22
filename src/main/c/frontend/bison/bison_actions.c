@@ -54,6 +54,11 @@ Expr *parse_assignment_expr(AssignmentExpr *assign) {
   return ast_expr_assignment(assign);
 }
 
+Expr *parse_if_expr(IfExpr *if_expr) {
+  fe_parser_log(LOG_DEBUG, "If Expr");
+  return ast_expr_if(if_expr);
+}
+
 Expr *parse_block_expr(BlockExpr *block) {
   fe_parser_log(LOG_DEBUG, "Block Expr (len=%u)", block->len);
   return ast_expr_block(block);
@@ -124,6 +129,13 @@ AssignmentExpr *parse_assignment(VariableExpr *left, TokenMeta *op, Expr *right)
   fe_parser_log(LOG_DEBUG, "Assignment");
   ast_free_meta(op);
   return ast_assignment(left, right);
+}
+
+IfExpr *parse_if(TokenMeta *if_kw, Expr *condition, Expr *true_branch, TokenMeta *else_kw, Expr *false_branch) {
+  fe_parser_log(LOG_DEBUG, "If");
+  ast_free_meta(if_kw);
+  ast_free_meta(else_kw);
+  return ast_if(condition, true_branch, false_branch);
 }
 
 BlockExpr *parse_block(TokenMeta *open, StmtList *statements, Expr *final, TokenMeta *close) {

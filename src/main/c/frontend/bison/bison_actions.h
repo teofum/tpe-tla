@@ -15,6 +15,7 @@ Expr *parse_unary_expr(UnaryExpr *unary);
 Expr *parse_binary_expr(BinaryExpr *binary);
 Expr *parse_group_expr(GroupExpr *group);
 Expr *parse_assignment_expr(AssignmentExpr *assign);
+Expr *parse_if_expr(IfExpr *if_expr);
 Expr *parse_block_expr(BlockExpr *block);
 
 LiteralExpr *parse_integer_literal(IntegerLiteral *i);
@@ -30,6 +31,7 @@ UnaryExpr *parse_unary(TokenMeta *op, Expr *expr);
 BinaryExpr *parse_binary(Expr *left, TokenMeta *op, Expr *right);
 GroupExpr *parse_group(TokenMeta *open, Expr *expr, TokenMeta *close);
 AssignmentExpr *parse_assignment(VariableExpr *left, TokenMeta *op, Expr *right);
+IfExpr *parse_if(TokenMeta *if_kw, Expr *condition, Expr *true_branch, TokenMeta *else_kw, Expr *false_branch);
 BlockExpr *parse_block(TokenMeta *open, StmtList *statements, Expr *final, TokenMeta *close);
 
 Type *parse_named_type(TokenMeta *id);
