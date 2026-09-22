@@ -223,13 +223,41 @@ Type *ast_type_named(TokenMeta *id) {
   *named_type = (NamedType){ .meta = id };
 
   Type *type = new(Type);
-  *type = (Type){
-    .type = T_NAMED,
-    .named = named_type,
-  };
+  *type = (Type){ .type = T_NAMED, .named = named_type };
 
   return type;
 }
+
+Type *ast_type_list(Type *item_type) {
+  ListType *list = new(ListType);
+  *list = (ListType){ .item_type = item_type };
+
+  Type *type = new(Type);
+  *type = (Type){ .type = T_LIST, .list = list };
+
+  return type;
+}
+
+Type *ast_type_map(Type *key_type, Type *value_type) {
+  MapType *map = new(MapType);
+  *map = (MapType){
+    .key_type = key_type,
+    .value_type = value_type,
+  };
+
+  Type *type = new(Type);
+  *type = (Type){ .type = T_MAP, .map = map };
+
+  return type;
+}
+
+Type *ast_type_nil() {
+  Type *type = new(Type);
+  *type = (Type){ .type = T_NIL };
+
+  return type;
+}
+
 
 // -----------------------------------------------------------------------------
 
@@ -456,6 +484,9 @@ void ast_free_type(Type *t) {
 
   switch (t->type) {
     case T_NAMED: ast_free_named_type(t->named); break;
+    case T_LIST: ast_free_list_type(t->list); break;
+    case T_MAP: ast_free_map_type(t->map); break;
+    case T_NIL: break;
   }
   free(t);
 }
@@ -464,6 +495,21 @@ void ast_free_named_type(NamedType *t) {
   if (!t) return;
 
   ast_free_meta(t->meta);
+  free(t);
+}
+
+void ast_free_list_type(ListType *t) {
+  if (!t) return;
+
+  ast_free_type(t->item_type);
+  free(t);
+}
+
+void ast_free_map_type(MapType *t) {
+  if (!t) return;
+
+  ast_free_type(t->key_type);
+  ast_free_type(t->value_type);
   free(t);
 }
 

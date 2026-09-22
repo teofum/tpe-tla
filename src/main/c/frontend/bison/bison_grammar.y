@@ -240,6 +240,9 @@ block: CURLY_L statement_list expression CURLY_R                    { $$ = parse
   ;
 
 type: IDENTIFIER                                                    { $$ = parse_named_type($1); }
+  | SQUARE_L SQUARE_R type                                          { $$ = parse_list_type($1, $2, $3); }
+  | SQUARE_L type SQUARE_R type                                     { $$ = parse_map_type($1, $2, $3, $4); }
+  | NIL                                                             { $$ = parse_nil_type($1); }
   ;
 
 %%

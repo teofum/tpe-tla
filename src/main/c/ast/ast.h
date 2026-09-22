@@ -42,6 +42,7 @@ typedef enum {
   T_UNION,
   T_LIST,
   T_MAP,
+  T_NIL,
 } TypeType;
 
 typedef struct {
@@ -86,6 +87,8 @@ typedef struct IndexedVariable IndexedVariable;
 
 typedef struct Type Type;
 typedef struct NamedType NamedType;
+typedef struct ListType ListType;
+typedef struct MapType MapType;
 
 typedef struct Program Program;
 typedef struct StmtList StmtList;
@@ -234,11 +237,22 @@ struct Type {
   TypeType type;
   union {
     NamedType *named;
+    ListType *list;
+    MapType *map;
   };
 };
 
 struct NamedType {
   TokenMeta *meta;
+};
+
+struct ListType {
+  Type *item_type;
+};
+
+struct MapType {
+  Type *key_type;
+  Type *value_type;
 };
 
 // -----------------------------------------------------------------------------
@@ -291,6 +305,9 @@ ForExpr *ast_for(TokenMeta *var, TokenMeta *idx, Expr *iterable, Expr *body);
 BlockExpr *ast_block(StmtList *statements, Expr *final);
 
 Type *ast_type_named(TokenMeta *id);
+Type *ast_type_list(Type *item_type);
+Type *ast_type_map(Type *key_type, Type *value_type);
+Type *ast_type_nil();
 
 StmtList *ast_stmt_list(Stmt *head, StmtList *tail);
 Program *ast_program(StmtList *statements);
@@ -323,6 +340,8 @@ void ast_free_indexed_variable(IndexedVariable *v);
 
 void ast_free_type(Type *t);
 void ast_free_named_type(NamedType *t);
+void ast_free_list_type(ListType *t);
+void ast_free_map_type(MapType *t);
 
 void ast_free_meta(TokenMeta *meta);
 void ast_free_stmt_list(StmtList *list, bool free_exprs);

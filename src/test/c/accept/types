@@ -1,3 +1,14 @@
-my_int is int
+// Simple type alias
+MyInt is int
 
-foo: my_int = 5
+// List and map types
+ListOfInts is []int
+ListOfLists is [][]int
+Record is [string]string
+ListRecord is [string][]string
+ListOfRecords is [][string]string
+
+foo: Record = 5
+
+// Nil type
+foo: nil = 5

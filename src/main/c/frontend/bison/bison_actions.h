@@ -39,6 +39,9 @@ ForExpr *parse_for(TokenMeta *for_kw, TokenMeta *var, TokenMeta *comma, TokenMet
 BlockExpr *parse_block(TokenMeta *open, StmtList *statements, Expr *final, TokenMeta *close);
 
 Type *parse_named_type(TokenMeta *id);
+Type *parse_list_type(TokenMeta *open, TokenMeta *close, Type *item);
+Type *parse_map_type(TokenMeta *open, Type *key, TokenMeta *close, Type *value);
+Type *parse_nil_type(TokenMeta *tok);
 
 StmtList *parse_stmt_list(Stmt *head, StmtList *tail);
 Program *parse_program(StmtList *statements);

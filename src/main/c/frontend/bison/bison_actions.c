@@ -148,6 +148,27 @@ Type *parse_named_type(TokenMeta *id) {
   return ast_type_named(id);
 }
 
+Type *parse_list_type(TokenMeta *open, TokenMeta *close, Type *item) {
+  fe_parser_log(LOG_DEBUG, "List Type");
+  ast_free_meta(open);
+  ast_free_meta(close);
+  return ast_type_list(item);
+}
+
+Type *parse_map_type(TokenMeta *open, Type *key, TokenMeta *close, Type *value) {
+  fe_parser_log(LOG_DEBUG, "Map Type");
+  ast_free_meta(open);
+  ast_free_meta(close);
+  return ast_type_map(key, value);
+}
+
+Type *parse_nil_type(TokenMeta *tok) {
+  fe_parser_log(LOG_DEBUG, "Nil Type");
+  ast_free_meta(tok);
+  return ast_type_nil();
+}
+
+
 // -----------------------------------------------------------------------------
 
 StmtList *parse_stmt_list(Stmt *head, StmtList *tail) {

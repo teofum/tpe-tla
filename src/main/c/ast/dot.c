@@ -65,7 +65,22 @@ static void dot_type(Type *type, u64 pid) {
   switch (type->type) {
     case T_NAMED:
       label = new_array(char, 256);
-      snprintf(label, 256, "Type\\n%s", type->named->meta->lexeme);
+      snprintf(label, 256, "%s", type->named->meta->lexeme);
+      break;
+    case T_LIST:
+      label = new_array(char, 8);
+      snprintf(label, 8, "List of");
+      dot_type(type->list->item_type, id);
+      break;
+    case T_MAP:
+      label = new_array(char, 8);
+      snprintf(label, 8, "Map of");
+      dot_type(type->map->key_type, id);
+      dot_type(type->map->value_type, id);
+      break;
+    case T_NIL:
+      label = new_array(char, 4);
+      snprintf(label, 4, "Nil");
       break;
   }
 

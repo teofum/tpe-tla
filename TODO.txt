@@ -42,12 +42,13 @@
   [ ] Import expressions
 [ ] Type expression
   [x] Simple (identifier) types
+  [x] Nil
   [ ] Structs
   [ ] Unions
   [ ] Enums
-  [ ] Lists
+  [x] Lists
   [ ] Tuples
-  [ ] Maps
+  [x] Maps
   [ ] Optional
   [ ] Functions
 [ ] Statements
