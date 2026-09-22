@@ -131,6 +131,7 @@ void yyerror(YYLTYPE *location, const char *message) {
 %type <group>             group
 %type <assignment>        assignment
 %type <if_expr>           if_expr
+%type <for_expr>          for_expr
 %type <block>             block
 
 %type <type>              type
@@ -139,6 +140,7 @@ void yyerror(YYLTYPE *location, const char *message) {
 %type <statement_list>    statement_list
 
 // Precedence
+%left FOR IN
 %left IF
 %left ELSE
 %right EQUAL
@@ -154,75 +156,80 @@ void yyerror(YYLTYPE *location, const char *message) {
 
 %%
 
-program: statement_list END                             { $$ = parse_program($1); }
+program: statement_list END                                         { $$ = parse_program($1); }
   ;
 
-statement_list: statement                               { $$ = parse_stmt_list($1, NULL); }
-  | statement_list statement                            { $$ = parse_stmt_list($2, $1); }
+statement_list: statement                                           { $$ = parse_stmt_list($1, NULL); }
+  | statement_list statement                                        { $$ = parse_stmt_list($2, $1); }
   ;
 
-statement: expression                                   { $$ = parse_expr_stmt($1); }
-  | declaration                                         { $$ = parse_declaration_stmt($1); }
+statement: expression                                               { $$ = parse_expr_stmt($1); }
+  | declaration                                                     { $$ = parse_declaration_stmt($1); }
   ;
 
-expression: literal                                     { $$ = parse_literal_expr($1); }
-  | variable                                            { $$ = parse_variable_expr($1); }
-  | unary                                               { $$ = parse_unary_expr($1); }
-  | binary                                              { $$ = parse_binary_expr($1); }
-  | group                                               { $$ = parse_group_expr($1); }
-  | assignment                                          { $$ = parse_assignment_expr($1); }
-  | if_expr                                             { $$ = parse_if_expr($1); }
-  | block                                               { $$ = parse_block_expr($1); }
+expression: literal                                                 { $$ = parse_literal_expr($1); }
+  | variable                                                        { $$ = parse_variable_expr($1); }
+  | unary                                                           { $$ = parse_unary_expr($1); }
+  | binary                                                          { $$ = parse_binary_expr($1); }
+  | group                                                           { $$ = parse_group_expr($1); }
+  | assignment                                                      { $$ = parse_assignment_expr($1); }
+  | if_expr                                                         { $$ = parse_if_expr($1); }
+  | for_expr                                                        { $$ = parse_for_expr($1); }
+  | block                                                           { $$ = parse_block_expr($1); }
   ;
 
-literal: INTEGER                                        { $$ = parse_integer_literal($1); }
-  | FLOAT                                               { $$ = parse_float_literal($1); }
-  | STRING                                              { $$ = parse_string_literal($1); }
-  | BOOL                                                { $$ = parse_boolean_literal($1); }
+literal: INTEGER                                                    { $$ = parse_integer_literal($1); }
+  | FLOAT                                                           { $$ = parse_float_literal($1); }
+  | STRING                                                          { $$ = parse_string_literal($1); }
+  | BOOL                                                            { $$ = parse_boolean_literal($1); }
   ;
 
-variable: IDENTIFIER                                    { $$ = parse_named_variable($1); }
-  | variable DOT IDENTIFIER                             { $$ = parse_struct_member_variable($1, $2, $3); }
-  | variable SQUARE_L expression SQUARE_R               { $$ = parse_indexed_variable($1, $2, $3, $4); }
+variable: IDENTIFIER                                                { $$ = parse_named_variable($1); }
+  | variable DOT IDENTIFIER                                         { $$ = parse_struct_member_variable($1, $2, $3); }
+  | variable SQUARE_L expression SQUARE_R                           { $$ = parse_indexed_variable($1, $2, $3, $4); }
   ;
 
-unary: BANG expression                                  { $$ = parse_unary($1, $2); }
-  | NOT expression                                      { $$ = parse_unary($1, $2); }
+unary: BANG expression                                              { $$ = parse_unary($1, $2); }
+  | NOT expression                                                  { $$ = parse_unary($1, $2); }
   ;
 
-binary: expression PLUS expression                      { $$ = parse_binary($1, $2, $3); }
-  | expression MINUS expression                         { $$ = parse_binary($1, $2, $3); }
-  | expression STAR expression                          { $$ = parse_binary($1, $2, $3); }
-  | expression SLASH expression                         { $$ = parse_binary($1, $2, $3); }
-  | expression GREATER_EQUAL expression                 { $$ = parse_binary($1, $2, $3); }
-  | expression GREATER expression                       { $$ = parse_binary($1, $2, $3); }
-  | expression LESS_EQUAL expression                    { $$ = parse_binary($1, $2, $3); }
-  | expression LESS expression                          { $$ = parse_binary($1, $2, $3); }
-  | expression EQUAL_EQUAL expression                   { $$ = parse_binary($1, $2, $3); }
-  | expression BANG_EQUAL expression                    { $$ = parse_binary($1, $2, $3); }
-  | expression AND expression                           { $$ = parse_binary($1, $2, $3); }
-  | expression OR expression                            { $$ = parse_binary($1, $2, $3); }
+binary: expression PLUS expression                                  { $$ = parse_binary($1, $2, $3); }
+  | expression MINUS expression                                     { $$ = parse_binary($1, $2, $3); }
+  | expression STAR expression                                      { $$ = parse_binary($1, $2, $3); }
+  | expression SLASH expression                                     { $$ = parse_binary($1, $2, $3); }
+  | expression GREATER_EQUAL expression                             { $$ = parse_binary($1, $2, $3); }
+  | expression GREATER expression                                   { $$ = parse_binary($1, $2, $3); }
+  | expression LESS_EQUAL expression                                { $$ = parse_binary($1, $2, $3); }
+  | expression LESS expression                                      { $$ = parse_binary($1, $2, $3); }
+  | expression EQUAL_EQUAL expression                               { $$ = parse_binary($1, $2, $3); }
+  | expression BANG_EQUAL expression                                { $$ = parse_binary($1, $2, $3); }
+  | expression AND expression                                       { $$ = parse_binary($1, $2, $3); }
+  | expression OR expression                                        { $$ = parse_binary($1, $2, $3); }
   ;
 
-group: PAREN_L expression PAREN_R                       { $$ = parse_group($1, $2, $3); }
+group: PAREN_L expression PAREN_R                                   { $$ = parse_group($1, $2, $3); }
   ;
 
-assignment: variable EQUAL expression                   { $$ = parse_assignment($1, $2, $3); }
+assignment: variable EQUAL expression                               { $$ = parse_assignment($1, $2, $3); }
   ;
 
-if_expr: IF expression expression ELSE expression       { $$ = parse_if($1, $2, $3, $4, $5); }
-  | IF expression expression                            { $$ = parse_if($1, $2, $3, NULL, NULL); }
+if_expr: IF expression expression ELSE expression                   { $$ = parse_if($1, $2, $3, $4, $5); }
+  | IF expression expression                                        { $$ = parse_if($1, $2, $3, NULL, NULL); }
   ;
 
-declaration: IDENTIFIER COLON type EQUAL expression     { $$ = parse_declaration($1, $2, $3, $4, $5); }
-  | IDENTIFIER COLON EQUAL expression                   { $$ = parse_declaration($1, $2, NULL, $3, $4); }
+for_expr: FOR IDENTIFIER COMMA IDENTIFIER IN expression expression  { $$ = parse_for($1, $2, $3, $4, $5, $6, $7); }
+  | FOR IDENTIFIER IN expression expression                         { $$ = parse_for($1, $2, NULL, NULL, $3, $4, $5); }
   ;
 
-block: CURLY_L statement_list expression CURLY_R        { $$ = parse_block($1, $2, $3, $4); }
-  | CURLY_L expression CURLY_R                          { $$ = parse_block($1, NULL, $2, $3); }
+declaration: IDENTIFIER COLON type EQUAL expression                 { $$ = parse_declaration($1, $2, $3, $4, $5); }
+  | IDENTIFIER COLON EQUAL expression                               { $$ = parse_declaration($1, $2, NULL, $3, $4); }
   ;
 
-type: IDENTIFIER                                        { $$ = parse_named_type($1); }
+block: CURLY_L statement_list expression CURLY_R                    { $$ = parse_block($1, $2, $3, $4); }
+  | CURLY_L expression CURLY_R                                      { $$ = parse_block($1, NULL, $2, $3); }
+  ;
+
+type: IDENTIFIER                                                    { $$ = parse_named_type($1); }
   ;
 
 %%

@@ -170,6 +170,20 @@ static void dot_if(IfExpr *if_expr, u64 pid) {
   if (if_expr->false_branch) dot_expr(if_expr->false_branch, id);
 }
 
+static void dot_for(ForExpr *for_expr, u64 pid) {
+  u64 id = next_id();
+  char label[256];
+  if (for_expr->idx_id) {
+    snprintf(label, 256, "For %s, %s In", for_expr->var_id->lexeme, for_expr->idx_id->lexeme);
+  } else {
+    snprintf(label, 256, "For %s In", for_expr->var_id->lexeme);
+  }
+  _node(id, label, NODE_EXPR);
+  _edge(pid, id);
+  dot_expr(for_expr->iterable, id);
+  dot_expr(for_expr->body, id);
+}
+
 static void dot_block(BlockExpr *block, u64 pid) {
   u64 id = next_id();
   _node(id, "Block", NODE_EXPR);
@@ -188,6 +202,7 @@ static void dot_expr(Expr *expr, u64 pid) {
     case EXPR_GROUP: return dot_group(expr->group, pid);
     case EXPR_ASSIGNMENT: return dot_assignment(expr->assignment, pid);
     case EXPR_IF: return dot_if(expr->if_expr, pid);
+    case EXPR_FOR: return dot_for(expr->for_expr, pid);
     case EXPR_BLOCK: return dot_block(expr->block, pid);
   }
 }

@@ -1,0 +1,12 @@
+// Simple for loop
+squares := for n in nums {
+  n * n
+}
+
+// Inline, with iteration index
+times_idx := for n, i in nums n * i
+
+// Nested for loop
+products := for x in nums for y in nums {
+  x * y
+}

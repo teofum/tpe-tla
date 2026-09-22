@@ -35,8 +35,8 @@
   [x] Binary expressions
   [x] Assignment expressions
   [x] Declaration expressions
-  [ ] If expressions
-  [ ] For expressions
+  [x] If expressions
+  [x] For expressions
   [x] Block expressions
   [ ] Function calls
   [ ] Import expressions
@@ -51,8 +51,8 @@
   [ ] Optional
   [ ] Functions
 [ ] Statements
-  [ ] Expression statements
-  [ ] Declarations
+  [x] Expression statements
+  [x] Declarations
   [ ] Type aliases
   [ ] Function definitions
 [x] Expression lists

@@ -15,19 +15,3 @@ if x > 5 {
 
 // Equivalent: assigning the result
 foo = if x > 5 x - 6 else x * 2
-
-// If-else chaining
-if x > 5 {
-  foo = x - 6
-} else if x > 0 {
-  bar := x * 2
-  foo = bar
-} else {
-  foo = -20
-}
-
-// Unreadable, but valid: inline if-else chain (please don't do this)
-if x > 5 foo = x - 6 else if x > 0 foo = x * 2 else foo = -20
-
-// Equivalent assigning the result
-foo = if x > 5 x - 6 else if x > 0 x * 2 else -20

@@ -24,45 +24,21 @@ DeclarationStmt *parse_declaration(TokenMeta *left, TokenMeta *l_op, Type *type,
 
 // -----------------------------------------------------------------------------
 
-Expr *parse_literal_expr(LiteralExpr *literal) {
-  fe_parser_log(LOG_DEBUG, "Literal Expr");
-  return ast_expr_literal(literal);
-}
+#define PARSE_EXPR_FUNC(expr_name, T, ...)            \
+Expr *parse_##expr_name##_expr(T *expr) {             \
+  fe_parser_log(LOG_DEBUG, __VA_ARGS__);              \
+  return ast_expr_##expr_name(expr);                  \
+}                                                     \
 
-Expr *parse_variable_expr(VariableExpr *var) {
-  fe_parser_log(LOG_DEBUG, "Variable Expr");
-  return ast_expr_variable(var);
-}
-
-Expr *parse_unary_expr(UnaryExpr *unary) {
-  fe_parser_log(LOG_DEBUG, "Unary Expr");
-  return ast_expr_unary(unary);
-}
-
-Expr *parse_binary_expr(BinaryExpr *binary) {
-  fe_parser_log(LOG_DEBUG, "Binary Expr");
-  return ast_expr_binary(binary);
-}
-
-Expr *parse_group_expr(GroupExpr *group) {
-  fe_parser_log(LOG_DEBUG, "Group Expr");
-  return ast_expr_group(group);
-}
-
-Expr *parse_assignment_expr(AssignmentExpr *assign) {
-  fe_parser_log(LOG_DEBUG, "Assignment Expr");
-  return ast_expr_assignment(assign);
-}
-
-Expr *parse_if_expr(IfExpr *if_expr) {
-  fe_parser_log(LOG_DEBUG, "If Expr");
-  return ast_expr_if(if_expr);
-}
-
-Expr *parse_block_expr(BlockExpr *block) {
-  fe_parser_log(LOG_DEBUG, "Block Expr (len=%u)", block->len);
-  return ast_expr_block(block);
-}
+PARSE_EXPR_FUNC(literal, LiteralExpr, "Literal Expr")
+PARSE_EXPR_FUNC(variable, VariableExpr, "Variable Expr")
+PARSE_EXPR_FUNC(unary, UnaryExpr, "Unary Expr")
+PARSE_EXPR_FUNC(binary, BinaryExpr, "Binary Expr")
+PARSE_EXPR_FUNC(group, GroupExpr, "Group Expr")
+PARSE_EXPR_FUNC(assignment, AssignmentExpr, "Assignment Expr")
+PARSE_EXPR_FUNC(if, IfExpr, "If Expr")
+PARSE_EXPR_FUNC(for, ForExpr, "For Expr")
+PARSE_EXPR_FUNC(block, BlockExpr, "Block Expr (len=%u)", expr->len)
 
 // -----------------------------------------------------------------------------
 
@@ -136,6 +112,14 @@ IfExpr *parse_if(TokenMeta *if_kw, Expr *condition, Expr *true_branch, TokenMeta
   ast_free_meta(if_kw);
   ast_free_meta(else_kw);
   return ast_if(condition, true_branch, false_branch);
+}
+
+ForExpr *parse_for(TokenMeta *for_kw, TokenMeta *var, TokenMeta *comma, TokenMeta *idx, TokenMeta *in, Expr *iterable, Expr *body) {
+  fe_parser_log(LOG_DEBUG, "For");
+  ast_free_meta(for_kw);
+  ast_free_meta(comma);
+  ast_free_meta(in);
+  return ast_for(var, idx, iterable, body);
 }
 
 BlockExpr *parse_block(TokenMeta *open, StmtList *statements, Expr *final, TokenMeta *close) {
