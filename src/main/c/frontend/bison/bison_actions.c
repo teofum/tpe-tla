@@ -279,9 +279,17 @@ StructField *parse_struct_field(Identifier *id, TokenMeta *colon, Type *type, To
   return ast_struct_field(id, type, default_value);
 }
 
+// -----------------------------------------------------------------------------
+
 Program *parse_program(StmtList *statements) {
   Program *prog = ast_program(statements);
   fe_parser_log(LOG_DEBUG, "Program (len=%u)", prog->len);
   fe_set_ast(prog);
   return prog;
+}
+
+// -----------------------------------------------------------------------------
+
+void parse_error(Location *loc, const char *message) {
+  fe_parser_log(LOG_ERROR, "%s\n\tAt line %u, col %u", message);
 }

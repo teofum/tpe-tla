@@ -7,7 +7,9 @@
 #include "bison_actions.h"
 #include "bison_parser.h"
 
-void yyerror(YYLTYPE *location, const char *message) {}
+void yyerror(YYLTYPE *location, const char *message) {
+  parse_error((Location *) location, message);
+}
 
 %}
 

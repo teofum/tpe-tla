@@ -60,4 +60,6 @@ ExprList *parse_expr_list(Expr *head, TokenMeta *comma, ExprList *tail);
 StructField *parse_struct_field(Identifier *id, TokenMeta *colon, Type *type, TokenMeta *eq, Expr *default_value);
 Program *parse_program(StmtList *statements);
 
+void parse_error(Location *loc, const char *message);
+
 #endif

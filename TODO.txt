@@ -1,3 +1,7 @@
+#=== Broken shit ==============================================================#
+
+[ ] Fix ambiguity of indexing vs list literals (ignore/weird)
+
 #=== Frontend =================================================================#
 
 [x] Project structure and build
@@ -24,7 +28,7 @@
     [ ] Structs
     [ ] Enums (identifiers)
     [x] Lists
-    [ ] Tuples
+    [x] Tuples
     [ ] Maps
   [x] Variable expressions
     [x] Named variables (identifiers)
