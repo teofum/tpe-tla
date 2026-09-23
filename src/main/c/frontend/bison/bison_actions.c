@@ -55,28 +55,37 @@ PARSE_EXPR_FUNC(block, BlockExpr, "Block Expr (len=%u)", expr->len)
 
 LiteralExpr *parse_integer_literal(IntegerLiteral *i) {
   fe_parser_log(LOG_DEBUG, "Integer Literal %lld", i->value);
-  return ast_literal_integer(i);
+  return ast_integer_literal(i);
 }
 
 LiteralExpr *parse_float_literal(FloatLiteral *f) {
   fe_parser_log(LOG_DEBUG, "Float Literal %f", f->value);
-  return ast_literal_float(f);
+  return ast_float_literal(f);
 }
 
 LiteralExpr *parse_string_literal(StringLiteral *s) {
   fe_parser_log(LOG_DEBUG, "String Literal %s", s->meta->lexeme);
-  return ast_literal_string(s);
+  return ast_string_literal(s);
 }
 
 LiteralExpr *parse_boolean_literal(BooleanLiteral *b) {
   fe_parser_log(LOG_DEBUG, "Boolean Literal %s", b->meta->lexeme);
-  return ast_literal_boolean(b);
+  return ast_boolean_literal(b);
 }
 
 LiteralExpr *parse_nil_literal(TokenMeta *tok) {
   fe_parser_log(LOG_DEBUG, "Nil Literal");
   ast_free_token(tok);
-  return ast_literal_nil();
+  return ast_nil_literal();
+}
+
+LiteralExpr *parse_list_literal(TokenMeta *open, ExprList *exprs, TokenMeta *close, TokenMeta *trailing) {
+  LiteralExpr *literal = ast_list_literal(exprs);
+  fe_parser_log(LOG_DEBUG, "List Literal (len=%u)", literal->list->len);
+  ast_free_token(open);
+  ast_free_token(close);
+  ast_free_token(trailing);
+  return literal;
 }
 
 // -----------------------------------------------------------------------------
@@ -244,6 +253,13 @@ IdentifierList *parse_identifier_list(Identifier *head, TokenMeta *comma, Identi
 StmtList *parse_stmt_list(Stmt *head, StmtList *tail) {
   StmtList* list = ast_stmt_list(head, tail);
   fe_parser_log(LOG_DEBUG, "Stmt List (len=%u)", list->len);
+  return list;
+}
+
+ExprList *parse_expr_list(Expr *head, TokenMeta *comma, ExprList *tail) {
+  ExprList* list = ast_expr_list(head, tail);
+  fe_parser_log(LOG_DEBUG, "Expr List (len=%u)", list->len);
+  ast_free_token(comma);
   return list;
 }
 

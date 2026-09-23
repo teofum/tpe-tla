@@ -38,6 +38,7 @@ static void _consume_##name##_list(T##List *list, T ***items, u32 *len) { \
 }                                                                         \
 
 AST_LIST_IMPL(Stmt, stmt)
+AST_LIST_IMPL(Expr, expr)
 AST_LIST_IMPL(StructField, struct_field)
 AST_LIST_IMPL(Type, type)
 AST_LIST_IMPL(Identifier, identifier)
@@ -115,14 +116,23 @@ LiteralExpr *f_name(T *p_name) {                        \
   return literal;                                       \
 }                                                       \
 
-AST_LITERAL_FUNC(ast_literal_integer, IntegerLiteral, L_INTEGER, integer)
-AST_LITERAL_FUNC(ast_literal_float, FloatLiteral, L_FLOAT, floating)
-AST_LITERAL_FUNC(ast_literal_string, StringLiteral, L_STRING, string)
-AST_LITERAL_FUNC(ast_literal_boolean, BooleanLiteral, L_BOOL, boolean)
+AST_LITERAL_FUNC(ast_integer_literal, IntegerLiteral, L_INTEGER, integer)
+AST_LITERAL_FUNC(ast_float_literal, FloatLiteral, L_FLOAT, floating)
+AST_LITERAL_FUNC(ast_string_literal, StringLiteral, L_STRING, string)
+AST_LITERAL_FUNC(ast_boolean_literal, BooleanLiteral, L_BOOL, boolean)
 
-LiteralExpr *ast_literal_nil() {
+LiteralExpr *ast_nil_literal() {
   LiteralExpr *literal = new(LiteralExpr);
   literal->type = L_NIL;
+  return literal;
+}
+
+LiteralExpr *ast_list_literal(ExprList *exprs) {
+  ListLiteral *list = new(ListLiteral);
+  _consume_expr_list(exprs, &list->exprs, &list->len);
+
+  LiteralExpr *literal = new(LiteralExpr);
+  *literal = (LiteralExpr){ .type = L_LIST, .list = list };
   return literal;
 }
 
@@ -402,6 +412,7 @@ void ast_free_literal(LiteralExpr *literal) {
     case L_STRING: ast_free_string_literal(literal->string); break;
     case L_BOOL: ast_free_bool_literal(literal->boolean); break;
     case L_NIL: break;
+    case L_LIST: ast_free_list_literal(literal->list); break;
   }
   free(literal);
 }
@@ -504,6 +515,16 @@ void ast_free_bool_literal(BooleanLiteral *l) {
   if (!l) return;
 
   ast_free_token(l->meta);
+  free(l);
+}
+
+void ast_free_list_literal(ListLiteral *l) {
+  if (!l) return;
+
+  for (u32 i = 0; i < l->len; i++) {
+    ast_free_expr(l->exprs[i]);
+  }
+  free(l->exprs);
   free(l);
 }
 

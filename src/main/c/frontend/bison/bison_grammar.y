@@ -47,6 +47,7 @@ void yyerror(YYLTYPE *location, const char *message) {}
   StructFieldList *struct_field_list;
   TypeList *type_list;
   IdentifierList *identifier_list;
+  ExprList *expression_list;
 }
 
 %destructor { ast_free_token($$); } <token>
@@ -73,6 +74,7 @@ void yyerror(YYLTYPE *location, const char *message) {}
 %destructor { ast_free_struct_field($$); } <struct_field>
 %destructor { ast_free_type_list($$, true); } <type_list>
 %destructor { ast_free_identifier_list($$, true); } <identifier_list>
+%destructor { ast_free_expr_list($$, true); } <expression_list>
 %destructor { ast_free_program($$); } <program>
 
 // Symbols
@@ -154,6 +156,7 @@ void yyerror(YYLTYPE *location, const char *message) {}
 %type <struct_field_list> struct_field_list
 %type <type_list>         type_list
 %type <identifier_list>   identifier_list
+%type <expression_list>   expression_list
 
 // Precedence
 %left FOR IN
@@ -209,6 +212,8 @@ literal: INTEGER                                                    { $$ = parse
   | STRING                                                          { $$ = parse_string_literal($1); }
   | BOOL                                                            { $$ = parse_boolean_literal($1); }
   | NIL                                                             { $$ = parse_nil_literal($1); }
+  | SQUARE_L expression_list SQUARE_R                               { $$ = parse_list_literal($1, $2, $3, NULL); }
+  | SQUARE_L expression_list COMMA SQUARE_R                         { $$ = parse_list_literal($1, $2, $4, $3); }
   ;
 
 variable: IDENTIFIER                                                { $$ = parse_named_variable($1); }
@@ -281,6 +286,10 @@ type_list: type                                                     { $$ = parse
 
 identifier_list: IDENTIFIER                                         { $$ = parse_identifier_list($1, NULL, NULL); }
   | identifier_list COMMA IDENTIFIER                                { $$ = parse_identifier_list($3, $2, $1); }
+  ;
+
+expression_list: expression                                         { $$ = parse_expr_list($1, NULL, NULL); }
+  | expression_list COMMA expression                                { $$ = parse_expr_list($3, $2, $1); }
   ;
 
 %%

@@ -26,6 +26,7 @@ LiteralExpr *parse_float_literal(FloatLiteral *f);
 LiteralExpr *parse_string_literal(StringLiteral *s);
 LiteralExpr *parse_boolean_literal(BooleanLiteral *b);
 LiteralExpr *parse_nil_literal(TokenMeta *tok);
+LiteralExpr *parse_list_literal(TokenMeta *open, ExprList *exprs, TokenMeta *close, TokenMeta *trailing);
 
 VariableExpr *parse_named_variable(Identifier *id);
 VariableExpr *parse_struct_member_variable(VariableExpr *struct_expr, TokenMeta *op, Identifier *id);
@@ -53,6 +54,7 @@ StructFieldList *parse_struct_field_list(StructField *head, TokenMeta *comma, St
 TypeList *parse_type_list(Type *head, TokenMeta *comma, TypeList *tail);
 IdentifierList *parse_identifier_list(Identifier *head, TokenMeta *comma, IdentifierList *tail);
 StmtList *parse_stmt_list(Stmt *head, StmtList *tail);
+ExprList *parse_expr_list(Expr *head, TokenMeta *comma, ExprList *tail);
 
 StructField *parse_struct_field(Identifier *id, TokenMeta *colon, Type *type, TokenMeta *eq, Expr *default_value);
 Program *parse_program(StmtList *statements);

@@ -23,7 +23,7 @@
     [x] Nil
     [ ] Structs
     [ ] Enums (identifiers)
-    [ ] Lists
+    [x] Lists
     [ ] Tuples
     [ ] Maps
   [x] Variable expressions

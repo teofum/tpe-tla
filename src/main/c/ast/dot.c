@@ -154,6 +154,13 @@ static void dot_literal(LiteralExpr *literal, u64 pid) {
       label = new_array(char, 4);
       snprintf(label, 4, "Nil");
       break;
+    case L_LIST:
+      label = new_array(char, 5);
+      snprintf(label, 5, "List");
+      for (u32 i = 0; i < literal->list->len; i++) {
+        dot_expr(literal->list->exprs[i], id);
+      }
+      break;
   }
 
   _node(id, label, NODE_BASE);

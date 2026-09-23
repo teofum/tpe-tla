@@ -39,6 +39,7 @@ typedef enum {
   L_STRING,
   L_BOOL,
   L_NIL,
+  L_LIST,
 } LiteralType;
 
 typedef enum {
@@ -95,6 +96,7 @@ typedef struct IntegerLiteral IntegerLiteral;
 typedef struct FloatLiteral FloatLiteral;
 typedef struct StringLiteral StringLiteral;
 typedef struct BooleanLiteral BooleanLiteral;
+typedef struct ListLiteral ListLiteral;
 
 typedef struct NamedVariable NamedVariable;
 typedef struct StructMemberVariable StructMemberVariable;
@@ -113,6 +115,7 @@ typedef struct EnumType EnumType;
 typedef struct Program Program;
 
 AST_LIST(Stmt, stmt);
+AST_LIST(Expr, expr);
 AST_LIST(StructField, struct_field);
 AST_LIST(Type, type);
 AST_LIST(Identifier, identifier);
@@ -169,6 +172,7 @@ struct LiteralExpr {
     FloatLiteral *floating;
     StringLiteral *string;
     BooleanLiteral *boolean;
+    ListLiteral *list;
   };
 };
 
@@ -239,6 +243,11 @@ struct StringLiteral {
 struct BooleanLiteral {
   bool value;
   TokenMeta *meta;
+};
+
+struct ListLiteral {
+  u32 len;
+  Expr **exprs;
 };
 
 // -----------------------------------------------------------------------------
@@ -337,11 +346,12 @@ Expr *ast_expr_if(IfExpr *if_expr);
 Expr *ast_expr_for(ForExpr *for_expr);
 Expr *ast_expr_block(BlockExpr *block);
 
-LiteralExpr *ast_literal_integer(IntegerLiteral *i);
-LiteralExpr *ast_literal_float(FloatLiteral *f);
-LiteralExpr *ast_literal_string(StringLiteral *s);
-LiteralExpr *ast_literal_boolean(BooleanLiteral *b);
-LiteralExpr *ast_literal_nil();
+LiteralExpr *ast_integer_literal(IntegerLiteral *i);
+LiteralExpr *ast_float_literal(FloatLiteral *f);
+LiteralExpr *ast_string_literal(StringLiteral *s);
+LiteralExpr *ast_boolean_literal(BooleanLiteral *b);
+LiteralExpr *ast_list_literal(ExprList *exprs);
+LiteralExpr *ast_nil_literal();
 
 VariableExpr *ast_variable_named(Identifier *id);
 VariableExpr *ast_variable_struct_member(VariableExpr *struct_expr, Identifier *id);
@@ -389,6 +399,7 @@ void ast_free_int_literal(IntegerLiteral *l);
 void ast_free_float_literal(FloatLiteral *l);
 void ast_free_string_literal(StringLiteral *l);
 void ast_free_bool_literal(BooleanLiteral *l);
+void ast_free_list_literal(ListLiteral *l);
 
 void ast_free_named_variable(NamedVariable *v);
 void ast_free_struct_member_variable(StructMemberVariable *v);
