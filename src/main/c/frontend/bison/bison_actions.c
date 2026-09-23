@@ -73,6 +73,12 @@ LiteralExpr *parse_boolean_literal(BooleanLiteral *b) {
   return ast_literal_boolean(b);
 }
 
+LiteralExpr *parse_nil_literal(TokenMeta *tok) {
+  fe_parser_log(LOG_DEBUG, "Nil Literal");
+  ast_free_token(tok);
+  return ast_literal_nil();
+}
+
 // -----------------------------------------------------------------------------
 
 VariableExpr *parse_named_variable(Identifier *id) {

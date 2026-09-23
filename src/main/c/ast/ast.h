@@ -38,6 +38,7 @@ typedef enum {
   L_FLOAT,
   L_STRING,
   L_BOOL,
+  L_NIL,
 } LiteralType;
 
 typedef enum {
@@ -340,6 +341,7 @@ LiteralExpr *ast_literal_integer(IntegerLiteral *i);
 LiteralExpr *ast_literal_float(FloatLiteral *f);
 LiteralExpr *ast_literal_string(StringLiteral *s);
 LiteralExpr *ast_literal_boolean(BooleanLiteral *b);
+LiteralExpr *ast_literal_nil();
 
 VariableExpr *ast_variable_named(Identifier *id);
 VariableExpr *ast_variable_struct_member(VariableExpr *struct_expr, Identifier *id);

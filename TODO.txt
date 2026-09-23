@@ -40,12 +40,12 @@
   [x] Block expressions
   [ ] Function calls
   [ ] Import expressions
-[ ] Type expression
+[x] Type expression
   [x] Simple (identifier) types
   [x] Nil
   [x] Structs
   [x] Unions
-  [ ] Enums
+  [x] Enums
   [x] Lists
   [x] Tuples
   [x] Maps

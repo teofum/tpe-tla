@@ -5,4 +5,4 @@ MaybeInt is union { int, nil }
 MaybeInt is int?
 
 foo: int? = 5
-bar: []int? = 5
+bar: []int? = nil

@@ -120,6 +120,12 @@ AST_LITERAL_FUNC(ast_literal_float, FloatLiteral, L_FLOAT, floating)
 AST_LITERAL_FUNC(ast_literal_string, StringLiteral, L_STRING, string)
 AST_LITERAL_FUNC(ast_literal_boolean, BooleanLiteral, L_BOOL, boolean)
 
+LiteralExpr *ast_literal_nil() {
+  LiteralExpr *literal = new(LiteralExpr);
+  literal->type = L_NIL;
+  return literal;
+}
+
 // -----------------------------------------------------------------------------
 
 VariableExpr *ast_variable_named(Identifier *id) {
@@ -395,6 +401,7 @@ void ast_free_literal(LiteralExpr *literal) {
     case L_FLOAT: ast_free_float_literal(literal->floating); break;
     case L_STRING: ast_free_string_literal(literal->string); break;
     case L_BOOL: ast_free_bool_literal(literal->boolean); break;
+    case L_NIL: break;
   }
   free(literal);
 }

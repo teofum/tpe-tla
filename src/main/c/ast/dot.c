@@ -134,21 +134,25 @@ static void dot_literal(LiteralExpr *literal, u64 pid) {
   switch (literal->type) {
     case L_INTEGER:
       label = new_array(char, 256);
-      snprintf(label, 256, "Integer Literal\\n%lld", (long long)literal->integer->value);
+      snprintf(label, 256, "Integer\\n%lld", (long long)literal->integer->value);
       break;
     case L_FLOAT:
       label = new_array(char, 256);
-      snprintf(label, 256, "Float Literal\\n%f", literal->floating->value);
+      snprintf(label, 256, "Float\\n%f", literal->floating->value);
       break;
     case L_BOOL:
       label = new_array(char, 23);
-      snprintf(label, 23, "Boolean Literal\\n%s", literal->boolean->value ? "true" : "false");
+      snprintf(label, 23, "Boolean\\n%s", literal->boolean->value ? "true" : "false");
       break;
     case L_STRING:
       char *str = str_to_cstring(literal->string->value);
       label = new_array(char, literal->string->value.len + 19);
-      snprintf(label, literal->string->value.len + 19, "String Literal\\n'%s'", str);
+      snprintf(label, literal->string->value.len + 19, "String\\n'%s'", str);
       free(str);
+      break;
+    case L_NIL:
+      label = new_array(char, 4);
+      snprintf(label, 4, "Nil");
       break;
   }
 

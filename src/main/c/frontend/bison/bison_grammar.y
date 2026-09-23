@@ -208,6 +208,7 @@ literal: INTEGER                                                    { $$ = parse
   | FLOAT                                                           { $$ = parse_float_literal($1); }
   | STRING                                                          { $$ = parse_string_literal($1); }
   | BOOL                                                            { $$ = parse_boolean_literal($1); }
+  | NIL                                                             { $$ = parse_nil_literal($1); }
   ;
 
 variable: IDENTIFIER                                                { $$ = parse_named_variable($1); }

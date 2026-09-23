@@ -25,6 +25,7 @@ LiteralExpr *parse_integer_literal(IntegerLiteral *i);
 LiteralExpr *parse_float_literal(FloatLiteral *f);
 LiteralExpr *parse_string_literal(StringLiteral *s);
 LiteralExpr *parse_boolean_literal(BooleanLiteral *b);
+LiteralExpr *parse_nil_literal(TokenMeta *tok);
 
 VariableExpr *parse_named_variable(Identifier *id);
 VariableExpr *parse_struct_member_variable(VariableExpr *struct_expr, TokenMeta *op, Identifier *id);
