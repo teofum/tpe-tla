@@ -20,7 +20,7 @@
     [x] Floats
     [x] Strings
     [x] Booleans
-    [ ] Nil
+    [x] Nil
     [ ] Structs
     [ ] Enums (identifiers)
     [ ] Lists
