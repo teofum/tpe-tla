@@ -184,17 +184,17 @@ void yyerror(YYLTYPE *location, const char *message) {
 
 %%
 
-program: statement_list END                                         { $$ = parse_program($1); }
+program: statement_list NL END                                      { $$ = parse_program($1); }
   ;
 
 statement_list: statement                                           { $$ = parse_stmt_list($1, NULL); }
-  | statement_list statement                                        { $$ = parse_stmt_list($2, $1); }
+  | statement_list NL statement                                     { $$ = parse_stmt_list($3, $1); }
   ;
 
-statement: expression NL                                            { $$ = parse_expr_stmt($1); }
-  | declaration NL                                                  { $$ = parse_declaration_stmt($1); }
-  | type_alias NL                                                   { $$ = parse_type_alias_stmt($1); }
-  | error NL                                                        { $$ = parse_error_stmt(); }
+statement: expression                                               { $$ = parse_expr_stmt($1); }
+  | declaration                                                     { $$ = parse_declaration_stmt($1); }
+  | type_alias                                                      { $$ = parse_type_alias_stmt($1); }
+  | error                                                           { $$ = parse_error_stmt(); }
   ;
 
 declaration: IDENTIFIER COLON type EQUAL expression                 { $$ = parse_declaration($1, $3, $5); }
