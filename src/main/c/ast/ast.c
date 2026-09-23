@@ -59,6 +59,12 @@ AST_STMT_FUNC(ast_stmt_expr, Expr, STMT_EXPR, expr)
 AST_STMT_FUNC(ast_stmt_decl, DeclarationStmt, STMT_DECLARATION, decl)
 AST_STMT_FUNC(ast_stmt_alias, TypeAliasStmt, STMT_TYPE_ALIAS, type_alias)
 
+Stmt *ast_stmt_error() {
+  Stmt *stmt = new(Stmt);
+  stmt->type = STMT_PARSE_ERROR;
+  return stmt;
+}
+
 // -----------------------------------------------------------------------------
 
 DeclarationStmt *ast_declaration(Identifier *id, Type *type, Expr *expr) {
@@ -194,7 +200,7 @@ VariableExpr *ast_variable_indexed(VariableExpr *container, Expr *index) {
 
 // -----------------------------------------------------------------------------
 
-UnaryExpr *ast_unary(TokenMeta *op, Expr *expr) {
+UnaryExpr *ast_unary(TokenLabel op, Expr *expr) {
   UnaryExpr *unary = new(UnaryExpr);
   *unary = (UnaryExpr){
     .op = op,
@@ -204,7 +210,7 @@ UnaryExpr *ast_unary(TokenMeta *op, Expr *expr) {
   return unary;
 }
 
-BinaryExpr *ast_binary(Expr *left, TokenMeta *op, Expr *right) {
+BinaryExpr *ast_binary(Expr *left, TokenLabel op, Expr *right) {
   BinaryExpr *binary = new(BinaryExpr);
   *binary = (BinaryExpr){
     .left = left,
@@ -255,10 +261,9 @@ ForExpr *ast_for(Identifier *var, Identifier *idx, Expr *iterable, Expr *body) {
   return for_expr;
 }
 
-BlockExpr *ast_block(StmtList *statements, Expr *final) {
-  StmtList *all_statements = ast_stmt_list(ast_stmt_expr(final), statements);
+BlockExpr *ast_block(StmtList *statements) {
   BlockExpr* block = new(BlockExpr);
-  _consume_stmt_list(all_statements, &block->statements, &block->len);
+  _consume_stmt_list(statements, &block->statements, &block->len);
   return block;
 }
 
@@ -372,6 +377,7 @@ void ast_free_stmt(Stmt *stmt) {
     case STMT_EXPR: ast_free_expr(stmt->expr); break;
     case STMT_DECLARATION: ast_free_decl(stmt->decl); break;
     case STMT_TYPE_ALIAS: ast_free_alias(stmt->type_alias); break;
+    case STMT_PARSE_ERROR: break;
   }
 
   free(stmt);
@@ -442,7 +448,6 @@ void ast_free_unary(UnaryExpr *unary) {
   if (!unary) return;
 
   ast_free_expr(unary->expr);
-  ast_free_token(unary->op);
   free(unary);
 }
 
@@ -451,7 +456,6 @@ void ast_free_binary(BinaryExpr *binary) {
 
   ast_free_expr(binary->left);
   ast_free_expr(binary->right);
-  ast_free_token(binary->op);
   free(binary);
 }
 

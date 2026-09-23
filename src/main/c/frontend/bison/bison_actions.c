@@ -20,16 +20,17 @@ Stmt *parse_type_alias_stmt(TypeAliasStmt *alias) {
   return ast_stmt_alias(alias);
 }
 
-DeclarationStmt *parse_declaration(Identifier *left, TokenMeta *l_op, Type *type, TokenMeta *r_op, Expr *right) {
+Stmt *parse_error_stmt() {
+  return ast_stmt_error();
+}
+
+DeclarationStmt *parse_declaration(Identifier *left, Type *type, Expr *right) {
   fe_parser_log(LOG_DEBUG, "Declaration for %s", left->lexeme);
-  ast_free_token(l_op);
-  ast_free_token(r_op);
   return ast_declaration(left, type, right);
 }
 
-TypeAliasStmt *parse_type_alias(Identifier *left, TokenMeta *is, Type *right) {
+TypeAliasStmt *parse_type_alias(Identifier *left, Type *right) {
   fe_parser_log(LOG_DEBUG, "Type alias for %s", left->lexeme);
-  ast_free_token(is);
   return ast_type_alias(left, right);
 }
 
@@ -73,27 +74,20 @@ LiteralExpr *parse_boolean_literal(BooleanLiteral *b) {
   return ast_boolean_literal(b);
 }
 
-LiteralExpr *parse_nil_literal(TokenMeta *tok) {
+LiteralExpr *parse_nil_literal() {
   fe_parser_log(LOG_DEBUG, "Nil Literal");
-  ast_free_token(tok);
   return ast_nil_literal();
 }
 
-LiteralExpr *parse_list_literal(TokenMeta *open, ExprList *exprs, TokenMeta *close, TokenMeta *trailing) {
+LiteralExpr *parse_list_literal(ExprList *exprs) {
   LiteralExpr *literal = ast_list_literal(exprs);
   fe_parser_log(LOG_DEBUG, "List Literal (len=%u)", literal->list->len);
-  ast_free_token(open);
-  ast_free_token(close);
-  ast_free_token(trailing);
   return literal;
 }
 
-LiteralExpr *parse_tuple_literal(TokenMeta *open, ExprList *exprs, TokenMeta *close, TokenMeta *trailing) {
+LiteralExpr *parse_tuple_literal(ExprList *exprs) {
   LiteralExpr *literal = ast_tuple_literal(exprs);
   fe_parser_log(LOG_DEBUG, "Tuple Literal (len=%u)", literal->tuple->len);
-  ast_free_token(open);
-  ast_free_token(close);
-  ast_free_token(trailing);
   return literal;
 }
 
@@ -104,64 +98,51 @@ VariableExpr *parse_named_variable(Identifier *id) {
   return ast_variable_named(id);
 }
 
-VariableExpr *parse_struct_member_variable(VariableExpr *struct_expr, TokenMeta *op, Identifier *id) {
+VariableExpr *parse_struct_member_variable(VariableExpr *struct_expr, Identifier *id) {
   fe_parser_log(LOG_DEBUG, "Struct Member %s", id->lexeme);
-  ast_free_token(op);
   return ast_variable_struct_member(struct_expr, id);
 }
 
-VariableExpr *parse_indexed_variable(VariableExpr *container, TokenMeta *open, Expr *index, TokenMeta *close) {
+VariableExpr *parse_indexed_variable(VariableExpr *container, Expr *index) {
   fe_parser_log(LOG_DEBUG, "Indexed variable");
-  ast_free_token(open);
-  ast_free_token(close);
   return ast_variable_indexed(container, index);
 }
 
 // -----------------------------------------------------------------------------
 
-UnaryExpr *parse_unary(TokenMeta *op, Expr *expr) {
-  fe_parser_log(LOG_DEBUG, "Unary '%s'", op->lexeme);
+UnaryExpr *parse_unary(TokenLabel op, Expr *expr) {
+  fe_parser_log(LOG_DEBUG, "Unary '%s'", TOKEN_LEXEME[op]);
   return ast_unary(op, expr);
 }
 
-BinaryExpr *parse_binary(Expr *left, TokenMeta *op, Expr *right) {
-  fe_parser_log(LOG_DEBUG, "Binary '%s'", op->lexeme);
+BinaryExpr *parse_binary(Expr *left, TokenLabel op, Expr *right) {
+  fe_parser_log(LOG_DEBUG, "Binary '%s'", TOKEN_LEXEME[op]);
   return ast_binary(left, op, right);
 }
 
-GroupExpr *parse_group(TokenMeta *open, Expr *expr, TokenMeta *close) {
+GroupExpr *parse_group(Expr *expr) {
   fe_parser_log(LOG_DEBUG, "Group");
-  ast_free_token(open);
-  ast_free_token(close);
   return ast_group(expr);
 }
 
-AssignmentExpr *parse_assignment(VariableExpr *left, TokenMeta *op, Expr *right) {
+AssignmentExpr *parse_assignment(VariableExpr *left, Expr *right) {
   fe_parser_log(LOG_DEBUG, "Assignment");
-  ast_free_token(op);
   return ast_assignment(left, right);
 }
 
-IfExpr *parse_if(TokenMeta *if_kw, Expr *condition, Expr *true_branch, TokenMeta *else_kw, Expr *false_branch) {
+IfExpr *parse_if(Expr *condition, Expr *true_branch, Expr *false_branch) {
   fe_parser_log(LOG_DEBUG, "If");
-  ast_free_token(if_kw);
-  ast_free_token(else_kw);
   return ast_if(condition, true_branch, false_branch);
 }
 
-ForExpr *parse_for(TokenMeta *for_kw, Identifier *var, TokenMeta *comma, Identifier *idx, TokenMeta *in, Expr *iterable, Expr *body) {
+ForExpr *parse_for(Identifier *var, Identifier *idx, Expr *iterable, Expr *body) {
   fe_parser_log(LOG_DEBUG, "For");
-  ast_free_token(for_kw);
-  ast_free_token(comma);
-  ast_free_token(in);
   return ast_for(var, idx, iterable, body);
 }
 
-BlockExpr *parse_block(TokenMeta *open, StmtList *statements, Expr *final, TokenMeta *close) {
-  BlockExpr *block = ast_block(statements, final);
+BlockExpr *parse_block(StmtList *statements) {
+  BlockExpr *block = ast_block(statements);
   fe_parser_log(LOG_DEBUG, "Block (len=%u)", block->len);
-  ast_free_token(open);
-  ast_free_token(close);
   return block;
 }
 
@@ -172,90 +153,66 @@ Type *parse_named_type(Identifier *id) {
   return ast_named_type(id);
 }
 
-Type *parse_list_type(TokenMeta *open, TokenMeta *close, Type *item) {
+Type *parse_list_type(Type *item) {
   fe_parser_log(LOG_DEBUG, "List Type");
-  ast_free_token(open);
-  ast_free_token(close);
   return ast_list_type(item);
 }
 
-Type *parse_map_type(TokenMeta *open, Type *key, TokenMeta *close, Type *value) {
+Type *parse_map_type(Type *key, Type *value) {
   fe_parser_log(LOG_DEBUG, "Map Type");
-  ast_free_token(open);
-  ast_free_token(close);
   return ast_map_type(key, value);
 }
 
-Type *parse_struct_type(TokenMeta *kw, TokenMeta *open, StructFieldList *fields, TokenMeta *close, TokenMeta *trailing) {
+Type *parse_struct_type(StructFieldList *fields) {
   fe_parser_log(LOG_DEBUG, "Struct");
-  ast_free_token(kw);
-  ast_free_token(open);
-  ast_free_token(close);
-  ast_free_token(trailing);
   return ast_struct_type(fields);
 }
 
-Type *parse_union_type(TokenMeta *kw, TokenMeta *open, TypeList *types, TokenMeta *close, TokenMeta *trailing) {
+Type *parse_union_type(TypeList *types) {
   fe_parser_log(LOG_DEBUG, "Union");
-  ast_free_token(kw);
-  ast_free_token(open);
-  ast_free_token(close);
-  ast_free_token(trailing);
   return ast_union_type(types);
 }
 
-Type *parse_optional_type(Type *type, TokenMeta *question) {
+Type *parse_optional_type(Type *type) {
   fe_parser_log(LOG_DEBUG, "Optional");
-  ast_free_token(question);
 
   // Optional types don't exist in the AST or backend; it's simply syntax sugar for a {T, nil} union
   TypeList *types = ast_type_list(type, ast_type_list(ast_nil_type(), NULL));
   return ast_union_type(types);
 }
 
-Type *parse_tuple_type(TokenMeta *open, TypeList *types, TokenMeta *close, TokenMeta *trailing) {
+Type *parse_tuple_type(TypeList *types) {
   fe_parser_log(LOG_DEBUG, "Tuple");
-  ast_free_token(open);
-  ast_free_token(close);
-  ast_free_token(trailing);
   return ast_tuple_type(types);
 }
 
-Type *parse_enum_type(TokenMeta *kw, TokenMeta *open, IdentifierList *values, TokenMeta *close, TokenMeta *trailing) {
+Type *parse_enum_type(IdentifierList *values) {
   fe_parser_log(LOG_DEBUG, "Enum");
-  ast_free_token(kw);
-  ast_free_token(open);
-  ast_free_token(close);
-  ast_free_token(trailing);
   return ast_enum_type(values);
 }
 
-Type *parse_nil_type(TokenMeta *tok) {
+Type *parse_nil_type() {
   fe_parser_log(LOG_DEBUG, "Nil Type");
-  ast_free_token(tok);
   return ast_nil_type();
 }
 
 // -----------------------------------------------------------------------------
 
-StructFieldList *parse_struct_field_list(StructField *head, TokenMeta *comma, StructFieldList *tail) {
+StructFieldList *parse_struct_field_list(StructField *head, StructFieldList *tail) {
   StructFieldList* list = ast_struct_field_list(head, tail);
   fe_parser_log(LOG_DEBUG, "Struct Field List (len=%u)", list->len);
-  ast_free_token(comma);
   return list;
 }
 
-TypeList *parse_type_list(Type *head, TokenMeta *comma, TypeList *tail) {
+TypeList *parse_type_list(Type *head, TypeList *tail) {
   TypeList* list = ast_type_list(head, tail);
   fe_parser_log(LOG_DEBUG, "Type List (len=%u)", list->len);
-  ast_free_token(comma);
   return list;
 }
 
-IdentifierList *parse_identifier_list(Identifier *head, TokenMeta *comma, IdentifierList *tail) {
+IdentifierList *parse_identifier_list(Identifier *head, IdentifierList *tail) {
   IdentifierList* list = ast_identifier_list(head, tail);
   fe_parser_log(LOG_DEBUG, "Identifier List (len=%u)", list->len);
-  ast_free_token(comma);
   return list;
 }
 
@@ -265,17 +222,14 @@ StmtList *parse_stmt_list(Stmt *head, StmtList *tail) {
   return list;
 }
 
-ExprList *parse_expr_list(Expr *head, TokenMeta *comma, ExprList *tail) {
+ExprList *parse_expr_list(Expr *head, ExprList *tail) {
   ExprList* list = ast_expr_list(head, tail);
   fe_parser_log(LOG_DEBUG, "Expr List (len=%u)", list->len);
-  ast_free_token(comma);
   return list;
 }
 
-StructField *parse_struct_field(Identifier *id, TokenMeta *colon, Type *type, TokenMeta *eq, Expr *default_value) {
+StructField *parse_struct_field(Identifier *id, Type *type, Expr *default_value) {
   fe_parser_log(LOG_DEBUG, "Struct Field %s", id->lexeme);
-  ast_free_token(colon);
-  ast_free_token(eq);
   return ast_struct_field(id, type, default_value);
 }
 

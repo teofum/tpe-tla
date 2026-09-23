@@ -16,7 +16,6 @@ static TokenMeta *_token_meta(Token *token) {
   *meta = (TokenMeta){
     .label = token->label,
     .len = token->len,
-    .location = token->location,
     .lexeme = strndup(token->lexeme, token->len),
   };
   return meta;
@@ -24,7 +23,7 @@ static TokenMeta *_token_meta(Token *token) {
 
 CompilationStatus lex_operator(TokenLabel label) {
   Token *token = fe_create_token(label);
-  token->semantic_value->token = _token_meta(token);
+  token->semantic_value->token = token->label;
 
   fe_push_token(token);
   fe_free_token(token);
@@ -33,7 +32,7 @@ CompilationStatus lex_operator(TokenLabel label) {
 
 CompilationStatus lex_keyword(TokenLabel label) {
   Token *token = fe_create_token(label);
-  token->semantic_value->token = _token_meta(token);
+  token->semantic_value->token = token->label;
 
   fe_push_token(token);
   fe_free_token(token);
@@ -100,7 +99,7 @@ CompilationStatus lex_boolean_literal() {
 
 CompilationStatus lex_identifier() {
   Token *token = fe_create_token(IDENTIFIER);
-  token->semantic_value->token = _token_meta(token);
+  token->semantic_value->identifier = _token_meta(token);
 
   fe_push_token(token);
   fe_free_token(token);
@@ -114,6 +113,15 @@ CompilationStatus lex_begin_multiline_comment(FlexContext ctx) {
 
 CompilationStatus lex_end_multiline_comment() {
   fe_leave_context();
+  return IN_PROGRESS;
+}
+
+CompilationStatus lex_newline() {
+  Token *token = fe_create_token(NL);
+  token->semantic_value->token = token->label;
+
+  fe_push_token(token);
+  fe_free_token(token);
   return IN_PROGRESS;
 }
 
@@ -131,6 +139,8 @@ CompilationStatus lex_unknown() {
 
 CompilationStatus lex_eof() {
   Token *token = fe_create_token(END);
+  token->semantic_value->token = token->label;
+
   fe_push_token(token);
   fe_free_token(token);
   return SUCCEEDED;

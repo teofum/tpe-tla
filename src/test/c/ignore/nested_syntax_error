@@ -1,0 +1,20 @@
+foo = {
+  x := 5
+
+  // This should error out the entire if expression
+  if x == 5 6 = 7 else "what"
+
+  // This should contain the error inside the block
+  if x == 5 {
+    6 = 7
+    6
+  } else "what"
+
+  {
+    6 = 7
+  }
+
+  x
+}
+
+bar = 67

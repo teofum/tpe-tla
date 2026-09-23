@@ -15,7 +15,7 @@ i32 main(i32 argc, const char **argv) {
   fe_parser_log(LOG_INFO, "Parsing done");
 
   if (parse_status == SUCCEEDED) {
-    FILE *dot_output = fopen("ast.dot", "w");
+    FILE *dot_output = fopen("ast.gv", "w");
     ast_generate_dot(cs.ast, dot_output);
     fclose(dot_output);
     ast_free_program(cs.ast);

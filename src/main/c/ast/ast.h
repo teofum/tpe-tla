@@ -19,6 +19,7 @@ typedef enum {
   STMT_EXPR,
   STMT_DECLARATION,
   STMT_TYPE_ALIAS,
+  STMT_PARSE_ERROR, // Shouldn't exist in any valid AST; only used for debug output
 } StmtType;
 
 typedef enum {
@@ -71,8 +72,6 @@ typedef struct {
   TokenLabel label;
   char *lexeme;
   u32 len;
-
-  Location location;
 } TokenMeta;
 
 typedef TokenMeta Identifier;
@@ -193,12 +192,12 @@ struct GroupExpr {
 };
 
 struct UnaryExpr {
-  TokenMeta *op;
+  TokenLabel op;
   Expr *expr;
 };
 
 struct BinaryExpr {
-  TokenMeta *op;
+  TokenLabel op;
   Expr *left;
   Expr *right;
 };
@@ -337,9 +336,13 @@ struct Program {
 
 // -----------------------------------------------------------------------------
 
+extern const char *TOKEN_LABEL_STR[];
+extern const char *TOKEN_LEXEME[];
+
 Stmt *ast_stmt_expr(Expr *expr);
 Stmt *ast_stmt_decl(DeclarationStmt *decl);
 Stmt *ast_stmt_alias(TypeAliasStmt *alias);
+Stmt *ast_stmt_error();
 
 DeclarationStmt *ast_declaration(Identifier *id, Type *type, Expr *expr);
 TypeAliasStmt *ast_type_alias(Identifier *id, Type *type);
@@ -366,13 +369,13 @@ VariableExpr *ast_variable_named(Identifier *id);
 VariableExpr *ast_variable_struct_member(VariableExpr *struct_expr, Identifier *id);
 VariableExpr *ast_variable_indexed(VariableExpr *container, Expr *index);
 
-UnaryExpr *ast_unary(TokenMeta *op, Expr *expr);
-BinaryExpr *ast_binary(Expr *left, TokenMeta *op, Expr *right);
+UnaryExpr *ast_unary(TokenLabel op, Expr *expr);
+BinaryExpr *ast_binary(Expr *left, TokenLabel op, Expr *right);
 GroupExpr *ast_group(Expr *expr);
 AssignmentExpr *ast_assignment(VariableExpr *left, Expr *right);
 IfExpr *ast_if(Expr *condition, Expr *true_branch, Expr *false_branch);
 ForExpr *ast_for(Identifier *var, Identifier *idx, Expr *iterable, Expr *body);
-BlockExpr *ast_block(StmtList *statements, Expr *final);
+BlockExpr *ast_block(StmtList *statements);
 
 Type *ast_named_type(Identifier *id);
 Type *ast_list_type(Type *item_type);

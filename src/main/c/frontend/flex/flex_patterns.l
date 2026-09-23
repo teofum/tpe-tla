@@ -1,6 +1,5 @@
 %top{
 
-#include "../../ast/ast.h"
 #include "../../support/types.h"
 #include "../frontend.h"
 #include "../bison/bison_parser.h"
@@ -47,7 +46,7 @@ bool flex_has_buffer(Frontend *la);
  * @see https://westes.github.io/flex/manual/Matching.html
  * @see https://westes.github.io/flex/manual/Patterns.html
  */
-whitespace			[[:space:]]+
+whitespace			([[:space:]]{-}[\n])+
 d               [[:digit:]]
 d_nz            [1-9]
 d_hex           [[:digit:]]
@@ -64,7 +63,8 @@ id_char         [a-zA-Z0-9_-]
  */
 %}
 
-"//".*\n                      { return lex_ignored(); }
+^{whitespace}?"//".*\n        { return lex_ignored(); }
+"//".*\n                      { return lex_newline(); }
 "/*"								          { return lex_begin_multiline_comment(MULTILINE_COMMENT); }
 <MULTILINE_COMMENT>"*/"				{ return lex_end_multiline_comment(); }
 <MULTILINE_COMMENT>[^*]+			{ return lex_ignored(); }
@@ -118,6 +118,8 @@ id_char         [a-zA-Z0-9_-]
 
 ({alpha}|_){id_char}*         { return lex_identifier(); }
 
+^{whitespace}?\n              { return lex_ignored(); }
+\n                            { return lex_newline(); }
 {whitespace}                  { return lex_ignored(); }
 .                             { return lex_unknown(); }
 

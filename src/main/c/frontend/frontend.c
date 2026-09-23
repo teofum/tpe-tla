@@ -19,7 +19,7 @@ void fe_init(CompilerState *compiler_state) {
   yylex_init(&f->scanner);
   f->parser = yypstate_new();
   f->location = new (YYLTYPE);
-  f->scan_logger = logger_create("Scanner", stderr, LOG_INFO);
+  f->scan_logger = logger_create("Scanner", stderr, LOG_ALL);
   f->parse_logger = logger_create("Parser", stderr, LOG_ALL);
 
   flex_enter_context(f, 0);
@@ -88,6 +88,55 @@ const char *TOKEN_LABEL_STR[] = {
   [IGNORED] = "Ignored Lexeme",
   [UNKNOWN] = "Unknown Lexeme",
   [END] = "EOF",
+};
+
+const char *TOKEN_LEXEME[] = {
+  [PAREN_L] = "(",
+  [PAREN_R] = ")",
+  [SQUARE_L] = "[",
+  [SQUARE_R] = "]",
+  [CURLY_L] = "{",
+  [CURLY_R] = "}",
+  [COLON] = ":",
+  [COMMA] = ",",
+  [DOT] = ".",
+  [MINUS] = "-",
+  [PLUS] = "+",
+  [STAR] = "*",
+  [SLASH] = "/",
+  [QUESTION_MARK] = "?",
+  [HASH] = "#",
+  [EQUAL] = "=",
+  [EQUAL_EQUAL] = "==",
+  [BANG] = "!",
+  [BANG_EQUAL] = "!=",
+  [GREATER] = ">",
+  [GREATER_EQUAL] = ">=",
+  [LESS] = "<",
+  [LESS_EQUAL] = "<=",
+  [IF] = "if",
+  [ELSE] = "else",
+  [FOR] = "for",
+  [IN] = "in",
+  [NIL] = "nil",
+  [IS] = "is",
+  [OF] = "of",
+  [AND] = "and",
+  [OR] = "or",
+  [NOT] = "not",
+  [STRUCT] = "struct",
+  [UNION] = "union",
+  [ENUM] = "enum",
+  [FUNCTION] = "function",
+  [IMPORT] = "import",
+  [INTEGER] = "Integer Literal",
+  [FLOAT] = "Float Literal",
+  [STRING] = "String Literal",
+  [BOOL] = "Boolean Literal",
+  [IDENTIFIER] = "Identifier",
+  [IGNORED] = "Ignored Lexeme",
+  [UNKNOWN] = "Unknown Lexeme",
+  [END] = "<EOF>",
 };
 
 static void _log_token(Token *token, LogLevel level) {

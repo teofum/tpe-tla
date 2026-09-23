@@ -20,7 +20,8 @@ void yyerror(YYLTYPE *location, const char *message) {
 %locations
 
 %union {
-	TokenMeta *token;
+	TokenLabel token;
+	Identifier *identifier;
 	IntegerLiteral *integer;
 	FloatLiteral *floating;
 	StringLiteral *string;
@@ -52,7 +53,7 @@ void yyerror(YYLTYPE *location, const char *message) {
   ExprList *expression_list;
 }
 
-%destructor { ast_free_token($$); } <token>
+%destructor { ast_free_identifier($$); } <identifier>
 %destructor { ast_free_int_literal($$); } <integer>
 %destructor { ast_free_float_literal($$); } <floating>
 %destructor { ast_free_string_literal($$); } <string>
@@ -122,13 +123,16 @@ void yyerror(YYLTYPE *location, const char *message) {
 %token <token>    IMPORT
 
 // Identifiers
-%token <token>    IDENTIFIER
+%token <identifier> IDENTIFIER
 
 // Literals
 %token <integer>  INTEGER
 %token <floating> FLOAT
 %token <string>   STRING
 %token <boolean>  BOOL
+
+// Newline: statement terminator
+%token <token>    NL
 
 // Other
 %token <token>    IGNORED
@@ -187,16 +191,17 @@ statement_list: statement                                           { $$ = parse
   | statement_list statement                                        { $$ = parse_stmt_list($2, $1); }
   ;
 
-statement: expression                                               { $$ = parse_expr_stmt($1); }
-  | declaration                                                     { $$ = parse_declaration_stmt($1); }
-  | type_alias                                                      { $$ = parse_type_alias_stmt($1); }
+statement: expression NL                                            { $$ = parse_expr_stmt($1); }
+  | declaration NL                                                  { $$ = parse_declaration_stmt($1); }
+  | type_alias NL                                                   { $$ = parse_type_alias_stmt($1); }
+  | error NL                                                        { $$ = parse_error_stmt(); }
   ;
 
-declaration: IDENTIFIER COLON type EQUAL expression                 { $$ = parse_declaration($1, $2, $3, $4, $5); }
-  | IDENTIFIER COLON EQUAL expression                               { $$ = parse_declaration($1, $2, NULL, $3, $4); }
+declaration: IDENTIFIER COLON type EQUAL expression                 { $$ = parse_declaration($1, $3, $5); }
+  | IDENTIFIER COLON EQUAL expression                               { $$ = parse_declaration($1, NULL, $4); }
   ;
 
-type_alias: IDENTIFIER IS type                                      { $$ = parse_type_alias($1, $2, $3); }
+type_alias: IDENTIFIER IS type                                      { $$ = parse_type_alias($1, $3); }
   ;
 
 expression: literal                                                 { $$ = parse_literal_expr($1); }
@@ -214,16 +219,28 @@ literal: INTEGER                                                    { $$ = parse
   | FLOAT                                                           { $$ = parse_float_literal($1); }
   | STRING                                                          { $$ = parse_string_literal($1); }
   | BOOL                                                            { $$ = parse_boolean_literal($1); }
-  | NIL                                                             { $$ = parse_nil_literal($1); }
-  | SQUARE_L expression_list SQUARE_R                               { $$ = parse_list_literal($1, $2, $3, NULL); }
-  | SQUARE_L expression_list COMMA SQUARE_R                         { $$ = parse_list_literal($1, $2, $4, $3); }
-  | PAREN_L expression_list PAREN_R                                 { $$ = parse_tuple_literal($1, $2, $3, NULL); }
-  | PAREN_L expression_list COMMA PAREN_R                           { $$ = parse_tuple_literal($1, $2, $4, $3); }
+  | NIL                                                             { $$ = parse_nil_literal(); }
+  | SQUARE_L expression_list SQUARE_R                               { $$ = parse_list_literal($2); }
+  | SQUARE_L NL expression_list SQUARE_R                            { $$ = parse_list_literal($3); }
+  | SQUARE_L expression_list NL SQUARE_R                            { $$ = parse_list_literal($2); }
+  | SQUARE_L NL expression_list NL SQUARE_R                         { $$ = parse_list_literal($3); }
+  | SQUARE_L expression_list COMMA SQUARE_R                         { $$ = parse_list_literal($2); }
+  | SQUARE_L NL expression_list COMMA SQUARE_R                      { $$ = parse_list_literal($3); }
+  | SQUARE_L expression_list COMMA NL SQUARE_R                      { $$ = parse_list_literal($2); }
+  | SQUARE_L NL expression_list COMMA NL SQUARE_R                   { $$ = parse_list_literal($3); }
+  | PAREN_L expression_list PAREN_R                                 { $$ = parse_tuple_literal($2); }
+  | PAREN_L NL expression_list PAREN_R                              { $$ = parse_tuple_literal($3); }
+  | PAREN_L expression_list NL PAREN_R                              { $$ = parse_tuple_literal($2); }
+  | PAREN_L NL expression_list NL PAREN_R                           { $$ = parse_tuple_literal($3); }
+  | PAREN_L expression_list COMMA PAREN_R                           { $$ = parse_tuple_literal($2); }
+  | PAREN_L NL expression_list COMMA PAREN_R                        { $$ = parse_tuple_literal($3); }
+  | PAREN_L expression_list COMMA NL PAREN_R                        { $$ = parse_tuple_literal($2); }
+  | PAREN_L NL expression_list COMMA NL PAREN_R                     { $$ = parse_tuple_literal($3); }
   ;
 
 variable: IDENTIFIER                                                { $$ = parse_named_variable($1); }
-  | variable DOT IDENTIFIER                                         { $$ = parse_struct_member_variable($1, $2, $3); }
-  | variable SQUARE_L expression SQUARE_R                           { $$ = parse_indexed_variable($1, $2, $3, $4); }
+  | variable DOT IDENTIFIER                                         { $$ = parse_struct_member_variable($1, $3); }
+  | variable SQUARE_L expression SQUARE_R                           { $$ = parse_indexed_variable($1, $3); }
   ;
 
 unary: BANG expression                                              { $$ = parse_unary($1, $2); }
@@ -244,57 +261,87 @@ binary: expression PLUS expression                                  { $$ = parse
   | expression OR expression                                        { $$ = parse_binary($1, $2, $3); }
   ;
 
-group: PAREN_L expression PAREN_R                                   { $$ = parse_group($1, $2, $3); }
+group: PAREN_L expression PAREN_R                                   { $$ = parse_group($2); }
   ;
 
-assignment: variable EQUAL expression                               { $$ = parse_assignment($1, $2, $3); }
+assignment: variable EQUAL expression                               { $$ = parse_assignment($1, $3); }
   ;
 
-if_expr: IF expression expression ELSE expression                   { $$ = parse_if($1, $2, $3, $4, $5); }
-  | IF expression expression                                        { $$ = parse_if($1, $2, $3, NULL, NULL); }
+if_expr: IF expression expression ELSE expression                   { $$ = parse_if($2, $3, $5); }
+  | IF expression expression                                        { $$ = parse_if($2, $3, NULL); }
   ;
 
-for_expr: FOR IDENTIFIER COMMA IDENTIFIER IN expression expression  { $$ = parse_for($1, $2, $3, $4, $5, $6, $7); }
-  | FOR IDENTIFIER IN expression expression                         { $$ = parse_for($1, $2, NULL, NULL, $3, $4, $5); }
+for_expr: FOR IDENTIFIER COMMA IDENTIFIER IN expression expression  { $$ = parse_for($2, $4, $6, $7); }
+  | FOR IDENTIFIER IN expression expression                         { $$ = parse_for($2, NULL, $4, $5); }
   ;
 
-block: CURLY_L statement_list expression CURLY_R                    { $$ = parse_block($1, $2, $3, $4); }
-  | CURLY_L expression CURLY_R                                      { $$ = parse_block($1, NULL, $2, $3); }
+block: CURLY_L statement_list CURLY_R                               { $$ = parse_block($2); }
+  | CURLY_L NL statement_list CURLY_R                               { $$ = parse_block($3); }
+  | CURLY_L statement_list NL CURLY_R                               { $$ = parse_block($2); }
+  | CURLY_L NL statement_list NL CURLY_R                            { $$ = parse_block($3); }
   ;
 
 type: IDENTIFIER                                                    { $$ = parse_named_type($1); }
-  | SQUARE_L SQUARE_R type                                          { $$ = parse_list_type($1, $2, $3); }
-  | SQUARE_L type SQUARE_R type                                     { $$ = parse_map_type($1, $2, $3, $4); }
-  | STRUCT CURLY_L struct_field_list CURLY_R                        { $$ = parse_struct_type($1, $2, $3, $4, NULL); }
-  | STRUCT CURLY_L struct_field_list COMMA CURLY_R                  { $$ = parse_struct_type($1, $2, $3, $5, $4); }
-  | UNION CURLY_L type_list CURLY_R                                 { $$ = parse_union_type($1, $2, $3, $4, NULL); }
-  | UNION CURLY_L type_list COMMA CURLY_R                           { $$ = parse_union_type($1, $2, $3, $5, $4); }
-  | type QUESTION_MARK                                              { $$ = parse_optional_type($1, $2); }
-  | PAREN_L type_list PAREN_R                                       { $$ = parse_tuple_type($1, $2, $3, NULL); }
-  | PAREN_L type_list COMMA PAREN_R                                 { $$ = parse_tuple_type($1, $2, $4, $3); }
-  | ENUM CURLY_L identifier_list CURLY_R                            { $$ = parse_enum_type($1, $2, $3, $4, NULL); }
-  | ENUM CURLY_L identifier_list COMMA CURLY_R                      { $$ = parse_enum_type($1, $2, $3, $5, $4); }
-  | NIL                                                             { $$ = parse_nil_type($1); }
+  | SQUARE_L SQUARE_R type                                          { $$ = parse_list_type($3); }
+  | SQUARE_L type SQUARE_R type                                     { $$ = parse_map_type($2, $4); }
+  | STRUCT CURLY_L struct_field_list CURLY_R                        { $$ = parse_struct_type($3); }
+  | STRUCT CURLY_L NL struct_field_list CURLY_R                     { $$ = parse_struct_type($4); }
+  | STRUCT CURLY_L struct_field_list NL CURLY_R                     { $$ = parse_struct_type($3); }
+  | STRUCT CURLY_L NL struct_field_list NL CURLY_R                  { $$ = parse_struct_type($4); }
+  | STRUCT CURLY_L struct_field_list COMMA CURLY_R                  { $$ = parse_struct_type($3); }
+  | STRUCT CURLY_L NL struct_field_list COMMA CURLY_R               { $$ = parse_struct_type($4); }
+  | STRUCT CURLY_L struct_field_list COMMA NL CURLY_R               { $$ = parse_struct_type($3); }
+  | STRUCT CURLY_L NL struct_field_list COMMA NL CURLY_R            { $$ = parse_struct_type($4); }
+  | UNION CURLY_L type_list CURLY_R                                 { $$ = parse_union_type($3); }
+  | UNION CURLY_L NL type_list CURLY_R                              { $$ = parse_union_type($4); }
+  | UNION CURLY_L type_list NL CURLY_R                              { $$ = parse_union_type($3); }
+  | UNION CURLY_L NL type_list NL CURLY_R                           { $$ = parse_union_type($4); }
+  | UNION CURLY_L type_list COMMA CURLY_R                           { $$ = parse_union_type($3); }
+  | UNION CURLY_L NL type_list COMMA CURLY_R                        { $$ = parse_union_type($4); }
+  | UNION CURLY_L type_list COMMA NL CURLY_R                        { $$ = parse_union_type($3); }
+  | UNION CURLY_L NL type_list COMMA NL CURLY_R                     { $$ = parse_union_type($4); }
+  | PAREN_L type_list PAREN_R                                       { $$ = parse_tuple_type($2); }
+  | PAREN_L NL type_list PAREN_R                                    { $$ = parse_tuple_type($3); }
+  | PAREN_L type_list NL PAREN_R                                    { $$ = parse_tuple_type($2); }
+  | PAREN_L NL type_list NL PAREN_R                                 { $$ = parse_tuple_type($3); }
+  | PAREN_L type_list COMMA PAREN_R                                 { $$ = parse_tuple_type($2); }
+  | PAREN_L NL type_list COMMA PAREN_R                              { $$ = parse_tuple_type($3); }
+  | PAREN_L type_list COMMA NL PAREN_R                              { $$ = parse_tuple_type($2); }
+  | PAREN_L NL type_list COMMA NL PAREN_R                           { $$ = parse_tuple_type($3); }
+  | ENUM CURLY_L identifier_list CURLY_R                            { $$ = parse_enum_type($3); }
+  | ENUM CURLY_L NL identifier_list CURLY_R                         { $$ = parse_enum_type($4); }
+  | ENUM CURLY_L identifier_list NL CURLY_R                         { $$ = parse_enum_type($3); }
+  | ENUM CURLY_L NL identifier_list NL CURLY_R                      { $$ = parse_enum_type($4); }
+  | ENUM CURLY_L identifier_list COMMA CURLY_R                      { $$ = parse_enum_type($3); }
+  | ENUM CURLY_L NL identifier_list COMMA CURLY_R                   { $$ = parse_enum_type($4); }
+  | ENUM CURLY_L identifier_list COMMA NL CURLY_R                   { $$ = parse_enum_type($3); }
+  | ENUM CURLY_L NL identifier_list COMMA NL CURLY_R                { $$ = parse_enum_type($4); }
+  | type QUESTION_MARK                                              { $$ = parse_optional_type($1); }
+  | NIL                                                             { $$ = parse_nil_type(); }
   ;
 
-struct_field_list: struct_field                                     { $$ = parse_struct_field_list($1, NULL, NULL); }
-  | struct_field_list COMMA struct_field                            { $$ = parse_struct_field_list($3, $2, $1); }
+struct_field_list: struct_field                                     { $$ = parse_struct_field_list($1, NULL); }
+  | struct_field_list COMMA struct_field                            { $$ = parse_struct_field_list($3, $1); }
+  | struct_field_list COMMA NL struct_field                         { $$ = parse_struct_field_list($4, $1); }
   ;
 
-struct_field: IDENTIFIER COLON type                                 { $$ = parse_struct_field($1, $2, $3, NULL, NULL); }
-  | IDENTIFIER COLON type EQUAL expression                          { $$ = parse_struct_field($1, $2, $3, $4, $5); }
+struct_field: IDENTIFIER COLON type                                 { $$ = parse_struct_field($1, $3, NULL); }
+  | IDENTIFIER COLON type EQUAL expression                          { $$ = parse_struct_field($1, $3, $5); }
   ;
 
-type_list: type                                                     { $$ = parse_type_list($1, NULL, NULL); }
-  | type_list COMMA type                                            { $$ = parse_type_list($3, $2, $1); }
+type_list: type                                                     { $$ = parse_type_list($1, NULL); }
+  | type_list COMMA type                                            { $$ = parse_type_list($3, $1); }
+  | type_list COMMA NL type                                         { $$ = parse_type_list($4, $1); }
   ;
 
-identifier_list: IDENTIFIER                                         { $$ = parse_identifier_list($1, NULL, NULL); }
-  | identifier_list COMMA IDENTIFIER                                { $$ = parse_identifier_list($3, $2, $1); }
+identifier_list: IDENTIFIER                                         { $$ = parse_identifier_list($1, NULL); }
+  | identifier_list COMMA IDENTIFIER                                { $$ = parse_identifier_list($3, $1); }
+  | identifier_list COMMA NL IDENTIFIER                             { $$ = parse_identifier_list($4, $1); }
   ;
 
-expression_list: expression                                         { $$ = parse_expr_list($1, NULL, NULL); }
-  | expression_list COMMA expression                                { $$ = parse_expr_list($3, $2, $1); }
+expression_list: expression                                         { $$ = parse_expr_list($1, NULL); }
+  | expression_list COMMA expression                                { $$ = parse_expr_list($3, $1); }
+  | expression_list COMMA NL expression                             { $$ = parse_expr_list($4, $1); }
   ;
 
 %%

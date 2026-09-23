@@ -17,6 +17,7 @@ CompilationStatus lex_identifier();
 CompilationStatus lex_begin_multiline_comment(FlexContext ctx);
 CompilationStatus lex_end_multiline_comment();
 
+CompilationStatus lex_newline();
 CompilationStatus lex_ignored();
 CompilationStatus lex_unknown();
 CompilationStatus lex_eof();

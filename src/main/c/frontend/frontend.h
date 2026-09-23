@@ -5,8 +5,6 @@
 #include <support/types.h>
 #include <support/logger.h>
 
-extern const char *TOKEN_LABEL_STR[];
-
 typedef struct {
   char *lexeme;
   u32 len;

@@ -16,6 +16,7 @@ typedef enum {
   NODE_STMT,
   NODE_BASE,
   NODE_TYPE,
+  NODE_ERROR,
 } NodeType;
 
 static const char *attrs_for_type[] = {
@@ -23,6 +24,7 @@ static const char *attrs_for_type[] = {
   [NODE_BASE] = ",style=filled",
   [NODE_STMT] = ",style=filled,fillcolor=\"#a0ffc0\"",
   [NODE_TYPE] = ",style=filled,fillcolor=\"#ffc0ff\"",
+  [NODE_ERROR] = ",style=filled,fillcolor=\"#ffc0c0\"",
 };
 
 // Internals
@@ -204,14 +206,14 @@ static void dot_variable(VariableExpr *var, u64 pid) {
 
 static void dot_unary(UnaryExpr *unary, u64 pid) {
   u64 id = next_id();
-  _node(id, unary->op->lexeme, NODE_BASE);
+  _node(id, TOKEN_LEXEME[unary->op], NODE_BASE);
   _edge(pid, id);
   dot_expr(unary->expr, id);
 }
 
 static void dot_binary(BinaryExpr *binary, u64 pid) {
   u64 id = next_id();
-  _node(id, binary->op->lexeme, NODE_BASE);
+  _node(id, TOKEN_LEXEME[binary->op], NODE_BASE);
   _edge(pid, id);
   dot_expr(binary->left, id);
   dot_expr(binary->right, id);
@@ -297,11 +299,18 @@ static void dot_alias(TypeAliasStmt *alias, u64 pid) {
   dot_type(alias->type, id);
 }
 
+static void dot_error(u64 pid) {
+  u64 id = next_id();
+  _node(id, "Parse ERROR", NODE_ERROR);
+  _edge(pid, id);
+}
+
 static void dot_stmt(Stmt *stmt, u64 pid) {
   switch (stmt->type) {
     case STMT_EXPR: return dot_expr(stmt->expr, pid);
     case STMT_DECLARATION: return dot_decl(stmt->decl, pid);
     case STMT_TYPE_ALIAS: return dot_alias(stmt->type_alias, pid);
+    case STMT_PARSE_ERROR: return dot_error(pid);
   }
 }
 
