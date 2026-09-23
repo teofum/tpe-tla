@@ -166,6 +166,7 @@ void yyerror(YYLTYPE *location, const char *message) {}
 %left OR
 %left AND
 %left NOT
+%left PAREN_L PAREN_R
 %left QUESTION_MARK
 %left SQUARE_L SQUARE_R
 %left EQUAL_EQUAL BANG_EQUAL
@@ -214,6 +215,8 @@ literal: INTEGER                                                    { $$ = parse
   | NIL                                                             { $$ = parse_nil_literal($1); }
   | SQUARE_L expression_list SQUARE_R                               { $$ = parse_list_literal($1, $2, $3, NULL); }
   | SQUARE_L expression_list COMMA SQUARE_R                         { $$ = parse_list_literal($1, $2, $4, $3); }
+  | PAREN_L expression_list PAREN_R                                 { $$ = parse_tuple_literal($1, $2, $3, NULL); }
+  | PAREN_L expression_list COMMA PAREN_R                           { $$ = parse_tuple_literal($1, $2, $4, $3); }
   ;
 
 variable: IDENTIFIER                                                { $$ = parse_named_variable($1); }
@@ -265,8 +268,8 @@ type: IDENTIFIER                                                    { $$ = parse
   | UNION CURLY_L type_list CURLY_R                                 { $$ = parse_union_type($1, $2, $3, $4, NULL); }
   | UNION CURLY_L type_list COMMA CURLY_R                           { $$ = parse_union_type($1, $2, $3, $5, $4); }
   | type QUESTION_MARK                                              { $$ = parse_optional_type($1, $2); }
-  | LESS type_list GREATER                                          { $$ = parse_tuple_type($1, $2, $3, NULL); }
-  | LESS type_list COMMA GREATER                                    { $$ = parse_tuple_type($1, $2, $4, $3); }
+  | PAREN_L type_list PAREN_R                                       { $$ = parse_tuple_type($1, $2, $3, NULL); }
+  | PAREN_L type_list COMMA PAREN_R                                 { $$ = parse_tuple_type($1, $2, $4, $3); }
   | ENUM CURLY_L identifier_list CURLY_R                            { $$ = parse_enum_type($1, $2, $3, $4, NULL); }
   | ENUM CURLY_L identifier_list COMMA CURLY_R                      { $$ = parse_enum_type($1, $2, $3, $5, $4); }
   | NIL                                                             { $$ = parse_nil_type($1); }

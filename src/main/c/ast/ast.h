@@ -40,6 +40,7 @@ typedef enum {
   L_BOOL,
   L_NIL,
   L_LIST,
+  L_TUPLE,
 } LiteralType;
 
 typedef enum {
@@ -97,6 +98,7 @@ typedef struct FloatLiteral FloatLiteral;
 typedef struct StringLiteral StringLiteral;
 typedef struct BooleanLiteral BooleanLiteral;
 typedef struct ListLiteral ListLiteral;
+typedef struct TupleLiteral TupleLiteral;
 
 typedef struct NamedVariable NamedVariable;
 typedef struct StructMemberVariable StructMemberVariable;
@@ -173,6 +175,7 @@ struct LiteralExpr {
     StringLiteral *string;
     BooleanLiteral *boolean;
     ListLiteral *list;
+    TupleLiteral *tuple;
   };
 };
 
@@ -246,6 +249,11 @@ struct BooleanLiteral {
 };
 
 struct ListLiteral {
+  u32 len;
+  Expr **exprs;
+};
+
+struct TupleLiteral {
   u32 len;
   Expr **exprs;
 };
@@ -351,6 +359,7 @@ LiteralExpr *ast_float_literal(FloatLiteral *f);
 LiteralExpr *ast_string_literal(StringLiteral *s);
 LiteralExpr *ast_boolean_literal(BooleanLiteral *b);
 LiteralExpr *ast_list_literal(ExprList *exprs);
+LiteralExpr *ast_tuple_literal(ExprList *exprs);
 LiteralExpr *ast_nil_literal();
 
 VariableExpr *ast_variable_named(Identifier *id);
@@ -400,6 +409,7 @@ void ast_free_float_literal(FloatLiteral *l);
 void ast_free_string_literal(StringLiteral *l);
 void ast_free_bool_literal(BooleanLiteral *l);
 void ast_free_list_literal(ListLiteral *l);
+void ast_free_tuple_literal(TupleLiteral *l);
 
 void ast_free_named_variable(NamedVariable *v);
 void ast_free_struct_member_variable(StructMemberVariable *v);

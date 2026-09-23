@@ -1,0 +1,14 @@
+{
+  // This parses as an indexed variable access (good)
+  foo[2]
+
+  // This parses as a variable followed by a list literal (weird, but valid)
+  foo[1, 2, 3]
+
+  // So does this (even weirder, but also valid)
+  foo[1,]
+
+  // This is also an indexed variable access (maybe unexpected?)
+  foo
+  [2]
+}

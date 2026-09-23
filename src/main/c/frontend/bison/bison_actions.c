@@ -88,6 +88,15 @@ LiteralExpr *parse_list_literal(TokenMeta *open, ExprList *exprs, TokenMeta *clo
   return literal;
 }
 
+LiteralExpr *parse_tuple_literal(TokenMeta *open, ExprList *exprs, TokenMeta *close, TokenMeta *trailing) {
+  LiteralExpr *literal = ast_tuple_literal(exprs);
+  fe_parser_log(LOG_DEBUG, "Tuple Literal (len=%u)", literal->tuple->len);
+  ast_free_token(open);
+  ast_free_token(close);
+  ast_free_token(trailing);
+  return literal;
+}
+
 // -----------------------------------------------------------------------------
 
 VariableExpr *parse_named_variable(Identifier *id) {

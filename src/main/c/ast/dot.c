@@ -161,6 +161,13 @@ static void dot_literal(LiteralExpr *literal, u64 pid) {
         dot_expr(literal->list->exprs[i], id);
       }
       break;
+    case L_TUPLE:
+      label = new_array(char, 6);
+      snprintf(label, 6, "Tuple");
+      for (u32 i = 0; i < literal->tuple->len; i++) {
+        dot_expr(literal->tuple->exprs[i], id);
+      }
+      break;
   }
 
   _node(id, label, NODE_BASE);

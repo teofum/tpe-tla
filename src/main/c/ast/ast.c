@@ -136,6 +136,15 @@ LiteralExpr *ast_list_literal(ExprList *exprs) {
   return literal;
 }
 
+LiteralExpr *ast_tuple_literal(ExprList *exprs) {
+  TupleLiteral *tuple = new(TupleLiteral);
+  _consume_expr_list(exprs, &tuple->exprs, &tuple->len);
+
+  LiteralExpr *literal = new(LiteralExpr);
+  *literal = (LiteralExpr){ .type = L_TUPLE, .tuple = tuple };
+  return literal;
+}
+
 // -----------------------------------------------------------------------------
 
 VariableExpr *ast_variable_named(Identifier *id) {
@@ -413,6 +422,7 @@ void ast_free_literal(LiteralExpr *literal) {
     case L_BOOL: ast_free_bool_literal(literal->boolean); break;
     case L_NIL: break;
     case L_LIST: ast_free_list_literal(literal->list); break;
+    case L_TUPLE: ast_free_tuple_literal(literal->tuple); break;
   }
   free(literal);
 }
@@ -519,6 +529,16 @@ void ast_free_bool_literal(BooleanLiteral *l) {
 }
 
 void ast_free_list_literal(ListLiteral *l) {
+  if (!l) return;
+
+  for (u32 i = 0; i < l->len; i++) {
+    ast_free_expr(l->exprs[i]);
+  }
+  free(l->exprs);
+  free(l);
+}
+
+void ast_free_tuple_literal(TupleLiteral *l) {
   if (!l) return;
 
   for (u32 i = 0; i < l->len; i++) {
