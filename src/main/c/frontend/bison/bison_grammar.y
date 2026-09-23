@@ -267,12 +267,13 @@ group: PAREN_L expression PAREN_R                                   { $$ = parse
 assignment: variable EQUAL expression                               { $$ = parse_assignment($1, $3); }
   ;
 
-if_expr: IF expression expression ELSE expression                   { $$ = parse_if($2, $3, $5); }
-  | IF expression expression                                        { $$ = parse_if($2, $3, NULL); }
+if_expr: IF expression block ELSE block                             { $$ = parse_if($2, $3, $5); }
+  | IF expression block                                             { $$ = parse_if($2, $3, NULL); }
+  | IF expression block ELSE if_expr                                { $$ = parse_nested_if($2, $3, $5); }
   ;
 
-for_expr: FOR IDENTIFIER COMMA IDENTIFIER IN expression expression  { $$ = parse_for($2, $4, $6, $7); }
-  | FOR IDENTIFIER IN expression expression                         { $$ = parse_for($2, NULL, $4, $5); }
+for_expr: FOR IDENTIFIER COMMA IDENTIFIER IN expression block       { $$ = parse_for($2, $4, $6, $7); }
+  | FOR IDENTIFIER IN expression block                              { $$ = parse_for($2, NULL, $4, $5); }
   ;
 
 block: CURLY_L statement_list CURLY_R                               { $$ = parse_block($2); }

@@ -38,8 +38,9 @@ UnaryExpr *parse_unary(TokenLabel op, Expr *expr);
 BinaryExpr *parse_binary(Expr *left, TokenLabel op, Expr *right);
 GroupExpr *parse_group(Expr *expr);
 AssignmentExpr *parse_assignment(VariableExpr *left, Expr *right);
-IfExpr *parse_if(Expr *condition, Expr *true_branch, Expr *false_branch);
-ForExpr *parse_for(Identifier *var, Identifier *idx, Expr *iterable, Expr *body);
+IfExpr *parse_if(Expr *condition, BlockExpr *true_branch, BlockExpr *false_branch);
+IfExpr *parse_nested_if(Expr *condition, BlockExpr *true_branch, IfExpr *false_branch);
+ForExpr *parse_for(Identifier *var, Identifier *idx, Expr *iterable, BlockExpr *body);
 BlockExpr *parse_block(StmtList *statements);
 
 Type *parse_named_type(Identifier *id);

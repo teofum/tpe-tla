@@ -21,6 +21,7 @@ Stmt *parse_type_alias_stmt(TypeAliasStmt *alias) {
 }
 
 Stmt *parse_error_stmt() {
+  fe_parser_log(LOG_DEBUG, "ERROR Stmt");
   return ast_stmt_error();
 }
 
@@ -130,14 +131,20 @@ AssignmentExpr *parse_assignment(VariableExpr *left, Expr *right) {
   return ast_assignment(left, right);
 }
 
-IfExpr *parse_if(Expr *condition, Expr *true_branch, Expr *false_branch) {
+IfExpr *parse_if(Expr *condition, BlockExpr *true_branch, BlockExpr *false_branch) {
   fe_parser_log(LOG_DEBUG, "If");
-  return ast_if(condition, true_branch, false_branch);
+  Expr *false_expr = false_branch ? ast_expr_block(false_branch) : NULL;
+  return ast_if(condition, ast_expr_block(true_branch), false_expr);
 }
 
-ForExpr *parse_for(Identifier *var, Identifier *idx, Expr *iterable, Expr *body) {
+IfExpr *parse_nested_if(Expr *condition, BlockExpr *true_branch, IfExpr *false_branch) {
+  fe_parser_log(LOG_DEBUG, "If");
+  return ast_if(condition, ast_expr_block(true_branch), ast_expr_if(false_branch));
+}
+
+ForExpr *parse_for(Identifier *var, Identifier *idx, Expr *iterable, BlockExpr *body) {
   fe_parser_log(LOG_DEBUG, "For");
-  return ast_for(var, idx, iterable, body);
+  return ast_for(var, idx, iterable, ast_expr_block(body));
 }
 
 BlockExpr *parse_block(StmtList *statements) {
