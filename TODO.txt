@@ -1,6 +1,8 @@
 #=== Broken shit ==============================================================#
 
-[ ] Fix ambiguity of indexing vs list literals (ignore/weird)
+[x] Fix ambiguity of indexing vs list literals (ignore/weird)
+  - Overhauled grammar to separate statements with newlines
+[ ] Fix ambiguity of grouping vs 1-uple literal
 
 #=== Frontend =================================================================#
 
