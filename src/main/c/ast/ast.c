@@ -40,6 +40,7 @@ static void _consume_##name##_list(T##List *list, T ***items, u32 *len) { \
 AST_LIST_IMPL(Stmt, stmt)
 AST_LIST_IMPL(StructField, struct_field)
 AST_LIST_IMPL(Type, type)
+AST_LIST_IMPL(Identifier, identifier)
 
 // -----------------------------------------------------------------------------
 
@@ -59,7 +60,7 @@ AST_STMT_FUNC(ast_stmt_alias, TypeAliasStmt, STMT_TYPE_ALIAS, type_alias)
 
 // -----------------------------------------------------------------------------
 
-DeclarationStmt *ast_declaration(TokenMeta *id, Type *type, Expr *expr) {
+DeclarationStmt *ast_declaration(Identifier *id, Type *type, Expr *expr) {
   DeclarationStmt *decl = new(DeclarationStmt);
   *decl = (DeclarationStmt){
     .left = id,
@@ -70,7 +71,7 @@ DeclarationStmt *ast_declaration(TokenMeta *id, Type *type, Expr *expr) {
   return decl;
 }
 
-TypeAliasStmt *ast_type_alias(TokenMeta *id, Type *type) {
+TypeAliasStmt *ast_type_alias(Identifier *id, Type *type) {
   TypeAliasStmt *alias = new(TypeAliasStmt);
   *alias = (TypeAliasStmt){
     .alias = id,
@@ -121,9 +122,9 @@ AST_LITERAL_FUNC(ast_literal_boolean, BooleanLiteral, L_BOOL, boolean)
 
 // -----------------------------------------------------------------------------
 
-VariableExpr *ast_variable_named(TokenMeta *id) {
+VariableExpr *ast_variable_named(Identifier *id) {
   NamedVariable *named_var = new(NamedVariable);
-  *named_var = (NamedVariable){ .meta = id };
+  *named_var = (NamedVariable){ .name = id };
 
   VariableExpr *var = new(VariableExpr);
   *var = (VariableExpr){
@@ -134,11 +135,11 @@ VariableExpr *ast_variable_named(TokenMeta *id) {
   return var;
 }
 
-VariableExpr *ast_variable_struct_member(VariableExpr *struct_expr, TokenMeta *id) {
+VariableExpr *ast_variable_struct_member(VariableExpr *struct_expr, Identifier *id) {
   StructMemberVariable *struct_var = new(StructMemberVariable);
   *struct_var = (StructMemberVariable){
     .struct_expr = struct_expr,
-    .meta = id,
+    .name = id,
   };
 
   VariableExpr *var = new(VariableExpr);
@@ -217,7 +218,7 @@ IfExpr *ast_if(Expr *condition, Expr *true_branch, Expr *false_branch) {
   return if_expr;
 }
 
-ForExpr *ast_for(TokenMeta *var, TokenMeta *idx, Expr *iterable, Expr *body) {
+ForExpr *ast_for(Identifier *var, Identifier *idx, Expr *iterable, Expr *body) {
   ForExpr *for_expr = new(ForExpr);
   *for_expr = (ForExpr){
     .var_id = var,
@@ -238,9 +239,9 @@ BlockExpr *ast_block(StmtList *statements, Expr *final) {
 
 // -----------------------------------------------------------------------------
 
-Type *ast_type_named(TokenMeta *id) {
+Type *ast_named_type(Identifier *id) {
   NamedType *named_type = new(NamedType);
-  *named_type = (NamedType){ .meta = id };
+  *named_type = (NamedType){ .name = id };
 
   Type *type = new(Type);
   *type = (Type){ .type = T_NAMED, .named = named_type };
@@ -248,7 +249,7 @@ Type *ast_type_named(TokenMeta *id) {
   return type;
 }
 
-Type *ast_type_array(Type *item_type) {
+Type *ast_list_type(Type *item_type) {
   ListType *list = new(ListType);
   *list = (ListType){ .item_type = item_type };
 
@@ -258,7 +259,7 @@ Type *ast_type_array(Type *item_type) {
   return type;
 }
 
-Type *ast_type_map(Type *key_type, Type *value_type) {
+Type *ast_map_type(Type *key_type, Type *value_type) {
   MapType *map = new(MapType);
   *map = (MapType){
     .key_type = key_type,
@@ -271,8 +272,8 @@ Type *ast_type_map(Type *key_type, Type *value_type) {
   return type;
 }
 
-Type *ast_type_struct(StructFieldList *fields) {
-  StructType* struct_type = new(StructType);
+Type *ast_struct_type(StructFieldList *fields) {
+  StructType *struct_type = new(StructType);
   _consume_struct_field_list(fields, &struct_type->fields, &struct_type->len);
 
   Type *type = new(Type);
@@ -281,8 +282,8 @@ Type *ast_type_struct(StructFieldList *fields) {
   return type;
 }
 
-Type *ast_type_union(TypeList *types) {
-  UnionType* union_type = new(UnionType);
+Type *ast_union_type(TypeList *types) {
+  UnionType *union_type = new(UnionType);
   _consume_type_list(types, &union_type->types, &union_type->len);
 
   Type *type = new(Type);
@@ -291,8 +292,8 @@ Type *ast_type_union(TypeList *types) {
   return type;
 }
 
-Type *ast_type_tuple(TypeList *types) {
-  TupleType* tuple = new(TupleType);
+Type *ast_tuple_type(TypeList *types) {
+  TupleType *tuple = new(TupleType);
   _consume_type_list(types, &tuple->types, &tuple->len);
 
   Type *type = new(Type);
@@ -301,7 +302,17 @@ Type *ast_type_tuple(TypeList *types) {
   return type;
 }
 
-Type *ast_type_nil() {
+Type *ast_enum_type(IdentifierList *values) {
+  EnumType *enum_type = new(EnumType);
+  _consume_identifier_list(values, &enum_type->values, &enum_type->len);
+
+  Type *type = new(Type);
+  *type = (Type){ .type = T_ENUM, .enum_type = enum_type };
+
+  return type;
+}
+
+Type *ast_nil_type() {
   Type *type = new(Type);
   *type = (Type){ .type = T_NIL };
 
@@ -310,7 +321,7 @@ Type *ast_type_nil() {
 
 // -----------------------------------------------------------------------------
 
-StructField *ast_struct_field(TokenMeta *id, Type *type, Expr *default_value) {
+StructField *ast_struct_field(Identifier *id, Type *type, Expr *default_value) {
   StructField *field = new(StructField);
   *field = (StructField){
     .name = id,
@@ -344,7 +355,7 @@ void ast_free_stmt(Stmt *stmt) {
 void ast_free_decl(DeclarationStmt *decl) {
   if (!decl) return;
 
-  ast_free_meta(decl->left);
+  ast_free_identifier(decl->left);
   ast_free_expr(decl->right);
   ast_free_type(decl->type);
   free(decl);
@@ -353,7 +364,7 @@ void ast_free_decl(DeclarationStmt *decl) {
 void ast_free_alias(TypeAliasStmt *alias) {
   if (!alias) return;
 
-  ast_free_meta(alias->alias);
+  ast_free_identifier(alias->alias);
   ast_free_type(alias->type);
   free(alias);
 }
@@ -403,7 +414,7 @@ void ast_free_unary(UnaryExpr *unary) {
   if (!unary) return;
 
   ast_free_expr(unary->expr);
-  ast_free_meta(unary->op);
+  ast_free_token(unary->op);
   free(unary);
 }
 
@@ -412,7 +423,7 @@ void ast_free_binary(BinaryExpr *binary) {
 
   ast_free_expr(binary->left);
   ast_free_expr(binary->right);
-  ast_free_meta(binary->op);
+  ast_free_token(binary->op);
   free(binary);
 }
 
@@ -443,8 +454,8 @@ void ast_free_if(IfExpr *if_expr) {
 void ast_free_for(ForExpr *for_expr) {
   if (!for_expr) return;
 
-  ast_free_meta(for_expr->var_id);
-  ast_free_meta(for_expr->idx_id);
+  ast_free_identifier(for_expr->var_id);
+  ast_free_identifier(for_expr->idx_id);
   ast_free_expr(for_expr->body);
   ast_free_expr(for_expr->iterable);
   free(for_expr);
@@ -463,14 +474,14 @@ void ast_free_block(BlockExpr *block) {
 void ast_free_int_literal(IntegerLiteral *l) {
   if (!l) return;
 
-  ast_free_meta(l->meta);
+  ast_free_token(l->meta);
   free(l);
 }
 
 void ast_free_float_literal(FloatLiteral *l) {
   if (!l) return;
 
-  ast_free_meta(l->meta);
+  ast_free_token(l->meta);
   free(l);
 }
 
@@ -478,21 +489,21 @@ void ast_free_string_literal(StringLiteral *l) {
   if (!l) return;
 
   str_free(l->value);
-  ast_free_meta(l->meta);
+  ast_free_token(l->meta);
   free(l);
 }
 
 void ast_free_bool_literal(BooleanLiteral *l) {
   if (!l) return;
 
-  ast_free_meta(l->meta);
+  ast_free_token(l->meta);
   free(l);
 }
 
 void ast_free_named_variable(NamedVariable *v) {
   if (!v) return;
 
-  ast_free_meta(v->meta);
+  ast_free_identifier(v->name);
   free(v);
 }
 
@@ -500,7 +511,7 @@ void ast_free_struct_member_variable(StructMemberVariable *v) {
   if (!v) return;
 
   ast_free_variable(v->struct_expr);
-  ast_free_meta(v->meta);
+  ast_free_identifier(v->name);
   free(v);
 }
 
@@ -522,6 +533,7 @@ void ast_free_type(Type *t) {
     case T_STRUCT: ast_free_struct_type(t->struct_type); break;
     case T_UNION: ast_free_union_type(t->union_type); break;
     case T_TUPLE: ast_free_tuple_type(t->tuple); break;
+    case T_ENUM: ast_free_enum_type(t->enum_type); break;
     case T_NIL: break;
   }
   free(t);
@@ -530,7 +542,7 @@ void ast_free_type(Type *t) {
 void ast_free_named_type(NamedType *t) {
   if (!t) return;
 
-  ast_free_meta(t->meta);
+  ast_free_identifier(t->name);
   free(t);
 }
 
@@ -552,7 +564,7 @@ void ast_free_map_type(MapType *t) {
 void ast_free_struct_field(StructField *f) {
   if (!f) return;
 
-  ast_free_meta(f->name);
+  ast_free_identifier(f->name);
   ast_free_type(f->type);
   ast_free_expr(f->default_value);
   free(f);
@@ -588,7 +600,21 @@ void ast_free_tuple_type(TupleType *t) {
   free(t);
 }
 
-void ast_free_meta(TokenMeta *meta) {
+void ast_free_enum_type(EnumType *t) {
+  if (!t) return;
+
+  for (u32 i = 0; i < t->len; i++) {
+    ast_free_identifier(t->values[i]);
+  }
+  free(t->values);
+  free(t);
+}
+
+void ast_free_identifier(Identifier *id) {
+  ast_free_token(id);
+}
+
+void ast_free_token(TokenMeta *meta) {
   if (!meta) return;
 
   free(meta->lexeme);

@@ -69,13 +69,21 @@ static void dot_struct_field(StructField *field, u64 pid) {
   if (field->default_value) dot_expr(field->default_value, id);
 }
 
+static void dot_enum_value(Identifier *value, u64 pid) {
+  u64 id = next_id();
+  char label[256];
+  snprintf(label, 256, "%s", value->lexeme);
+  _node(id, label, NODE_BASE);
+  _edge(pid, id);
+}
+
 static void dot_type(Type *type, u64 pid) {
   u64 id = next_id();
   char label[256];
 
   switch (type->type) {
     case T_NAMED:
-      snprintf(label, 256, "%s", type->named->meta->lexeme);
+      snprintf(label, 256, "%s", type->named->name->lexeme);
       break;
     case T_LIST:
       snprintf(label, 8, "List of");
@@ -102,6 +110,12 @@ static void dot_type(Type *type, u64 pid) {
       snprintf(label, 8, "Tuple");
       for (u32 i = 0; i < type->tuple->len; i++) {
         dot_type(type->tuple->types[i], id);
+      }
+      break;
+    case T_ENUM:
+      snprintf(label, 8, "Enum");
+      for (u32 i = 0; i < type->enum_type->len; i++) {
+        dot_enum_value(type->enum_type->values[i], id);
       }
       break;
     case T_NIL:
@@ -150,11 +164,11 @@ static void dot_variable(VariableExpr *var, u64 pid) {
   switch (var->type) {
     case V_NAMED:
       label = new_array(char, 256);
-      snprintf(label, 256, "Variable\\n%s", var->named->meta->lexeme);
+      snprintf(label, 256, "Variable\\n%s", var->named->name->lexeme);
       break;
     case V_STRUCT_MEMBER:
       label = new_array(char, 256);
-      snprintf(label, 256, "Struct Member\\n%s", var->struct_member->meta->lexeme);
+      snprintf(label, 256, "Struct Member\\n%s", var->struct_member->name->lexeme);
       dot_variable(var->struct_member->struct_expr, id);
       break;
     case V_INDEX:

@@ -53,6 +53,7 @@ typedef enum {
   T_LIST,
   T_MAP,
   T_TUPLE,
+  T_ENUM,
   T_NIL,
 } TypeType;
 
@@ -70,6 +71,8 @@ typedef struct {
 
   Location location;
 } TokenMeta;
+
+typedef TokenMeta Identifier;
 
 typedef struct Stmt Stmt;
 typedef struct ExprStmt ExprStmt;
@@ -104,12 +107,14 @@ typedef struct StructField StructField;
 typedef struct StructType StructType;
 typedef struct UnionType UnionType;
 typedef struct TupleType TupleType;
+typedef struct EnumType EnumType;
 
 typedef struct Program Program;
 
 AST_LIST(Stmt, stmt);
 AST_LIST(StructField, struct_field);
 AST_LIST(Type, type);
+AST_LIST(Identifier, identifier);
 
 // -----------------------------------------------------------------------------
 
@@ -129,13 +134,13 @@ struct Stmt {
 };
 
 struct DeclarationStmt {
-  TokenMeta *left;
+  Identifier *left;
   Expr *right;
   Type *type;
 };
 
 struct TypeAliasStmt {
-  TokenMeta *alias;
+  Identifier *alias;
   Type *type;
 };
 
@@ -202,8 +207,8 @@ struct IfExpr {
 };
 
 struct ForExpr {
-  TokenMeta *var_id;
-  TokenMeta *idx_id;
+  Identifier *var_id;
+  Identifier *idx_id;
   Expr *iterable;
   Expr *body;
 };
@@ -238,12 +243,12 @@ struct BooleanLiteral {
 // -----------------------------------------------------------------------------
 
 struct NamedVariable {
-  TokenMeta *meta;
+  Identifier *name;
 };
 
 struct StructMemberVariable {
   VariableExpr *struct_expr;
-  TokenMeta *meta;
+  Identifier *name;
 };
 
 struct IndexedVariable {
@@ -262,11 +267,12 @@ struct Type {
     StructType *struct_type;
     UnionType *union_type;
     TupleType *tuple;
+    EnumType *enum_type;
   };
 };
 
 struct NamedType {
-  TokenMeta *meta;
+  Identifier *name;
 };
 
 struct ListType {
@@ -293,8 +299,13 @@ struct TupleType {
   Type **types;
 };
 
+struct EnumType {
+  u32 len;
+  Identifier **values;
+};
+
 struct StructField {
-  TokenMeta *name;
+  Identifier *name;
   Type *type;
   Expr *default_value;
 };
@@ -312,8 +323,8 @@ Stmt *ast_stmt_expr(Expr *expr);
 Stmt *ast_stmt_decl(DeclarationStmt *decl);
 Stmt *ast_stmt_alias(TypeAliasStmt *alias);
 
-DeclarationStmt *ast_declaration(TokenMeta *id, Type *type, Expr *expr);
-TypeAliasStmt *ast_type_alias(TokenMeta *id, Type *type);
+DeclarationStmt *ast_declaration(Identifier *id, Type *type, Expr *expr);
+TypeAliasStmt *ast_type_alias(Identifier *id, Type *type);
 
 Expr *ast_expr_literal(LiteralExpr *literal);
 Expr *ast_expr_variable(VariableExpr *var);
@@ -330,8 +341,8 @@ LiteralExpr *ast_literal_float(FloatLiteral *f);
 LiteralExpr *ast_literal_string(StringLiteral *s);
 LiteralExpr *ast_literal_boolean(BooleanLiteral *b);
 
-VariableExpr *ast_variable_named(TokenMeta *id);
-VariableExpr *ast_variable_struct_member(VariableExpr *struct_expr, TokenMeta *id);
+VariableExpr *ast_variable_named(Identifier *id);
+VariableExpr *ast_variable_struct_member(VariableExpr *struct_expr, Identifier *id);
 VariableExpr *ast_variable_indexed(VariableExpr *container, Expr *index);
 
 UnaryExpr *ast_unary(TokenMeta *op, Expr *expr);
@@ -339,18 +350,19 @@ BinaryExpr *ast_binary(Expr *left, TokenMeta *op, Expr *right);
 GroupExpr *ast_group(Expr *expr);
 AssignmentExpr *ast_assignment(VariableExpr *left, Expr *right);
 IfExpr *ast_if(Expr *condition, Expr *true_branch, Expr *false_branch);
-ForExpr *ast_for(TokenMeta *var, TokenMeta *idx, Expr *iterable, Expr *body);
+ForExpr *ast_for(Identifier *var, Identifier *idx, Expr *iterable, Expr *body);
 BlockExpr *ast_block(StmtList *statements, Expr *final);
 
-Type *ast_type_named(TokenMeta *id);
-Type *ast_type_array(Type *item_type);
-Type *ast_type_map(Type *key_type, Type *value_type);
-Type *ast_type_struct(StructFieldList *fields);
-Type *ast_type_union(TypeList *types);
-Type *ast_type_tuple(TypeList *types);
-Type *ast_type_nil();
+Type *ast_named_type(Identifier *id);
+Type *ast_list_type(Type *item_type);
+Type *ast_map_type(Type *key_type, Type *value_type);
+Type *ast_struct_type(StructFieldList *fields);
+Type *ast_union_type(TypeList *types);
+Type *ast_tuple_type(TypeList *types);
+Type *ast_enum_type(IdentifierList *values);
+Type *ast_nil_type();
 
-StructField *ast_struct_field(TokenMeta *id, Type *type, Expr *default_value);
+StructField *ast_struct_field(Identifier *id, Type *type, Expr *default_value);
 
 Program *ast_program(StmtList *statements);
 
@@ -388,8 +400,10 @@ void ast_free_struct_field(StructField *f);
 void ast_free_struct_type(StructType *t);
 void ast_free_union_type(UnionType *t);
 void ast_free_tuple_type(TupleType *t);
+void ast_free_enum_type(EnumType *t);
 
-void ast_free_meta(TokenMeta *meta);
+void ast_free_identifier(Identifier *id);
+void ast_free_token(TokenMeta *meta);
 void ast_free_program(Program *program);
 
 #endif

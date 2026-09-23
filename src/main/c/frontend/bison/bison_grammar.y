@@ -46,9 +46,10 @@ void yyerror(YYLTYPE *location, const char *message) {}
   StmtList *statement_list;
   StructFieldList *struct_field_list;
   TypeList *type_list;
+  IdentifierList *identifier_list;
 }
 
-%destructor { ast_free_meta($$); } <token>
+%destructor { ast_free_token($$); } <token>
 %destructor { ast_free_int_literal($$); } <integer>
 %destructor { ast_free_float_literal($$); } <floating>
 %destructor { ast_free_string_literal($$); } <string>
@@ -70,6 +71,8 @@ void yyerror(YYLTYPE *location, const char *message) {}
 %destructor { ast_free_stmt_list($$, true); } <statement_list>
 %destructor { ast_free_struct_field_list($$, true); } <struct_field_list>
 %destructor { ast_free_struct_field($$); } <struct_field>
+%destructor { ast_free_type_list($$, true); } <type_list>
+%destructor { ast_free_identifier_list($$, true); } <identifier_list>
 %destructor { ast_free_program($$); } <program>
 
 // Symbols
@@ -150,6 +153,7 @@ void yyerror(YYLTYPE *location, const char *message) {}
 %type <statement_list>    statement_list
 %type <struct_field_list> struct_field_list
 %type <type_list>         type_list
+%type <identifier_list>   identifier_list
 
 // Precedence
 %left FOR IN
@@ -257,6 +261,8 @@ type: IDENTIFIER                                                    { $$ = parse
   | type QUESTION_MARK                                              { $$ = parse_optional_type($1, $2); }
   | LESS type_list GREATER                                          { $$ = parse_tuple_type($1, $2, $3, NULL); }
   | LESS type_list COMMA GREATER                                    { $$ = parse_tuple_type($1, $2, $4, $3); }
+  | ENUM CURLY_L identifier_list CURLY_R                            { $$ = parse_enum_type($1, $2, $3, $4, NULL); }
+  | ENUM CURLY_L identifier_list COMMA CURLY_R                      { $$ = parse_enum_type($1, $2, $3, $5, $4); }
   | NIL                                                             { $$ = parse_nil_type($1); }
   ;
 
@@ -270,6 +276,10 @@ struct_field: IDENTIFIER COLON type                                 { $$ = parse
 
 type_list: type                                                     { $$ = parse_type_list($1, NULL, NULL); }
   | type_list COMMA type                                            { $$ = parse_type_list($3, $2, $1); }
+  ;
+
+identifier_list: IDENTIFIER                                         { $$ = parse_identifier_list($1, NULL, NULL); }
+  | identifier_list COMMA IDENTIFIER                                { $$ = parse_identifier_list($3, $2, $1); }
   ;
 
 %%
