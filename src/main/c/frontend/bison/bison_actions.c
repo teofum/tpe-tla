@@ -92,6 +92,12 @@ LiteralExpr *parse_tuple_literal(Expr *head, ExprList *exprs) {
   return literal;
 }
 
+LiteralExpr *parse_map_literal(MapEntryList *entries) {
+  LiteralExpr *literal = ast_map_literal(entries);
+  fe_parser_log(LOG_DEBUG, "Map Literal (len=%u)", literal->map->len);
+  return literal;
+}
+
 // -----------------------------------------------------------------------------
 
 VariableExpr *parse_named_variable(Identifier *id) {
@@ -211,6 +217,12 @@ StructFieldList *parse_struct_field_list(StructField *head, StructFieldList *tai
   return list;
 }
 
+MapEntryList *parse_map_entry_list(MapEntry *head, MapEntryList *tail) {
+  MapEntryList* list = ast_map_entry_list(head, tail);
+  fe_parser_log(LOG_DEBUG, "Map Entry List (len=%u)", list->len);
+  return list;
+}
+
 TypeList *parse_type_list(Type *head, TypeList *tail) {
   TypeList* list = ast_type_list(head, tail);
   fe_parser_log(LOG_DEBUG, "Type List (len=%u)", list->len);
@@ -235,12 +247,22 @@ ExprList *parse_expr_list(Expr *head, ExprList *tail) {
   return list;
 }
 
+// -----------------------------------------------------------------------------
+
 StructField *parse_struct_field(Identifier *id, Type *type, Expr *default_value) {
   fe_parser_log(LOG_DEBUG, "Struct Field %s", id->lexeme);
   return ast_struct_field(id, type, default_value);
 }
 
-// -----------------------------------------------------------------------------
+MapEntry *parse_map_entry_literal(LiteralExpr *key, Expr *value) {
+  fe_parser_log(LOG_DEBUG, "Map Entry");
+  return ast_map_entry(ast_expr_literal(key), value);
+}
+
+MapEntry *parse_map_entry_block(BlockExpr *key, Expr *value) {
+  fe_parser_log(LOG_DEBUG, "Map Entry");
+  return ast_map_entry(ast_expr_block(key), value);
+}
 
 Program *parse_program(StmtList *statements) {
   Program *prog = ast_program(statements);

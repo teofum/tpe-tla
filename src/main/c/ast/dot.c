@@ -71,6 +71,14 @@ static void dot_struct_field(StructField *field, u64 pid) {
   if (field->default_value) dot_expr(field->default_value, id);
 }
 
+static void dot_map_entry(MapEntry *entry, u64 pid) {
+  u64 id = next_id();
+  _node(id, "Map Entry", NODE_BASE);
+  _edge(pid, id);
+  dot_expr(entry->key, id);
+  dot_expr(entry->value, id);
+}
+
 static void dot_enum_value(Identifier *value, u64 pid) {
   u64 id = next_id();
   char label[256];
@@ -168,6 +176,13 @@ static void dot_literal(LiteralExpr *literal, u64 pid) {
       snprintf(label, 6, "Tuple");
       for (u32 i = 0; i < literal->tuple->len; i++) {
         dot_expr(literal->tuple->exprs[i], id);
+      }
+      break;
+    case L_MAP:
+      label = new_array(char, 6);
+      snprintf(label, 6, "Map");
+      for (u32 i = 0; i < literal->map->len; i++) {
+        dot_map_entry(literal->map->entries[i], id);
       }
       break;
   }

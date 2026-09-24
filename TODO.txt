@@ -2,7 +2,8 @@
 
 [x] Fix ambiguity of indexing vs list literals (ignore/weird)
   - Overhauled grammar to separate statements with newlines
-[ ] Fix ambiguity of grouping vs 1-uple literal
+[x] Fix ambiguity of grouping vs 1-uple literal
+  - Tuple types and literals muct have at least two elements (a 1-uple is just... a value with extra steps)
 
 #=== Frontend =================================================================#
 
@@ -18,6 +19,7 @@
 [x] Identifiers
 [x] Line comments
 [x] Block comments
+[x] Newlines
 
 /--- Parser -------------------------------------------------------------------/
 [x] Base expression node
@@ -31,7 +33,7 @@
     [ ] Enums (identifiers)
     [x] Lists
     [x] Tuples
-    [ ] Maps
+    [x] Maps
   [x] Variable expressions
     [x] Named variables (identifiers)
     [x] Struct members

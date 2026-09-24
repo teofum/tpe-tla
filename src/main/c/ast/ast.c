@@ -40,6 +40,7 @@ static void _consume_##name##_list(T##List *list, T ***items, u32 *len) { \
 AST_LIST_IMPL(Stmt, stmt)
 AST_LIST_IMPL(Expr, expr)
 AST_LIST_IMPL(StructField, struct_field)
+AST_LIST_IMPL(MapEntry, map_entry)
 AST_LIST_IMPL(Type, type)
 AST_LIST_IMPL(Identifier, identifier)
 
@@ -148,6 +149,15 @@ LiteralExpr *ast_tuple_literal(ExprList *exprs) {
 
   LiteralExpr *literal = new(LiteralExpr);
   *literal = (LiteralExpr){ .type = L_TUPLE, .tuple = tuple };
+  return literal;
+}
+
+LiteralExpr *ast_map_literal(MapEntryList *entries) {
+  MapLiteral *map = new(MapLiteral);
+  _consume_map_entry_list(entries, &map->entries, &map->len);
+
+  LiteralExpr *literal = new(LiteralExpr);
+  *literal = (LiteralExpr){ .type = L_MAP, .map = map };
   return literal;
 }
 
@@ -362,6 +372,16 @@ StructField *ast_struct_field(Identifier *id, Type *type, Expr *default_value) {
   return field;
 }
 
+MapEntry *ast_map_entry(Expr *key, Expr *value) {
+  MapEntry *entry = new(MapEntry);
+  *entry = (MapEntry){
+    .key = key,
+    .value = value,
+  };
+
+  return entry;
+}
+
 Program *ast_program(StmtList *statements) {
   Program* prog = new(Program);
   _consume_stmt_list(statements, &prog->statements, &prog->len);
@@ -426,9 +446,10 @@ void ast_free_literal(LiteralExpr *literal) {
     case L_FLOAT: ast_free_float_literal(literal->floating); break;
     case L_STRING: ast_free_string_literal(literal->string); break;
     case L_BOOL: ast_free_bool_literal(literal->boolean); break;
-    case L_NIL: break;
     case L_LIST: ast_free_list_literal(literal->list); break;
     case L_TUPLE: ast_free_tuple_literal(literal->tuple); break;
+    case L_MAP: ast_free_map_literal(literal->map); break;
+    case L_NIL: break;
   }
   free(literal);
 }
@@ -552,6 +573,16 @@ void ast_free_tuple_literal(TupleLiteral *l) {
   free(l);
 }
 
+void ast_free_map_literal(MapLiteral *l) {
+  if (!l) return;
+
+  for (u32 i = 0; i < l->len; i++) {
+    ast_free_map_entry(l->entries[i]);
+  }
+  free(l->entries);
+  free(l);
+}
+
 void ast_free_named_variable(NamedVariable *v) {
   if (!v) return;
 
@@ -613,15 +644,6 @@ void ast_free_map_type(MapType *t) {
   free(t);
 }
 
-void ast_free_struct_field(StructField *f) {
-  if (!f) return;
-
-  ast_free_identifier(f->name);
-  ast_free_type(f->type);
-  ast_free_expr(f->default_value);
-  free(f);
-}
-
 void ast_free_struct_type(StructType *t) {
   if (!t) return;
 
@@ -660,6 +682,23 @@ void ast_free_enum_type(EnumType *t) {
   }
   free(t->values);
   free(t);
+}
+
+void ast_free_struct_field(StructField *f) {
+  if (!f) return;
+
+  ast_free_identifier(f->name);
+  ast_free_type(f->type);
+  ast_free_expr(f->default_value);
+  free(f);
+}
+
+void ast_free_map_entry(MapEntry *e) {
+  if (!e) return;
+
+  ast_free_expr(e->key);
+  ast_free_expr(e->value);
+  free(e);
 }
 
 void ast_free_identifier(Identifier *id) {

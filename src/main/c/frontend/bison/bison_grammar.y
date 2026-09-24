@@ -44,10 +44,12 @@ void yyerror(YYLTYPE *location, const char *message) {
 
   Type *type;
   StructField *struct_field;
+  MapEntry *map_entry;
 
   Program *program;
   StmtList *statement_list;
   StructFieldList *struct_field_list;
+  MapEntryList *map_entry_list;
   TypeList *type_list;
   IdentifierList *identifier_list;
   ExprList *expression_list;
@@ -75,6 +77,8 @@ void yyerror(YYLTYPE *location, const char *message) {
 %destructor { ast_free_stmt_list($$, true); } <statement_list>
 %destructor { ast_free_struct_field_list($$, true); } <struct_field_list>
 %destructor { ast_free_struct_field($$); } <struct_field>
+%destructor { ast_free_map_entry_list($$, true); } <map_entry_list>
+%destructor { ast_free_map_entry($$); } <map_entry>
 %destructor { ast_free_type_list($$, true); } <type_list>
 %destructor { ast_free_identifier_list($$, true); } <identifier_list>
 %destructor { ast_free_expr_list($$, true); } <expression_list>
@@ -156,10 +160,12 @@ void yyerror(YYLTYPE *location, const char *message) {
 
 %type <type>              type
 %type <struct_field>      struct_field
+%type <map_entry>         map_entry
 
 %type <program>           program
 %type <statement_list>    statement_list
 %type <struct_field_list> struct_field_list
+%type <map_entry_list>    map_entry_list
 %type <type_list>         type_list
 %type <identifier_list>   identifier_list
 %type <expression_list>   expression_list
@@ -228,6 +234,14 @@ literal: INTEGER                                                    { $$ = parse
   | SQUARE_L NL expression_list COMMA SQUARE_R                      { $$ = parse_list_literal($3); }
   | SQUARE_L expression_list COMMA NL SQUARE_R                      { $$ = parse_list_literal($2); }
   | SQUARE_L NL expression_list COMMA NL SQUARE_R                   { $$ = parse_list_literal($3); }
+  | SQUARE_L map_entry_list SQUARE_R                                { $$ = parse_map_literal($2); }
+  | SQUARE_L NL map_entry_list SQUARE_R                             { $$ = parse_map_literal($3); }
+  | SQUARE_L map_entry_list NL SQUARE_R                             { $$ = parse_map_literal($2); }
+  | SQUARE_L NL map_entry_list NL SQUARE_R                          { $$ = parse_map_literal($3); }
+  | SQUARE_L map_entry_list COMMA SQUARE_R                          { $$ = parse_map_literal($2); }
+  | SQUARE_L NL map_entry_list COMMA SQUARE_R                       { $$ = parse_map_literal($3); }
+  | SQUARE_L map_entry_list COMMA NL SQUARE_R                       { $$ = parse_map_literal($2); }
+  | SQUARE_L NL map_entry_list COMMA NL SQUARE_R                    { $$ = parse_map_literal($3); }
   | PAREN_L expression COMMA expression_list PAREN_R                { $$ = parse_tuple_literal($2, $4); }
   | PAREN_L NL expression COMMA expression_list PAREN_R             { $$ = parse_tuple_literal($3, $5); }
   | PAREN_L expression COMMA expression_list NL PAREN_R             { $$ = parse_tuple_literal($2, $4); }
@@ -328,6 +342,15 @@ struct_field_list: struct_field                                     { $$ = parse
 
 struct_field: IDENTIFIER COLON type                                 { $$ = parse_struct_field($1, $3, NULL); }
   | IDENTIFIER COLON type EQUAL expression                          { $$ = parse_struct_field($1, $3, $5); }
+  ;
+
+map_entry_list: map_entry                                           { $$ = parse_map_entry_list($1, NULL); }
+  | map_entry_list COMMA map_entry                                  { $$ = parse_map_entry_list($3, $1); }
+  | map_entry_list COMMA NL map_entry                               { $$ = parse_map_entry_list($4, $1); }
+  ;
+
+map_entry: literal EQUAL expression                                 { $$ = parse_map_entry_literal($1, $3); }
+  | block EQUAL expression                                          { $$ = parse_map_entry_block($1, $3); }
   ;
 
 type_list: type                                                     { $$ = parse_type_list($1, NULL); }
