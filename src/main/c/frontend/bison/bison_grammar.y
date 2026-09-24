@@ -232,38 +232,16 @@ literal: INTEGER                                                    { $$ = parse
   | STRING                                                          { $$ = parse_string_literal($1); }
   | BOOL                                                            { $$ = parse_boolean_literal($1); }
   | NIL                                                             { $$ = parse_nil_literal(); }
-  | CURLY_L struct_literal_field_list CURLY_R                       { $$ = parse_struct_literal($2); }
-  | CURLY_L NL struct_literal_field_list CURLY_R                    { $$ = parse_struct_literal($3); }
-  | CURLY_L struct_literal_field_list NL CURLY_R                    { $$ = parse_struct_literal($2); }
-  | CURLY_L NL struct_literal_field_list NL CURLY_R                 { $$ = parse_struct_literal($3); }
-  | CURLY_L struct_literal_field_list COMMA CURLY_R                 { $$ = parse_struct_literal($2); }
-  | CURLY_L NL struct_literal_field_list COMMA CURLY_R              { $$ = parse_struct_literal($3); }
-  | CURLY_L struct_literal_field_list COMMA NL CURLY_R              { $$ = parse_struct_literal($2); }
-  | CURLY_L NL struct_literal_field_list COMMA NL CURLY_R           { $$ = parse_struct_literal($3); }
-  | SQUARE_L expression_list SQUARE_R                               { $$ = parse_list_literal($2); }
-  | SQUARE_L NL expression_list SQUARE_R                            { $$ = parse_list_literal($3); }
-  | SQUARE_L expression_list NL SQUARE_R                            { $$ = parse_list_literal($2); }
-  | SQUARE_L NL expression_list NL SQUARE_R                         { $$ = parse_list_literal($3); }
-  | SQUARE_L expression_list COMMA SQUARE_R                         { $$ = parse_list_literal($2); }
-  | SQUARE_L NL expression_list COMMA SQUARE_R                      { $$ = parse_list_literal($3); }
-  | SQUARE_L expression_list COMMA NL SQUARE_R                      { $$ = parse_list_literal($2); }
-  | SQUARE_L NL expression_list COMMA NL SQUARE_R                   { $$ = parse_list_literal($3); }
-  | SQUARE_L map_entry_list SQUARE_R                                { $$ = parse_map_literal($2); }
-  | SQUARE_L NL map_entry_list SQUARE_R                             { $$ = parse_map_literal($3); }
-  | SQUARE_L map_entry_list NL SQUARE_R                             { $$ = parse_map_literal($2); }
-  | SQUARE_L NL map_entry_list NL SQUARE_R                          { $$ = parse_map_literal($3); }
-  | SQUARE_L map_entry_list COMMA SQUARE_R                          { $$ = parse_map_literal($2); }
-  | SQUARE_L NL map_entry_list COMMA SQUARE_R                       { $$ = parse_map_literal($3); }
-  | SQUARE_L map_entry_list COMMA NL SQUARE_R                       { $$ = parse_map_literal($2); }
-  | SQUARE_L NL map_entry_list COMMA NL SQUARE_R                    { $$ = parse_map_literal($3); }
-  | PAREN_L expression COMMA expression_list PAREN_R                { $$ = parse_tuple_literal($2, $4); }
-  | PAREN_L NL expression COMMA expression_list PAREN_R             { $$ = parse_tuple_literal($3, $5); }
-  | PAREN_L expression COMMA expression_list NL PAREN_R             { $$ = parse_tuple_literal($2, $4); }
-  | PAREN_L NL expression COMMA expression_list NL PAREN_R          { $$ = parse_tuple_literal($3, $5); }
-  | PAREN_L expression COMMA expression_list COMMA PAREN_R          { $$ = parse_tuple_literal($2, $4); }
-  | PAREN_L NL expression COMMA expression_list COMMA PAREN_R       { $$ = parse_tuple_literal($3, $5); }
-  | PAREN_L expression COMMA expression_list COMMA NL PAREN_R       { $$ = parse_tuple_literal($2, $4); }
-  | PAREN_L NL expression COMMA expression_list COMMA NL PAREN_R    { $$ = parse_tuple_literal($3, $5); }
+  | CURLY_L nl struct_literal_field_list nl CURLY_R                 { $$ = parse_struct_literal($3); }
+  | CURLY_L nl struct_literal_field_list COMMA nl CURLY_R           { $$ = parse_struct_literal($3); }
+  | SQUARE_L nl expression_list nl SQUARE_R                         { $$ = parse_list_literal($3); }
+  | SQUARE_L nl expression_list COMMA nl SQUARE_R                   { $$ = parse_list_literal($3); }
+  | SQUARE_L nl map_entry_list nl SQUARE_R                          { $$ = parse_map_literal($3); }
+  | SQUARE_L nl map_entry_list COMMA nl SQUARE_R                    { $$ = parse_map_literal($3); }
+  | PAREN_L expression COMMA expression_list nl PAREN_R             { $$ = parse_tuple_literal($2, $4); }
+  | PAREN_L NL expression COMMA expression_list nl PAREN_R          { $$ = parse_tuple_literal($3, $5); }
+  | PAREN_L expression COMMA expression_list COMMA nl PAREN_R       { $$ = parse_tuple_literal($2, $4); }
+  | PAREN_L NL expression COMMA expression_list COMMA nl PAREN_R    { $$ = parse_tuple_literal($3, $5); }
   ;
 
 variable: IDENTIFIER                                                { $$ = parse_named_variable($1); }
@@ -304,54 +282,26 @@ for_expr: FOR IDENTIFIER COMMA IDENTIFIER IN expression block       { $$ = parse
   | FOR IDENTIFIER IN expression block                              { $$ = parse_for($2, NULL, $4, $5); }
   ;
 
-block: CURLY_L statement_list CURLY_R                               { $$ = parse_block($2); }
-  | CURLY_L NL statement_list CURLY_R                               { $$ = parse_block($3); }
-  | CURLY_L statement_list NL CURLY_R                               { $$ = parse_block($2); }
-  | CURLY_L NL statement_list NL CURLY_R                            { $$ = parse_block($3); }
+block: CURLY_L nl statement_list nl CURLY_R                         { $$ = parse_block($3); }
   ;
 
 type: IDENTIFIER                                                    { $$ = parse_named_type($1); }
   | SQUARE_L SQUARE_R type                                          { $$ = parse_list_type($3); }
   | SQUARE_L type SQUARE_R type                                     { $$ = parse_map_type($2, $4); }
-  | STRUCT CURLY_L struct_field_list CURLY_R                        { $$ = parse_struct_type($3); }
-  | STRUCT CURLY_L NL struct_field_list CURLY_R                     { $$ = parse_struct_type($4); }
-  | STRUCT CURLY_L struct_field_list NL CURLY_R                     { $$ = parse_struct_type($3); }
-  | STRUCT CURLY_L NL struct_field_list NL CURLY_R                  { $$ = parse_struct_type($4); }
-  | STRUCT CURLY_L struct_field_list COMMA CURLY_R                  { $$ = parse_struct_type($3); }
-  | STRUCT CURLY_L NL struct_field_list COMMA CURLY_R               { $$ = parse_struct_type($4); }
-  | STRUCT CURLY_L struct_field_list COMMA NL CURLY_R               { $$ = parse_struct_type($3); }
-  | STRUCT CURLY_L NL struct_field_list COMMA NL CURLY_R            { $$ = parse_struct_type($4); }
-  | UNION CURLY_L type_list CURLY_R                                 { $$ = parse_union_type($3); }
-  | UNION CURLY_L NL type_list CURLY_R                              { $$ = parse_union_type($4); }
-  | UNION CURLY_L type_list NL CURLY_R                              { $$ = parse_union_type($3); }
-  | UNION CURLY_L NL type_list NL CURLY_R                           { $$ = parse_union_type($4); }
-  | UNION CURLY_L type_list COMMA CURLY_R                           { $$ = parse_union_type($3); }
-  | UNION CURLY_L NL type_list COMMA CURLY_R                        { $$ = parse_union_type($4); }
-  | UNION CURLY_L type_list COMMA NL CURLY_R                        { $$ = parse_union_type($3); }
-  | UNION CURLY_L NL type_list COMMA NL CURLY_R                     { $$ = parse_union_type($4); }
-  | PAREN_L type COMMA type_list PAREN_R                            { $$ = parse_tuple_type($2, $4); }
-  | PAREN_L NL type COMMA type_list PAREN_R                         { $$ = parse_tuple_type($3, $5); }
-  | PAREN_L type COMMA type_list NL PAREN_R                         { $$ = parse_tuple_type($2, $4); }
-  | PAREN_L NL type COMMA type_list NL PAREN_R                      { $$ = parse_tuple_type($3, $5); }
-  | PAREN_L type COMMA type_list COMMA PAREN_R                      { $$ = parse_tuple_type($2, $4); }
-  | PAREN_L NL type COMMA type_list COMMA PAREN_R                   { $$ = parse_tuple_type($3, $5); }
-  | PAREN_L type COMMA type_list COMMA NL PAREN_R                   { $$ = parse_tuple_type($2, $4); }
-  | PAREN_L NL type COMMA type_list COMMA NL PAREN_R                { $$ = parse_tuple_type($3, $5); }
-  | ENUM CURLY_L identifier_list CURLY_R                            { $$ = parse_enum_type($3); }
-  | ENUM CURLY_L NL identifier_list CURLY_R                         { $$ = parse_enum_type($4); }
-  | ENUM CURLY_L identifier_list NL CURLY_R                         { $$ = parse_enum_type($3); }
-  | ENUM CURLY_L NL identifier_list NL CURLY_R                      { $$ = parse_enum_type($4); }
-  | ENUM CURLY_L identifier_list COMMA CURLY_R                      { $$ = parse_enum_type($3); }
-  | ENUM CURLY_L NL identifier_list COMMA CURLY_R                   { $$ = parse_enum_type($4); }
-  | ENUM CURLY_L identifier_list COMMA NL CURLY_R                   { $$ = parse_enum_type($3); }
-  | ENUM CURLY_L NL identifier_list COMMA NL CURLY_R                { $$ = parse_enum_type($4); }
+  | STRUCT CURLY_L nl struct_field_list nl CURLY_R                  { $$ = parse_struct_type($4); }
+  | STRUCT CURLY_L nl struct_field_list COMMA nl CURLY_R            { $$ = parse_struct_type($4); }
+  | UNION CURLY_L nl type_list nl CURLY_R                           { $$ = parse_union_type($4); }
+  | UNION CURLY_L nl type_list COMMA nl CURLY_R                     { $$ = parse_union_type($4); }
+  | PAREN_L nl type COMMA type_list nl PAREN_R                      { $$ = parse_tuple_type($3, $5); }
+  | PAREN_L nl type COMMA type_list COMMA nl PAREN_R                { $$ = parse_tuple_type($3, $5); }
+  | ENUM CURLY_L nl identifier_list nl CURLY_R                      { $$ = parse_enum_type($4); }
+  | ENUM CURLY_L nl identifier_list COMMA nl CURLY_R                { $$ = parse_enum_type($4); }
   | type QUESTION_MARK                                              { $$ = parse_optional_type($1); }
   | NIL                                                             { $$ = parse_nil_type(); }
   ;
 
 struct_field_list: struct_field                                     { $$ = parse_struct_field_list($1, NULL); }
-  | struct_field_list COMMA struct_field                            { $$ = parse_struct_field_list($3, $1); }
-  | struct_field_list COMMA NL struct_field                         { $$ = parse_struct_field_list($4, $1); }
+  | struct_field_list COMMA nl struct_field                         { $$ = parse_struct_field_list($4, $1); }
   ;
 
 struct_field: IDENTIFIER COLON type                                 { $$ = parse_struct_field($1, $3, NULL); }
@@ -359,8 +309,7 @@ struct_field: IDENTIFIER COLON type                                 { $$ = parse
   ;
 
 map_entry_list: map_entry                                           { $$ = parse_map_entry_list($1, NULL); }
-  | map_entry_list COMMA map_entry                                  { $$ = parse_map_entry_list($3, $1); }
-  | map_entry_list COMMA NL map_entry                               { $$ = parse_map_entry_list($4, $1); }
+  | map_entry_list COMMA nl map_entry                               { $$ = parse_map_entry_list($4, $1); }
   ;
 
 map_entry: literal EQUAL expression                                 { $$ = parse_map_entry_literal($1, $3); }
@@ -368,26 +317,26 @@ map_entry: literal EQUAL expression                                 { $$ = parse
   ;
 
 struct_literal_field_list: struct_literal_field                     { $$ = parse_struct_literal_field_list($1, NULL); }
-  | struct_literal_field_list COMMA struct_literal_field            { $$ = parse_struct_literal_field_list($3, $1); }
-  | struct_literal_field_list COMMA NL struct_literal_field         { $$ = parse_struct_literal_field_list($4, $1); }
+  | struct_literal_field_list COMMA nl struct_literal_field         { $$ = parse_struct_literal_field_list($4, $1); }
   ;
 
 struct_literal_field: DOT IDENTIFIER EQUAL expression               { $$ = parse_struct_literal_field($2, $4); }
   ;
 
 type_list: type                                                     { $$ = parse_type_list($1, NULL); }
-  | type_list COMMA type                                            { $$ = parse_type_list($3, $1); }
-  | type_list COMMA NL type                                         { $$ = parse_type_list($4, $1); }
+  | type_list COMMA nl type                                         { $$ = parse_type_list($4, $1); }
   ;
 
 identifier_list: IDENTIFIER                                         { $$ = parse_identifier_list($1, NULL); }
-  | identifier_list COMMA IDENTIFIER                                { $$ = parse_identifier_list($3, $1); }
-  | identifier_list COMMA NL IDENTIFIER                             { $$ = parse_identifier_list($4, $1); }
+  | identifier_list COMMA nl IDENTIFIER                             { $$ = parse_identifier_list($4, $1); }
   ;
 
 expression_list: expression                                         { $$ = parse_expr_list($1, NULL); }
-  | expression_list COMMA expression                                { $$ = parse_expr_list($3, $1); }
-  | expression_list COMMA NL expression                             { $$ = parse_expr_list($4, $1); }
+  | expression_list COMMA nl expression                             { $$ = parse_expr_list($4, $1); }
+  ;
+
+nl: NL                                                              {}
+  | %empty                                                          {}
   ;
 
 %%

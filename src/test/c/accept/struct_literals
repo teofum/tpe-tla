@@ -15,3 +15,5 @@ foo: Book = {
   .authors = [{ .name = "John Doe" }],
   .stock = 42,
 }
+
+foo: Book = { .isbn = "xxxxx", .title = "asfd", .authors = [{ .name = "John Doe" }], .stock = 42 }
