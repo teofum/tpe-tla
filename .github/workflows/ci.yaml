@@ -18,13 +18,13 @@ jobs:
             flex \
             gcc \
             make
-          chmod u+x --recursive src/main/bash
+          chmod u+x --recursive .script
       - name: "Build"
         run: |
-          src/main/bash/build.sh
+          .script/build.sh
       - name: "Test"
         run: |
-          src/main/bash/test.sh
+          .script/test.sh
 
 name: "CI"
 

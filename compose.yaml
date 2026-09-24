@@ -20,11 +20,11 @@ services:
   compiler:
     build:
       context: "."
-      dockerfile: "src/main/docker/compiler/Dockerfile"
+      dockerfile: ".docker/compiler/Dockerfile"
     develop:
       watch:
         - action: rebuild
-          path: "src/main/docker/compiler/"
+          path: ".docker/compiler/"
     env_file:
       - path: ".env"
         required: false

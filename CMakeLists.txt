@@ -16,9 +16,9 @@ if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
   # R/R conflicts exists.
   add_custom_command(
     OUTPUT
-      ../src/main/c/frontend/bison/bison_parser.c
-      ../src/main/c/frontend/bison/bison_parser.h
-    COMMAND ../src/main/bash/bison.sh
+      ../src/frontend/bison/bison_parser.c
+      ../src/frontend/bison/bison_parser.h
+    COMMAND ../.script/bison.sh
   )
 
   # Options for GCC.
@@ -30,27 +30,27 @@ if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
   # Compiles the scanner with Flex.
   add_custom_command(
     OUTPUT
-      ../src/main/c/frontend/flex/flex_scanner.c
-      ../src/main/c/frontend/flex/flex_scanner.h
-    COMMAND ../src/main/bash/flex.sh
+      ../src/frontend/flex/flex_scanner.c
+      ../src/frontend/flex/flex_scanner.h
+    COMMAND ../.script/flex.sh
     DEPENDS
-      ../src/main/c/frontend/bison/bison_parser.c
-      ../src/main/c/frontend/bison/bison_parser.h
+      ../src/frontend/bison/bison_parser.c
+      ../src/frontend/bison/bison_parser.h
   )
 
   add_executable(Flex-Bison-Compiler
-    src/main/c/main.c
-    src/main/c/ast/ast.c
-    src/main/c/ast/dot.c
-    src/main/c/frontend/bison/bison_actions.c
-    src/main/c/frontend/bison/bison_parser.c
-    src/main/c/frontend/flex/flex_actions.c
-    src/main/c/frontend/flex/flex_scanner.c
-    src/main/c/frontend/frontend.c
-    src/main/c/support/logger.c
-    src/main/c/support/str.c
+    src/main.c
+    src/ast/ast.c
+    src/ast/dot.c
+    src/frontend/bison/bison_actions.c
+    src/frontend/bison/bison_parser.c
+    src/frontend/flex/flex_actions.c
+    src/frontend/flex/flex_scanner.c
+    src/frontend/frontend.c
+    src/support/logger.c
+    src/support/str.c
   )
-  target_include_directories(Flex-Bison-Compiler PRIVATE src/main/c)
+  target_include_directories(Flex-Bison-Compiler PRIVATE src)
 
   # Link final project and libraries.
   target_link_libraries(Flex-Bison-Compiler)

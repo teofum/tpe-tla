@@ -41,7 +41,7 @@ docker compose run --rm compiler
 Builds or rebuilds the entire compiler:
 
 ```bash
-src/main/bash/build.sh
+.script/build.sh
 ```
 
 ### Run
@@ -49,17 +49,17 @@ src/main/bash/build.sh
 Compiles a program:
 
 ```bash
-src/main/bash/run.sh <program>
+.script/run.sh <program>
 ```
 
 where `<program>` is the path to the file that represents its entry-point.
 
 ### Test
 
-Executes every available unit-test under `src/test/c` folder:
+Executes every available unit-test under `test` folder:
 
 ```bash
-src/main/bash/test.sh
+.script/test.sh
 ```
 
 ### Stop

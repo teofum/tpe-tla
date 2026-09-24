@@ -1,2 +1,2 @@
--Isrc/main/c
+-Isrc/
 -std=c23

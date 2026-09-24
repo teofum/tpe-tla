@@ -15,10 +15,10 @@ endif
 
 clean:
 	rm -rf .build
-	rm -f src/main/c/frontend/flex/flex_scanner.c
-	rm -f src/main/c/frontend/flex/flex_scanner.h
-	rm -f src/main/c/frontend/bison/bison_parser.c
-	rm -f src/main/c/frontend/bison/bison_parser.h
+	rm -f src/frontend/flex/flex_scanner.c
+	rm -f src/frontend/flex/flex_scanner.h
+	rm -f src/frontend/bison/bison_parser.c
+	rm -f src/frontend/bison/bison_parser.h
 	echo Cleaned.
 
 clean-build: clean .build/Flex-Bison-Compiler
@@ -30,9 +30,9 @@ rebuild:
 configure: clean .build
 
 test: .build/Flex-Bison-Compiler
-	docker compose run -q --rm compiler src/main/bash/test.sh
+	docker compose run -q --rm compiler .script/test.sh
 
 run: .build/Flex-Bison-Compiler
-	docker compose run -q --rm compiler src/main/bash/run.sh $(src)
+	docker compose run -q --rm compiler .script/run.sh $(src)
 
 .PHONY: clean clean-build configure test

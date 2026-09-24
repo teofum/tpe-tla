@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-BASE_PATH="$(dirname "$0")/../../.."
+BASE_PATH="$(dirname "$0")/.."
 cd "$BASE_PATH"
 
 INPUT="$1"

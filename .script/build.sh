@@ -1,0 +1,23 @@
+#! /bin/bash
+
+set -euxo pipefail
+
+BASE_PATH="$(dirname "$0")/.."
+cd "$BASE_PATH"
+
+GREEN='\033[0;32m'
+OFF='\033[0m'
+
+rm -rf .build
+rm -f src/frontend/flex/flex_scanner.c
+rm -f src/frontend/flex/flex_scanner.h
+rm -f src/frontend/bison/bison_parser.c
+rm -f src/frontend/bison/bison_parser.h
+
+cmake -S . -B .build
+echo -e "${GREEN}CMake done.${OFF}"
+cd .build
+make
+cd ..
+
+echo -e "${GREEN}All done.${OFF}"
