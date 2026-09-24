@@ -6,9 +6,3 @@ foo := (1 + 3, y < z and x == y, 1 * (2 + 3))
 
 // Tuples in parentheses
 ((1, 2) + (3, 4)) * 5
-
-// Weird: ambiguity between 1-uple literal and grouped expression
-foo: (int) = (5)
-
-// Weirder: trailing comma resolves ambiguity
-foo: (int) = (5,)

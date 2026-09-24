@@ -28,7 +28,7 @@ LiteralExpr *parse_string_literal(StringLiteral *s);
 LiteralExpr *parse_boolean_literal(BooleanLiteral *b);
 LiteralExpr *parse_nil_literal();
 LiteralExpr *parse_list_literal(ExprList *exprs);
-LiteralExpr *parse_tuple_literal(ExprList *exprs);
+LiteralExpr *parse_tuple_literal(Expr *head, ExprList *exprs);
 
 VariableExpr *parse_named_variable(Identifier *id);
 VariableExpr *parse_struct_member_variable(VariableExpr *struct_expr, Identifier *id);
@@ -49,7 +49,7 @@ Type *parse_map_type(Type *key, Type *value);
 Type *parse_struct_type(StructFieldList *fields);
 Type *parse_union_type(TypeList *types);
 Type *parse_optional_type(Type *type);
-Type *parse_tuple_type(TypeList *types);
+Type *parse_tuple_type(Type *head, TypeList *types);
 Type *parse_enum_type(IdentifierList *values);
 Type *parse_nil_type();
 
