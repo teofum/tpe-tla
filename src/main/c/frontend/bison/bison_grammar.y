@@ -44,11 +44,13 @@ void yyerror(YYLTYPE *location, const char *message) {
 
   Type *type;
   StructField *struct_field;
+  StructLiteralField *struct_literal_field;
   MapEntry *map_entry;
 
   Program *program;
   StmtList *statement_list;
   StructFieldList *struct_field_list;
+  StructLiteralFieldList *struct_literal_field_list;
   MapEntryList *map_entry_list;
   TypeList *type_list;
   IdentifierList *identifier_list;
@@ -77,6 +79,8 @@ void yyerror(YYLTYPE *location, const char *message) {
 %destructor { ast_free_stmt_list($$, true); } <statement_list>
 %destructor { ast_free_struct_field_list($$, true); } <struct_field_list>
 %destructor { ast_free_struct_field($$); } <struct_field>
+%destructor { ast_free_struct_literal_field_list($$, true); } <struct_literal_field_list>
+%destructor { ast_free_struct_literal_field($$); } <struct_literal_field>
 %destructor { ast_free_map_entry_list($$, true); } <map_entry_list>
 %destructor { ast_free_map_entry($$); } <map_entry>
 %destructor { ast_free_type_list($$, true); } <type_list>
@@ -143,32 +147,34 @@ void yyerror(YYLTYPE *location, const char *message) {
 %token <token>    UNKNOWN
 %token <token>    END
 
-%type <statement>         statement
-%type <declaration>       declaration
-%type <type_alias>        type_alias
+%type <statement>                   statement
+%type <declaration>                 declaration
+%type <type_alias>                  type_alias
 
-%type <expression>        expression
-%type <literal>           literal
-%type <variable>          variable
-%type <unary>             unary
-%type <binary>            binary
-%type <group>             group
-%type <assignment>        assignment
-%type <if_expr>           if_expr
-%type <for_expr>          for_expr
-%type <block>             block
+%type <expression>                  expression
+%type <literal>                     literal
+%type <variable>                    variable
+%type <unary>                       unary
+%type <binary>                      binary
+%type <group>                       group
+%type <assignment>                  assignment
+%type <if_expr>                     if_expr
+%type <for_expr>                    for_expr
+%type <block>                       block
 
-%type <type>              type
-%type <struct_field>      struct_field
-%type <map_entry>         map_entry
+%type <type>                        type
+%type <struct_field>                struct_field
+%type <struct_literal_field>        struct_literal_field
+%type <map_entry>                   map_entry
 
-%type <program>           program
-%type <statement_list>    statement_list
-%type <struct_field_list> struct_field_list
-%type <map_entry_list>    map_entry_list
-%type <type_list>         type_list
-%type <identifier_list>   identifier_list
-%type <expression_list>   expression_list
+%type <program>                     program
+%type <statement_list>              statement_list
+%type <struct_field_list>           struct_field_list
+%type <struct_literal_field_list>   struct_literal_field_list
+%type <map_entry_list>              map_entry_list
+%type <type_list>                   type_list
+%type <identifier_list>             identifier_list
+%type <expression_list>             expression_list
 
 // Precedence
 %left FOR IN
@@ -226,6 +232,14 @@ literal: INTEGER                                                    { $$ = parse
   | STRING                                                          { $$ = parse_string_literal($1); }
   | BOOL                                                            { $$ = parse_boolean_literal($1); }
   | NIL                                                             { $$ = parse_nil_literal(); }
+  | CURLY_L struct_literal_field_list CURLY_R                       { $$ = parse_struct_literal($2); }
+  | CURLY_L NL struct_literal_field_list CURLY_R                    { $$ = parse_struct_literal($3); }
+  | CURLY_L struct_literal_field_list NL CURLY_R                    { $$ = parse_struct_literal($2); }
+  | CURLY_L NL struct_literal_field_list NL CURLY_R                 { $$ = parse_struct_literal($3); }
+  | CURLY_L struct_literal_field_list COMMA CURLY_R                 { $$ = parse_struct_literal($2); }
+  | CURLY_L NL struct_literal_field_list COMMA CURLY_R              { $$ = parse_struct_literal($3); }
+  | CURLY_L struct_literal_field_list COMMA NL CURLY_R              { $$ = parse_struct_literal($2); }
+  | CURLY_L NL struct_literal_field_list COMMA NL CURLY_R           { $$ = parse_struct_literal($3); }
   | SQUARE_L expression_list SQUARE_R                               { $$ = parse_list_literal($2); }
   | SQUARE_L NL expression_list SQUARE_R                            { $$ = parse_list_literal($3); }
   | SQUARE_L expression_list NL SQUARE_R                            { $$ = parse_list_literal($2); }
@@ -351,6 +365,14 @@ map_entry_list: map_entry                                           { $$ = parse
 
 map_entry: literal EQUAL expression                                 { $$ = parse_map_entry_literal($1, $3); }
   | block EQUAL expression                                          { $$ = parse_map_entry_block($1, $3); }
+  ;
+
+struct_literal_field_list: struct_literal_field                     { $$ = parse_struct_literal_field_list($1, NULL); }
+  | struct_literal_field_list COMMA struct_literal_field            { $$ = parse_struct_literal_field_list($3, $1); }
+  | struct_literal_field_list COMMA NL struct_literal_field         { $$ = parse_struct_literal_field_list($4, $1); }
+  ;
+
+struct_literal_field: DOT IDENTIFIER EQUAL expression               { $$ = parse_struct_literal_field($2, $4); }
   ;
 
 type_list: type                                                     { $$ = parse_type_list($1, NULL); }

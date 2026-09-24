@@ -4,6 +4,15 @@
   - Overhauled grammar to separate statements with newlines
 [x] Fix ambiguity of grouping vs 1-uple literal
   - Tuple types and literals muct have at least two elements (a 1-uple is just... a value with extra steps)
+[ ] Add nonterminals for optional comma, newline
+[ ] Simplify the project tree
+
+#=== General ==================================================================#
+
+[ ] Error handling: structured reporting of errors
+  [ ] Error handling service
+  [ ] Error gates
+  [ ] Syntax errors
 
 #=== Frontend =================================================================#
 

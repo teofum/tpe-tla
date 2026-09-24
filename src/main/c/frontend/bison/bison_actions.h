@@ -30,6 +30,7 @@ LiteralExpr *parse_nil_literal();
 LiteralExpr *parse_list_literal(ExprList *exprs);
 LiteralExpr *parse_tuple_literal(Expr *head, ExprList *exprs);
 LiteralExpr *parse_map_literal(MapEntryList *entries);
+LiteralExpr *parse_struct_literal(StructLiteralFieldList *fields);
 
 VariableExpr *parse_named_variable(Identifier *id);
 VariableExpr *parse_struct_member_variable(VariableExpr *struct_expr, Identifier *id);
@@ -55,6 +56,7 @@ Type *parse_enum_type(IdentifierList *values);
 Type *parse_nil_type();
 
 StructFieldList *parse_struct_field_list(StructField *head, StructFieldList *tail);
+StructLiteralFieldList *parse_struct_literal_field_list(StructLiteralField *head, StructLiteralFieldList *tail);
 MapEntryList *parse_map_entry_list(MapEntry *head, MapEntryList *tail);
 TypeList *parse_type_list(Type *head, TypeList *tail);
 IdentifierList *parse_identifier_list(Identifier *head, IdentifierList *tail);
@@ -62,6 +64,7 @@ StmtList *parse_stmt_list(Stmt *head, StmtList *tail);
 ExprList *parse_expr_list(Expr *head, ExprList *tail);
 
 StructField *parse_struct_field(Identifier *id, Type *type, Expr *default_value);
+StructLiteralField *parse_struct_literal_field(Identifier *id, Expr *value);
 MapEntry *parse_map_entry_literal(LiteralExpr *key, Expr *value);
 MapEntry *parse_map_entry_block(BlockExpr *key, Expr *value);
 Program *parse_program(StmtList *statements);

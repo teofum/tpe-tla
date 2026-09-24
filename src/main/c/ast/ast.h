@@ -43,6 +43,7 @@ typedef enum {
   L_LIST,
   L_TUPLE,
   L_MAP,
+  L_STRUCT,
 } LiteralType;
 
 typedef enum {
@@ -101,6 +102,8 @@ typedef struct ListLiteral ListLiteral;
 typedef struct TupleLiteral TupleLiteral;
 typedef struct MapLiteral MapLiteral;
 typedef struct MapEntry MapEntry;
+typedef struct StructLiteral StructLiteral;
+typedef struct StructLiteralField StructLiteralField;
 
 typedef struct NamedVariable NamedVariable;
 typedef struct StructMemberVariable StructMemberVariable;
@@ -121,6 +124,7 @@ typedef struct Program Program;
 AST_LIST(Stmt, stmt);
 AST_LIST(Expr, expr);
 AST_LIST(StructField, struct_field);
+AST_LIST(StructLiteralField, struct_literal_field);
 AST_LIST(MapEntry, map_entry);
 AST_LIST(Type, type);
 AST_LIST(Identifier, identifier);
@@ -180,6 +184,7 @@ struct LiteralExpr {
     ListLiteral *list;
     TupleLiteral *tuple;
     MapLiteral *map;
+    StructLiteral *struct_literal;
   };
 };
 
@@ -269,6 +274,16 @@ struct MapLiteral {
 
 struct MapEntry {
   Expr *key;
+  Expr *value;
+};
+
+struct StructLiteral {
+  u32 len;
+  StructLiteralField **fields;
+};
+
+struct StructLiteralField {
+  Identifier *name;
   Expr *value;
 };
 
@@ -379,6 +394,7 @@ LiteralExpr *ast_boolean_literal(BooleanLiteral *b);
 LiteralExpr *ast_list_literal(ExprList *exprs);
 LiteralExpr *ast_tuple_literal(ExprList *exprs);
 LiteralExpr *ast_map_literal(MapEntryList *entries);
+LiteralExpr *ast_struct_literal(StructLiteralFieldList *fields);
 LiteralExpr *ast_nil_literal();
 
 VariableExpr *ast_variable_named(Identifier *id);
@@ -403,6 +419,7 @@ Type *ast_enum_type(IdentifierList *values);
 Type *ast_nil_type();
 
 StructField *ast_struct_field(Identifier *id, Type *type, Expr *default_value);
+StructLiteralField *ast_struct_literal_field(Identifier *id, Expr *value);
 MapEntry *ast_map_entry(Expr *key, Expr *value);
 
 Program *ast_program(StmtList *statements);
@@ -431,6 +448,7 @@ void ast_free_bool_literal(BooleanLiteral *l);
 void ast_free_list_literal(ListLiteral *l);
 void ast_free_tuple_literal(TupleLiteral *l);
 void ast_free_map_literal(MapLiteral *l);
+void ast_free_struct_literal(StructLiteral *l);
 
 void ast_free_named_variable(NamedVariable *v);
 void ast_free_struct_member_variable(StructMemberVariable *v);
@@ -446,6 +464,7 @@ void ast_free_tuple_type(TupleType *t);
 void ast_free_enum_type(EnumType *t);
 
 void ast_free_struct_field(StructField *f);
+void ast_free_struct_literal_field(StructLiteralField *f);
 void ast_free_map_entry(MapEntry *e);
 
 void ast_free_identifier(Identifier *id);

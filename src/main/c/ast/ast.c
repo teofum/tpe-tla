@@ -40,6 +40,7 @@ static void _consume_##name##_list(T##List *list, T ***items, u32 *len) { \
 AST_LIST_IMPL(Stmt, stmt)
 AST_LIST_IMPL(Expr, expr)
 AST_LIST_IMPL(StructField, struct_field)
+AST_LIST_IMPL(StructLiteralField, struct_literal_field)
 AST_LIST_IMPL(MapEntry, map_entry)
 AST_LIST_IMPL(Type, type)
 AST_LIST_IMPL(Identifier, identifier)
@@ -158,6 +159,15 @@ LiteralExpr *ast_map_literal(MapEntryList *entries) {
 
   LiteralExpr *literal = new(LiteralExpr);
   *literal = (LiteralExpr){ .type = L_MAP, .map = map };
+  return literal;
+}
+
+LiteralExpr *ast_struct_literal(StructLiteralFieldList *fields) {
+  StructLiteral *struct_literal = new(StructLiteral);
+  _consume_struct_literal_field_list(fields, &struct_literal->fields, &struct_literal->len);
+
+  LiteralExpr *literal = new(LiteralExpr);
+  *literal = (LiteralExpr){ .type = L_STRUCT, .struct_literal = struct_literal };
   return literal;
 }
 
@@ -372,6 +382,16 @@ StructField *ast_struct_field(Identifier *id, Type *type, Expr *default_value) {
   return field;
 }
 
+StructLiteralField *ast_struct_literal_field(Identifier *id, Expr *value) {
+  StructLiteralField *field = new(StructLiteralField);
+  *field = (StructLiteralField){
+    .name = id,
+    .value = value,
+  };
+
+  return field;
+}
+
 MapEntry *ast_map_entry(Expr *key, Expr *value) {
   MapEntry *entry = new(MapEntry);
   *entry = (MapEntry){
@@ -449,6 +469,7 @@ void ast_free_literal(LiteralExpr *literal) {
     case L_LIST: ast_free_list_literal(literal->list); break;
     case L_TUPLE: ast_free_tuple_literal(literal->tuple); break;
     case L_MAP: ast_free_map_literal(literal->map); break;
+    case L_STRUCT: ast_free_struct_literal(literal->struct_literal); break;
     case L_NIL: break;
   }
   free(literal);
@@ -583,6 +604,16 @@ void ast_free_map_literal(MapLiteral *l) {
   free(l);
 }
 
+void ast_free_struct_literal(StructLiteral *l) {
+  if (!l) return;
+
+  for (u32 i = 0; i < l->len; i++) {
+    ast_free_struct_literal_field(l->fields[i]);
+  }
+  free(l->fields);
+  free(l);
+}
+
 void ast_free_named_variable(NamedVariable *v) {
   if (!v) return;
 
@@ -690,6 +721,14 @@ void ast_free_struct_field(StructField *f) {
   ast_free_identifier(f->name);
   ast_free_type(f->type);
   ast_free_expr(f->default_value);
+  free(f);
+}
+
+void ast_free_struct_literal_field(StructLiteralField *f) {
+  if (!f) return;
+
+  ast_free_identifier(f->name);
+  ast_free_expr(f->value);
   free(f);
 }
 

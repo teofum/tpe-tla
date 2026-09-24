@@ -71,6 +71,15 @@ static void dot_struct_field(StructField *field, u64 pid) {
   if (field->default_value) dot_expr(field->default_value, id);
 }
 
+static void dot_struct_literal_field(StructLiteralField *field, u64 pid) {
+  u64 id = next_id();
+  char label[256];
+  snprintf(label, 256, "%s", field->name->lexeme);
+  _node(id, label, NODE_BASE);
+  _edge(pid, id);
+  dot_expr(field->value, id);
+}
+
 static void dot_map_entry(MapEntry *entry, u64 pid) {
   u64 id = next_id();
   _node(id, "Map Entry", NODE_BASE);
@@ -183,6 +192,13 @@ static void dot_literal(LiteralExpr *literal, u64 pid) {
       snprintf(label, 6, "Map");
       for (u32 i = 0; i < literal->map->len; i++) {
         dot_map_entry(literal->map->entries[i], id);
+      }
+      break;
+    case L_STRUCT:
+      label = new_array(char, 7);
+      snprintf(label, 7, "Struct");
+      for (u32 i = 0; i < literal->struct_literal->len; i++) {
+        dot_struct_literal_field(literal->struct_literal->fields[i], id);
       }
       break;
   }
