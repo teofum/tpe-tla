@@ -14,6 +14,8 @@ static void yyerror(YYLTYPE *location, const char *message) {
 
 %}
 
+/*== Bison settings ==================================================================================================*/
+
 %define api.pure full
 %define api.push-pull push
 %define api.value.union.name SemanticValue
@@ -58,6 +60,8 @@ static void yyerror(YYLTYPE *location, const char *message) {
   ExprList *expression_list;
 }
 
+/*== Destructors =====================================================================================================*/
+
 %destructor { ast_free_identifier($$); } <identifier>
 %destructor { ast_free_int_literal($$); } <integer>
 %destructor { ast_free_float_literal($$); } <floating>
@@ -89,7 +93,9 @@ static void yyerror(YYLTYPE *location, const char *message) {
 %destructor { ast_free_expr_list($$, true); } <expression_list>
 %destructor { ast_free_program($$); } <program>
 
-// Symbols
+/*== Symbols: terminals ==============================================================================================*/
+
+// Operators
 %token <token>    PAREN_L           "'('"
 %token <token>    PAREN_R           "')'"
 %token <token>    SQUARE_L          "'['"
@@ -150,6 +156,8 @@ static void yyerror(YYLTYPE *location, const char *message) {
 %token <token>    UNKNOWN           "<unknown lexeme>"
 %token <token>    END               "<EOF>"
 
+/*== Symbols: nonterminals ===========================================================================================*/
+
 %type <statement>                   statement
 %type <declaration>                 declaration
 %type <type_alias>                  type_alias
@@ -179,7 +187,8 @@ static void yyerror(YYLTYPE *location, const char *message) {
 %type <identifier_list>             identifier_list
 %type <expression_list>             expression_list
 
-// Precedence
+/*== Precedence ======================================================================================================*/
+
 %left NL
 %left COMMA
 %left FOR IN
@@ -199,7 +208,11 @@ static void yyerror(YYLTYPE *location, const char *message) {
 %left BANG
 %left DOT
 
+/*== Grammar rules ===================================================================================================*/
+
 %%
+
+/*-- Program and statements ------------------------------------------------------------------------------------------*/
 
 program: statement_list NL END                                      { $$ = parse_program($1); }
   ;
@@ -220,6 +233,8 @@ declaration: IDENTIFIER COLON type EQUAL expression                 { $$ = parse
 
 type_alias: IDENTIFIER IS type                                      { $$ = parse_type_alias($1, $3); }
   ;
+
+/*-- Expressions -----------------------------------------------------------------------------------------------------*/
 
 expression: literal                                                 { $$ = parse_literal_expr($1); }
   | variable                                                        { $$ = parse_variable_expr($1); }
@@ -242,6 +257,21 @@ literal: INTEGER                                                    { $$ = parse
   | SQUARE_L nl map_entry_list nl SQUARE_R                          { $$ = parse_map_literal($3); }
   | IDENTIFIER COLON_COLON IDENTIFIER                               { $$ = parse_enum_literal($3, $1); }
   | COLON_COLON IDENTIFIER                                          { $$ = parse_enum_literal($2, NULL); }
+  ;
+
+map_entry_list: map_entry                                           { $$ = parse_map_entry_list($1, NULL); }
+  | map_entry_list COMMA nl map_entry                               { $$ = parse_map_entry_list($4, $1); }
+  ;
+
+map_entry: literal EQUAL expression                                 { $$ = parse_map_entry_literal($1, $3); }
+  | block EQUAL expression                                          { $$ = parse_map_entry_block($1, $3); }
+  ;
+
+struct_literal_field_list: struct_literal_field                     { $$ = parse_struct_literal_field_list($1, NULL); }
+  | struct_literal_field_list COMMA nl struct_literal_field         { $$ = parse_struct_literal_field_list($4, $1); }
+  ;
+
+struct_literal_field: DOT IDENTIFIER EQUAL expression               { $$ = parse_struct_literal_field($2, $4); }
   ;
 
 variable: IDENTIFIER                                                { $$ = parse_named_variable($1); }
@@ -285,6 +315,8 @@ for_expr: FOR IDENTIFIER COMMA IDENTIFIER IN expression block       { $$ = parse
 block: CURLY_L nl statement_list nl CURLY_R                         { $$ = parse_block($3); }
   ;
 
+/*-- Types -----------------------------------------------------------------------------------------------------------*/
+
 type: IDENTIFIER                                                    { $$ = parse_named_type($1); }
   | type SQUARE_L SQUARE_R                                          { $$ = parse_list_type($1); }
   | type SQUARE_L type SQUARE_R                                     { $$ = parse_map_type($3, $1); }
@@ -304,21 +336,6 @@ struct_field: IDENTIFIER COLON type                                 { $$ = parse
   | IDENTIFIER COLON type EQUAL expression                          { $$ = parse_struct_field($1, $3, $5); }
   ;
 
-map_entry_list: map_entry                                           { $$ = parse_map_entry_list($1, NULL); }
-  | map_entry_list COMMA nl map_entry                               { $$ = parse_map_entry_list($4, $1); }
-  ;
-
-map_entry: literal EQUAL expression                                 { $$ = parse_map_entry_literal($1, $3); }
-  | block EQUAL expression                                          { $$ = parse_map_entry_block($1, $3); }
-  ;
-
-struct_literal_field_list: struct_literal_field                     { $$ = parse_struct_literal_field_list($1, NULL); }
-  | struct_literal_field_list COMMA nl struct_literal_field         { $$ = parse_struct_literal_field_list($4, $1); }
-  ;
-
-struct_literal_field: DOT IDENTIFIER EQUAL expression               { $$ = parse_struct_literal_field($2, $4); }
-  ;
-
 type_list: type                                                     { $$ = parse_type_list($1, NULL); }
   | type_list COMMA nl type                                         { $$ = parse_type_list($4, $1); }
   ;
@@ -331,11 +348,15 @@ expression_list: expression                                         { $$ = parse
   | expression_list COMMA nl expression                             { $$ = parse_expr_list($4, $1); }
   ;
 
+/*-- Utility ---------------------------------------------------------------------------------------------------------*/
+
 nl: NL                                                              {}
   | %empty                                                          {}
   ;
 
 %%
+
+/*== Error reporting =================================================================================================*/
 
 static int yyreport_syntax_error(const yypcontext_t *ctx) {
   enum {MAX_EXPECTED = 10};
