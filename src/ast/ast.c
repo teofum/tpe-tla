@@ -144,15 +144,6 @@ LiteralExpr *ast_list_literal(ExprList *exprs) {
   return literal;
 }
 
-LiteralExpr *ast_tuple_literal(ExprList *exprs) {
-  TupleLiteral *tuple = new(TupleLiteral);
-  _consume_expr_list(exprs, &tuple->exprs, &tuple->len);
-
-  LiteralExpr *literal = new(LiteralExpr);
-  *literal = (LiteralExpr){ .type = L_TUPLE, .tuple = tuple };
-  return literal;
-}
-
 LiteralExpr *ast_map_literal(MapEntryList *entries) {
   MapLiteral *map = new(MapLiteral);
   _consume_map_entry_list(entries, &map->entries, &map->len);
@@ -403,7 +394,7 @@ MapEntry *ast_map_entry(Expr *key, Expr *value) {
 }
 
 Program *ast_program(StmtList *statements) {
-  Program* prog = new(Program);
+  Program *prog = new(Program);
   _consume_stmt_list(statements, &prog->statements, &prog->len);
   return prog;
 }
@@ -467,7 +458,6 @@ void ast_free_literal(LiteralExpr *literal) {
     case L_STRING: ast_free_string_literal(literal->string); break;
     case L_BOOL: ast_free_bool_literal(literal->boolean); break;
     case L_LIST: ast_free_list_literal(literal->list); break;
-    case L_TUPLE: ast_free_tuple_literal(literal->tuple); break;
     case L_MAP: ast_free_map_literal(literal->map); break;
     case L_STRUCT: ast_free_struct_literal(literal->struct_literal); break;
     case L_NIL: break;
@@ -575,16 +565,6 @@ void ast_free_bool_literal(BooleanLiteral *l) {
 }
 
 void ast_free_list_literal(ListLiteral *l) {
-  if (!l) return;
-
-  for (u32 i = 0; i < l->len; i++) {
-    ast_free_expr(l->exprs[i]);
-  }
-  free(l->exprs);
-  free(l);
-}
-
-void ast_free_tuple_literal(TupleLiteral *l) {
   if (!l) return;
 
   for (u32 i = 0; i < l->len; i++) {

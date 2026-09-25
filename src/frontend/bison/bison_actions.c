@@ -86,12 +86,6 @@ LiteralExpr *parse_list_literal(ExprList *exprs) {
   return literal;
 }
 
-LiteralExpr *parse_tuple_literal(Expr *head, ExprList *exprs) {
-  LiteralExpr *literal = ast_tuple_literal(ast_expr_list(head, exprs));
-  fe_parser_log(LOG_DEBUG, "Tuple Literal (len=%u)", literal->tuple->len);
-  return literal;
-}
-
 LiteralExpr *parse_map_literal(MapEntryList *entries) {
   LiteralExpr *literal = ast_map_literal(entries);
   fe_parser_log(LOG_DEBUG, "Map Literal (len=%u)", literal->map->len);
@@ -200,9 +194,9 @@ Type *parse_optional_type(Type *type) {
   return ast_union_type(types);
 }
 
-Type *parse_tuple_type(Type *tail, TypeList *types) {
+Type *parse_tuple_type(TypeList *types) {
   fe_parser_log(LOG_DEBUG, "Tuple");
-  return ast_tuple_type(ast_type_list(tail, types));
+  return ast_tuple_type(types);
 }
 
 Type *parse_enum_type(IdentifierList *values) {

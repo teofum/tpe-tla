@@ -5,7 +5,7 @@ Author is struct {
 Book is struct {
   isbn: string,
   title: string,
-  authors: []Author,
+  authors: Author[],
   stock: int = 0
 }
 
@@ -13,8 +13,8 @@ Book is struct {
 Book is struct {
   isbn: string,
   title: string,
-  authors: []struct {
+  authors: struct {
     name: string
-  },
+  }[],
   stock: int = 0
 }

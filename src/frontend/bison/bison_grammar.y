@@ -238,8 +238,8 @@ literal: INTEGER                                                    { $$ = parse
   | CURLY_L nl struct_literal_field_list nl CURLY_R                 { $$ = parse_struct_literal($3); }
   | SQUARE_L nl expression_list nl SQUARE_R                         { $$ = parse_list_literal($3); }
   | SQUARE_L nl map_entry_list nl SQUARE_R                          { $$ = parse_map_literal($3); }
-  | PAREN_L expression COMMA nl expression_list nl PAREN_R          { $$ = parse_tuple_literal($2, $5); }
-  | PAREN_L NL expression COMMA nl expression_list nl PAREN_R       { $$ = parse_tuple_literal($3, $6); }
+  // | type DOT IDENTIFIER                                             { $$ = parse_enum_literal($3, $1); }
+  // | DOT IDENTIFIER                                                  { $$ = parse_enum_literal($3, $1); }
   ;
 
 variable: IDENTIFIER                                                { $$ = parse_named_variable($1); }
@@ -284,11 +284,11 @@ block: CURLY_L nl statement_list nl CURLY_R                         { $$ = parse
   ;
 
 type: IDENTIFIER                                                    { $$ = parse_named_type($1); }
-  | SQUARE_L SQUARE_R type                                          { $$ = parse_list_type($3); }
-  | SQUARE_L type SQUARE_R type                                     { $$ = parse_map_type($2, $4); }
+  | type SQUARE_L SQUARE_R                                          { $$ = parse_list_type($1); }
+  | type SQUARE_L type SQUARE_R                                     { $$ = parse_map_type($3, $1); }
+  | SQUARE_L nl type_list nl SQUARE_R                               { $$ = parse_tuple_type($3); }
   | STRUCT CURLY_L nl struct_field_list nl CURLY_R                  { $$ = parse_struct_type($4); }
   | UNION CURLY_L nl type_list nl CURLY_R                           { $$ = parse_union_type($4); }
-  | PAREN_L nl type COMMA nl type_list nl PAREN_R                   { $$ = parse_tuple_type($3, $6); }
   | ENUM CURLY_L nl identifier_list nl CURLY_R                      { $$ = parse_enum_type($4); }
   | type QUESTION_MARK                                              { $$ = parse_optional_type($1); }
   | NIL                                                             { $$ = parse_nil_type(); }
