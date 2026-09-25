@@ -1,19 +1,19 @@
 Author is struct {
-  name: string,
+  name: string
 }
 
 Book is struct {
   isbn: string,
   title: string,
   authors: []Author,
-  stock: int = 0,
+  stock: int = 0
 }
 
 foo: Book = {
   .isbn = "xxxxx",
   .title = "asfd",
   .authors = [{ .name = "John Doe" }],
-  .stock = 42,
+  .stock = 42
 }
 
 foo: Book = { .isbn = "xxxxx", .title = "asfd", .authors = [{ .name = "John Doe" }], .stock = 42 }

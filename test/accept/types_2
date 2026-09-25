@@ -1,12 +1,12 @@
 Author is struct {
-  name: string,
+  name: string
 }
 
 Book is struct {
   isbn: string,
   title: string,
   authors: []Author,
-  stock: int = 0,
+  stock: int = 0
 }
 
 // Nested structs
@@ -14,7 +14,7 @@ Book is struct {
   isbn: string,
   title: string,
   authors: []struct {
-    name: string,
+    name: string
   },
-  stock: int = 0,
+  stock: int = 0
 }
