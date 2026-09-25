@@ -64,10 +64,10 @@ typedef enum {
 } TypeType;
 
 typedef struct {
-  int first_line;
-  int first_column;
-  int last_line;
-  int last_column;
+  i32 first_line;
+  i32 first_column;
+  i32 last_line;
+  i32 last_column;
 } Location;
 
 typedef struct {

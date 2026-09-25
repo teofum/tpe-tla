@@ -291,5 +291,5 @@ Program *parse_program(StmtList *statements) {
 // -----------------------------------------------------------------------------
 
 void parse_error(Location *loc, const char *message) {
-  fe_parser_log(LOG_ERROR, "%s\n\tAt line %u, col %u", message);
+  fe_parser_log(LOG_ERROR, "%s\n\tAt line %u, col %u", message, loc->first_line, loc->first_column);
 }
