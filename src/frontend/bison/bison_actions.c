@@ -20,6 +20,11 @@ Stmt *parse_type_alias_stmt(TypeAliasStmt *alias) {
   return ast_stmt_alias(alias);
 }
 
+Stmt *parse_function_def_stmt(FunctionDef *function) {
+  fe_parser_log(LOG_DEBUG, "Function Definition Stmt");
+  return ast_stmt_function_def(function);
+}
+
 Stmt *parse_error_stmt() {
   fe_parser_log(LOG_DEBUG, "ERROR Stmt");
   return ast_stmt_error();
@@ -216,6 +221,13 @@ Type *parse_nil_type() {
 
 // -----------------------------------------------------------------------------
 
+FunctionDef *parse_function_def(Identifier *id, ParameterList *params, Type *return_type, BlockExpr *body) {
+  fe_parser_log(LOG_DEBUG, "Function Definition %s", id->lexeme);
+  return ast_function_def(id, params, return_type, body);
+}
+
+// -----------------------------------------------------------------------------
+
 StructFieldList *parse_struct_field_list(StructField *head, StructFieldList *tail) {
   StructFieldList* list = ast_struct_field_list(head, tail);
   fe_parser_log(LOG_DEBUG, "Struct Field List (len=%u)", list->len);
@@ -258,6 +270,12 @@ ExprList *parse_expr_list(Expr *head, ExprList *tail) {
   return list;
 }
 
+ParameterList *parse_parameter_list(Parameter *head, ParameterList *tail) {
+  ParameterList* list = ast_parameter_list(head, tail);
+  fe_parser_log(LOG_DEBUG, "Parameter List (len=%u)", list->len);
+  return list;
+}
+
 // -----------------------------------------------------------------------------
 
 StructField *parse_struct_field(Identifier *id, Type *type, Expr *default_value) {
@@ -279,6 +297,13 @@ MapEntry *parse_map_entry_block(BlockExpr *key, Expr *value) {
   fe_parser_log(LOG_DEBUG, "Map Entry");
   return ast_map_entry(ast_expr_block(key), value);
 }
+
+Parameter *parse_parameter(Identifier *id, Type *type, Expr *default_value) {
+  fe_parser_log(LOG_DEBUG, "Parameter %s", id->lexeme);
+  return ast_parameter(id, type, default_value);
+}
+
+// -----------------------------------------------------------------------------
 
 Program *parse_program(StmtList *statements) {
   Program *prog = ast_program(statements);

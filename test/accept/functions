@@ -1,0 +1,3 @@
+squares is function(ns: int[]) -> int[] {
+  for n in ns { n * n }
+}

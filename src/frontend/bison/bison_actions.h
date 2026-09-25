@@ -7,6 +7,7 @@
 Stmt *parse_expr_stmt(Expr *expr);
 Stmt *parse_declaration_stmt(DeclarationStmt *decl);
 Stmt *parse_type_alias_stmt(TypeAliasStmt *alias);
+Stmt *parse_function_def_stmt(FunctionDef *function);
 Stmt *parse_error_stmt();
 
 DeclarationStmt *parse_declaration(Identifier *left, Type *type, Expr *right);
@@ -55,6 +56,8 @@ Type *parse_tuple_type(TypeList *types);
 Type *parse_enum_type(IdentifierList *values);
 Type *parse_nil_type();
 
+FunctionDef *parse_function_def(Identifier *id, ParameterList *params, Type *return_type, BlockExpr *body);
+
 StructFieldList *parse_struct_field_list(StructField *head, StructFieldList *tail);
 StructLiteralFieldList *parse_struct_literal_field_list(StructLiteralField *head, StructLiteralFieldList *tail);
 MapEntryList *parse_map_entry_list(MapEntry *head, MapEntryList *tail);
@@ -62,11 +65,14 @@ TypeList *parse_type_list(Type *head, TypeList *tail);
 IdentifierList *parse_identifier_list(Identifier *head, IdentifierList *tail);
 StmtList *parse_stmt_list(Stmt *head, StmtList *tail);
 ExprList *parse_expr_list(Expr *head, ExprList *tail);
+ParameterList *parse_parameter_list(Parameter *head, ParameterList *tail);
 
 StructField *parse_struct_field(Identifier *id, Type *type, Expr *default_value);
 StructLiteralField *parse_struct_literal_field(Identifier *id, Expr *value);
 MapEntry *parse_map_entry_literal(LiteralExpr *key, Expr *value);
 MapEntry *parse_map_entry_block(BlockExpr *key, Expr *value);
+Parameter *parse_parameter(Identifier *id, Type *type, Expr *default_value);
+
 Program *parse_program(StmtList *statements);
 
 void parse_error(Location *loc, const char *message);

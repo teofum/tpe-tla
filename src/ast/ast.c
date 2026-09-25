@@ -44,6 +44,7 @@ AST_LIST_IMPL(StructLiteralField, struct_literal_field)
 AST_LIST_IMPL(MapEntry, map_entry)
 AST_LIST_IMPL(Type, type)
 AST_LIST_IMPL(Identifier, identifier)
+AST_LIST_IMPL(Parameter, parameter)
 
 // -----------------------------------------------------------------------------
 
@@ -60,6 +61,7 @@ Stmt *f_name(T *p_name) {                         \
 AST_STMT_FUNC(ast_stmt_expr, Expr, STMT_EXPR, expr)
 AST_STMT_FUNC(ast_stmt_decl, DeclarationStmt, STMT_DECLARATION, decl)
 AST_STMT_FUNC(ast_stmt_alias, TypeAliasStmt, STMT_TYPE_ALIAS, type_alias)
+AST_STMT_FUNC(ast_stmt_function_def, FunctionDef, STMT_FUNCTION_DEF, function_def)
 
 Stmt *ast_stmt_error() {
   Stmt *stmt = new(Stmt);
@@ -371,6 +373,20 @@ Type *ast_nil_type() {
 
 // -----------------------------------------------------------------------------
 
+FunctionDef *ast_function_def(Identifier *id, ParameterList *params, Type *return_type, BlockExpr *body) {
+  FunctionDef *function = new(FunctionDef);
+  *function = (FunctionDef){
+    .name = id,
+    .return_type = return_type,
+    .body = body,
+  };
+  _consume_parameter_list(params, &function->params, &function->params_len);
+
+  return function;
+}
+
+// -----------------------------------------------------------------------------
+
 StructField *ast_struct_field(Identifier *id, Type *type, Expr *default_value) {
   StructField *field = new(StructField);
   *field = (StructField){
@@ -402,6 +418,19 @@ MapEntry *ast_map_entry(Expr *key, Expr *value) {
   return entry;
 }
 
+Parameter *ast_parameter(Identifier *id, Type *type, Expr *default_value) {
+  Parameter *param = new(Parameter);
+  *param = (Parameter){
+    .name = id,
+    .type = type,
+    .default_value = default_value,
+  };
+
+  return param;
+}
+
+// -----------------------------------------------------------------------------
+
 Program *ast_program(StmtList *statements) {
   Program *prog = new(Program);
   _consume_stmt_list(statements, &prog->statements, &prog->len);
@@ -417,6 +446,7 @@ void ast_free_stmt(Stmt *stmt) {
     case STMT_EXPR: ast_free_expr(stmt->expr); break;
     case STMT_DECLARATION: ast_free_decl(stmt->decl); break;
     case STMT_TYPE_ALIAS: ast_free_alias(stmt->type_alias); break;
+    case STMT_FUNCTION_DEF: ast_free_function_def(stmt->function_def); break;
     case STMT_PARSE_ERROR: break;
   }
 
@@ -713,6 +743,19 @@ void ast_free_enum_type(EnumType *t) {
   free(t);
 }
 
+void ast_free_function_def(FunctionDef *f) {
+  if (!f) return;
+
+  ast_free_identifier(f->name);
+  for (u32 i = 0; i < f->params_len; i++) {
+    ast_free_parameter(f->params[i]);
+  }
+  ast_free_type(f->return_type);
+  ast_free_block(f->body);
+  free(f->params);
+  free(f);
+}
+
 void ast_free_struct_field(StructField *f) {
   if (!f) return;
 
@@ -736,6 +779,15 @@ void ast_free_map_entry(MapEntry *e) {
   ast_free_expr(e->key);
   ast_free_expr(e->value);
   free(e);
+}
+
+void ast_free_parameter(Parameter *p) {
+  if (!p) return;
+
+  ast_free_identifier(p->name);
+  ast_free_type(p->type);
+  ast_free_expr(p->default_value);
+  free(p);
 }
 
 void ast_free_identifier(Identifier *id) {

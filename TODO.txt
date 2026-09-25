@@ -46,6 +46,7 @@
     [x] Lists
     [x] Tuples
     [x] Maps
+    [ ] Ranges
   [x] Variable expressions
     [x] Named variables (identifiers)
     [x] Struct members
@@ -70,11 +71,11 @@
   [x] Tuples
   [x] Maps
   [x] Optional
-[ ] Statements
+[x] Statements
   [x] Expression statements
   [x] Declarations
   [x] Type aliases
-  [ ] Function definitions
+  [x] Function definitions
 [x] Expression lists
 [x] Statement lists
 [x] Program

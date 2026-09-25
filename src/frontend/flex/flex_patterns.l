@@ -94,6 +94,7 @@ id_char         [a-zA-Z0-9_-]
 ">="                          { return lex_operator(GREATER_EQUAL); }
 "<"                           { return lex_operator(LESS); }
 "<="                          { return lex_operator(LESS_EQUAL); }
+"->"                          { return lex_operator(ARROW); }
 
 "if"                          { return lex_keyword(IF); }
 "else"                        { return lex_keyword(ELSE); }

@@ -328,6 +328,29 @@ static void dot_alias(TypeAliasStmt *alias, u64 pid) {
   dot_type(alias->type, id);
 }
 
+static void dot_parameter(Parameter *param, u64 pid) {
+  u64 id = next_id();
+  char label[256];
+  snprintf(label, 256, "%s", param->name->lexeme);
+  _node(id, label, NODE_BASE);
+  _edge(pid, id);
+  dot_type(param->type, id);
+  if (param->default_value) dot_expr(param->default_value, id);
+}
+
+static void dot_function_def(FunctionDef *function, u64 pid) {
+  u64 id = next_id();
+  char label[256];
+  snprintf(label, 256, "Function\\n%s", function->name->lexeme);
+  _node(id, label, NODE_STMT);
+  _edge(pid, id);
+  for (u32 i = 0; i < function->params_len; i++) {
+    dot_parameter(function->params[i], id);
+  }
+  dot_type(function->return_type, id);
+  dot_block(function->body, id);
+}
+
 static void dot_error(u64 pid) {
   u64 id = next_id();
   _node(id, "Parse ERROR", NODE_ERROR);
@@ -339,6 +362,7 @@ static void dot_stmt(Stmt *stmt, u64 pid) {
     case STMT_EXPR: return dot_expr(stmt->expr, pid);
     case STMT_DECLARATION: return dot_decl(stmt->decl, pid);
     case STMT_TYPE_ALIAS: return dot_alias(stmt->type_alias, pid);
+    case STMT_FUNCTION_DEF: return dot_function_def(stmt->function_def, pid);
     case STMT_PARSE_ERROR: return dot_error(pid);
   }
 }

@@ -19,6 +19,7 @@ typedef enum {
   STMT_EXPR,
   STMT_DECLARATION,
   STMT_TYPE_ALIAS,
+  STMT_FUNCTION_DEF,
   STMT_PARSE_ERROR, // Shouldn't exist in any valid AST; only used for debug output
 } StmtType;
 
@@ -79,7 +80,6 @@ typedef struct {
 typedef TokenMeta Identifier;
 
 typedef struct Stmt Stmt;
-typedef struct ExprStmt ExprStmt;
 typedef struct DeclarationStmt DeclarationStmt;
 typedef struct TypeAliasStmt TypeAliasStmt;
 
@@ -119,6 +119,9 @@ typedef struct UnionType UnionType;
 typedef struct TupleType TupleType;
 typedef struct EnumType EnumType;
 
+typedef struct FunctionDef FunctionDef;
+typedef struct Parameter Parameter;
+
 typedef struct Program Program;
 
 AST_LIST(Stmt, stmt);
@@ -128,6 +131,7 @@ AST_LIST(StructLiteralField, struct_literal_field);
 AST_LIST(MapEntry, map_entry);
 AST_LIST(Type, type);
 AST_LIST(Identifier, identifier);
+AST_LIST(Parameter, parameter);
 
 // -----------------------------------------------------------------------------
 
@@ -143,6 +147,7 @@ struct Stmt {
     Expr *expr;
     DeclarationStmt *decl;
     TypeAliasStmt *type_alias;
+    FunctionDef *function_def;
   };
 };
 
@@ -359,6 +364,22 @@ struct StructField {
 
 // -----------------------------------------------------------------------------
 
+struct FunctionDef {
+  Identifier *name;
+  u32 params_len;
+  Parameter **params;
+  Type *return_type;
+  BlockExpr *body;
+};
+
+struct Parameter {
+  Identifier *name;
+  Type *type;
+  Expr *default_value;
+};
+
+// -----------------------------------------------------------------------------
+
 struct Program {
   u32 len;
   Stmt **statements;
@@ -372,6 +393,7 @@ extern const char *TOKEN_LEXEME[];
 Stmt *ast_stmt_expr(Expr *expr);
 Stmt *ast_stmt_decl(DeclarationStmt *decl);
 Stmt *ast_stmt_alias(TypeAliasStmt *alias);
+Stmt *ast_stmt_function_def(FunctionDef *function);
 Stmt *ast_stmt_error();
 
 DeclarationStmt *ast_declaration(Identifier *id, Type *type, Expr *expr);
@@ -418,9 +440,12 @@ Type *ast_tuple_type(TypeList *types);
 Type *ast_enum_type(IdentifierList *values);
 Type *ast_nil_type();
 
+FunctionDef *ast_function_def(Identifier *id, ParameterList *params, Type *return_type, BlockExpr *body);
+
 StructField *ast_struct_field(Identifier *id, Type *type, Expr *default_value);
 StructLiteralField *ast_struct_literal_field(Identifier *id, Expr *value);
 MapEntry *ast_map_entry(Expr *key, Expr *value);
+Parameter *ast_parameter(Identifier *id, Type *type, Expr *default_value);
 
 Program *ast_program(StmtList *statements);
 
@@ -463,9 +488,12 @@ void ast_free_union_type(UnionType *t);
 void ast_free_tuple_type(TupleType *t);
 void ast_free_enum_type(EnumType *t);
 
+void ast_free_function_def(FunctionDef *f);
+
 void ast_free_struct_field(StructField *f);
 void ast_free_struct_literal_field(StructLiteralField *f);
 void ast_free_map_entry(MapEntry *e);
+void ast_free_parameter(Parameter *p);
 
 void ast_free_identifier(Identifier *id);
 void ast_free_token(TokenMeta *meta);

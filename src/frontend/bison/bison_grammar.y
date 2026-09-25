@@ -50,7 +50,11 @@ static void yyerror(YYLTYPE *location, const char *message) {
   StructLiteralField *struct_literal_field;
   MapEntry *map_entry;
 
+  FunctionDef *function_def;
+  Parameter *parameter;
+
   Program *program;
+
   StmtList *statement_list;
   StructFieldList *struct_field_list;
   StructLiteralFieldList *struct_literal_field_list;
@@ -58,6 +62,7 @@ static void yyerror(YYLTYPE *location, const char *message) {
   TypeList *type_list;
   IdentifierList *identifier_list;
   ExprList *expression_list;
+  ParameterList *parameter_list;
 }
 
 /*== Destructors =====================================================================================================*/
@@ -81,6 +86,7 @@ static void yyerror(YYLTYPE *location, const char *message) {
 %destructor { ast_free_decl($$); } <declaration>
 %destructor { ast_free_alias($$); } <type_alias>
 %destructor { ast_free_type($$); } <type>
+%destructor { ast_free_function_def($$); } <function_def>
 %destructor { ast_free_stmt_list($$, true); } <statement_list>
 %destructor { ast_free_struct_field_list($$, true); } <struct_field_list>
 %destructor { ast_free_struct_field($$); } <struct_field>
@@ -88,6 +94,8 @@ static void yyerror(YYLTYPE *location, const char *message) {
 %destructor { ast_free_struct_literal_field($$); } <struct_literal_field>
 %destructor { ast_free_map_entry_list($$, true); } <map_entry_list>
 %destructor { ast_free_map_entry($$); } <map_entry>
+%destructor { ast_free_parameter_list($$, true); } <parameter_list>
+%destructor { ast_free_parameter($$); } <parameter>
 %destructor { ast_free_type_list($$, true); } <type_list>
 %destructor { ast_free_identifier_list($$, true); } <identifier_list>
 %destructor { ast_free_expr_list($$, true); } <expression_list>
@@ -120,6 +128,7 @@ static void yyerror(YYLTYPE *location, const char *message) {
 %token <token>    GREATER_EQUAL     "'>='"
 %token <token>    LESS              "'<'"
 %token <token>    LESS_EQUAL        "'<='"
+%token <token>    ARROW             "'->'"
 
 // Keywords
 %token <token>    IF                "'if'"
@@ -178,6 +187,9 @@ static void yyerror(YYLTYPE *location, const char *message) {
 %type <struct_literal_field>        struct_literal_field
 %type <map_entry>                   map_entry
 
+%type <function_def>                function_def
+%type <parameter>                   parameter
+
 %type <program>                     program
 %type <statement_list>              statement_list
 %type <struct_field_list>           struct_field_list
@@ -186,6 +198,8 @@ static void yyerror(YYLTYPE *location, const char *message) {
 %type <type_list>                   type_list
 %type <identifier_list>             identifier_list
 %type <expression_list>             expression_list
+%type <parameter_list>              parameter_list
+%type <parameter_list>              parameters
 
 /*== Precedence ======================================================================================================*/
 
@@ -224,6 +238,7 @@ statement_list: statement                                           { $$ = parse
 statement: expression                                               { $$ = parse_expr_stmt($1); }
   | declaration                                                     { $$ = parse_declaration_stmt($1); }
   | type_alias                                                      { $$ = parse_type_alias_stmt($1); }
+  | function_def                                                    { $$ = parse_function_def_stmt($1); }
   | error                                                           { $$ = parse_error_stmt(); }
   ;
 
@@ -232,6 +247,20 @@ declaration: IDENTIFIER COLON type EQUAL expression                 { $$ = parse
   ;
 
 type_alias: IDENTIFIER IS type                                      { $$ = parse_type_alias($1, $3); }
+  ;
+
+function_def: IDENTIFIER IS FUNCTION parameters ARROW type nl block { $$ = parse_function_def($1, $4, $6, $8); }
+  ;
+
+parameters: PAREN_L nl parameter_list nl PAREN_R                    { $$ = $3; }
+  ;
+
+parameter_list: parameter                                           { $$ = parse_parameter_list($1, NULL); }
+  | parameter_list COMMA nl parameter                               { $$ = parse_parameter_list($4, $1); }
+  ;
+
+parameter: IDENTIFIER COLON type                                    { $$ = parse_parameter($1, $3, NULL); }
+  | IDENTIFIER COLON type EQUAL expression                          { $$ = parse_parameter($1, $3, $5); }
   ;
 
 /*-- Expressions -----------------------------------------------------------------------------------------------------*/
