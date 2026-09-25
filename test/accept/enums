@@ -1,0 +1,7 @@
+ListingState is enum {Active, Sold, Pending_Transaction, Canceled}
+
+// Enum literal
+foo := ListingState::Active
+
+// Enum literal type can be inferred from context
+bar: ListingState = ::Pending_Transaction

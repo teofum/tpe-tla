@@ -162,6 +162,15 @@ LiteralExpr *ast_struct_literal(StructLiteralFieldList *fields) {
   return literal;
 }
 
+LiteralExpr *ast_enum_literal(Type *type, Identifier *id) {
+  EnumLiteral *enum_literal = new(EnumLiteral);
+  *enum_literal = (EnumLiteral){ .type = type, .value = id };
+
+  LiteralExpr *literal = new(LiteralExpr);
+  *literal = (LiteralExpr){ .type = L_ENUM, .enum_literal = enum_literal };
+  return literal;
+}
+
 // -----------------------------------------------------------------------------
 
 VariableExpr *ast_variable_named(Identifier *id) {
@@ -460,6 +469,7 @@ void ast_free_literal(LiteralExpr *literal) {
     case L_LIST: ast_free_list_literal(literal->list); break;
     case L_MAP: ast_free_map_literal(literal->map); break;
     case L_STRUCT: ast_free_struct_literal(literal->struct_literal); break;
+    case L_ENUM: ast_free_enum_literal(literal->enum_literal); break;
     case L_NIL: break;
   }
   free(literal);
@@ -591,6 +601,14 @@ void ast_free_struct_literal(StructLiteral *l) {
     ast_free_struct_literal_field(l->fields[i]);
   }
   free(l->fields);
+  free(l);
+}
+
+void ast_free_enum_literal(EnumLiteral *l) {
+  if (!l) return;
+
+  ast_free_type(l->type);
+  ast_free_identifier(l->value);
   free(l);
 }
 

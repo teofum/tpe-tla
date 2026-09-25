@@ -98,6 +98,11 @@ LiteralExpr *parse_struct_literal(StructLiteralFieldList *fields) {
   return literal;
 }
 
+LiteralExpr *parse_enum_literal(Identifier *id, Identifier *typename) {
+  fe_parser_log(LOG_DEBUG, "Enum Literal .%s", id->lexeme);
+  return ast_enum_literal(map(typename, ast_named_type), id);
+}
+
 // -----------------------------------------------------------------------------
 
 VariableExpr *parse_named_variable(Identifier *id) {

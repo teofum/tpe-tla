@@ -97,6 +97,7 @@ static void yyerror(YYLTYPE *location, const char *message) {
 %token <token>    CURLY_L           "'{'"
 %token <token>    CURLY_R           "'}'"
 %token <token>    COLON             "':'"
+%token <token>    COLON_COLON       "'::'"
 %token <token>    COMMA             "','"
 %token <token>    DOT               "'.'"
 %token <token>    MINUS             "'-'"
@@ -238,8 +239,8 @@ literal: INTEGER                                                    { $$ = parse
   | CURLY_L nl struct_literal_field_list nl CURLY_R                 { $$ = parse_struct_literal($3); }
   | SQUARE_L nl expression_list nl SQUARE_R                         { $$ = parse_list_literal($3); }
   | SQUARE_L nl map_entry_list nl SQUARE_R                          { $$ = parse_map_literal($3); }
-  // | type DOT IDENTIFIER                                             { $$ = parse_enum_literal($3, $1); }
-  // | DOT IDENTIFIER                                                  { $$ = parse_enum_literal($3, $1); }
+  | IDENTIFIER COLON_COLON IDENTIFIER                               { $$ = parse_enum_literal($3, $1); }
+  | COLON_COLON IDENTIFIER                                          { $$ = parse_enum_literal($2, NULL); }
   ;
 
 variable: IDENTIFIER                                                { $$ = parse_named_variable($1); }

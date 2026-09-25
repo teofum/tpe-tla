@@ -43,6 +43,7 @@ typedef enum {
   L_LIST,
   L_MAP,
   L_STRUCT,
+  L_ENUM,
 } LiteralType;
 
 typedef enum {
@@ -102,6 +103,7 @@ typedef struct MapLiteral MapLiteral;
 typedef struct MapEntry MapEntry;
 typedef struct StructLiteral StructLiteral;
 typedef struct StructLiteralField StructLiteralField;
+typedef struct EnumLiteral EnumLiteral;
 
 typedef struct NamedVariable NamedVariable;
 typedef struct StructMemberVariable StructMemberVariable;
@@ -182,6 +184,7 @@ struct LiteralExpr {
     ListLiteral *list;
     MapLiteral *map;
     StructLiteral *struct_literal;
+    EnumLiteral *enum_literal;
   };
 };
 
@@ -277,6 +280,11 @@ struct StructLiteral {
 struct StructLiteralField {
   Identifier *name;
   Expr *value;
+};
+
+struct EnumLiteral {
+  Type *type;
+  Identifier *value;
 };
 
 // -----------------------------------------------------------------------------
@@ -386,6 +394,7 @@ LiteralExpr *ast_boolean_literal(BooleanLiteral *b);
 LiteralExpr *ast_list_literal(ExprList *exprs);
 LiteralExpr *ast_map_literal(MapEntryList *entries);
 LiteralExpr *ast_struct_literal(StructLiteralFieldList *fields);
+LiteralExpr *ast_enum_literal(Type *type, Identifier *id);
 LiteralExpr *ast_nil_literal();
 
 VariableExpr *ast_variable_named(Identifier *id);
@@ -439,6 +448,7 @@ void ast_free_bool_literal(BooleanLiteral *l);
 void ast_free_list_literal(ListLiteral *l);
 void ast_free_map_literal(MapLiteral *l);
 void ast_free_struct_literal(StructLiteral *l);
+void ast_free_enum_literal(EnumLiteral *l);
 
 void ast_free_named_variable(NamedVariable *v);
 void ast_free_struct_member_variable(StructMemberVariable *v);

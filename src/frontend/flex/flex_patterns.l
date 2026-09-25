@@ -77,6 +77,7 @@ id_char         [a-zA-Z0-9_-]
 "{"                           { return lex_operator(CURLY_L); }
 "}"                           { return lex_operator(CURLY_R); }
 ":"                           { return lex_operator(COLON); }
+"::"                          { return lex_operator(COLON_COLON); }
 ","                           { return lex_operator(COMMA); }
 "."                           { return lex_operator(DOT); }
 "-"                           { return lex_operator(MINUS); }

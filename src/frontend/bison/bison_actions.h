@@ -30,6 +30,7 @@ LiteralExpr *parse_nil_literal();
 LiteralExpr *parse_list_literal(ExprList *exprs);
 LiteralExpr *parse_map_literal(MapEntryList *entries);
 LiteralExpr *parse_struct_literal(StructLiteralFieldList *fields);
+LiteralExpr *parse_enum_literal(Identifier *id, Identifier *typename);
 
 VariableExpr *parse_named_variable(Identifier *id);
 VariableExpr *parse_struct_member_variable(VariableExpr *struct_expr, Identifier *id);

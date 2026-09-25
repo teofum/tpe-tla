@@ -187,6 +187,11 @@ static void dot_literal(LiteralExpr *literal, u64 pid) {
         dot_map_entry(literal->map->entries[i], id);
       }
       break;
+    case L_ENUM:
+      label = new_array(char, 256);
+      snprintf(label, 256, "Enum .%s", literal->enum_literal->value->lexeme);
+      if (literal->enum_literal->type) dot_type(literal->enum_literal->type, id);
+      break;
     case L_STRUCT:
       label = new_array(char, 7);
       snprintf(label, 7, "Struct");
