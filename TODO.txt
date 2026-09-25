@@ -12,9 +12,10 @@
 #=== General ==================================================================#
 
 [ ] Error handling: structured reporting of errors
-  [ ] Error handling service
-  [ ] Error gates
-  [ ] Syntax errors
+  [x] Error handling service
+  [x] Error gates
+  [x] Syntax errors
+  [ ] Error output on gate
 
 #=== Frontend =================================================================#
 
@@ -40,7 +41,7 @@
     [x] Strings
     [x] Booleans
     [x] Nil
-    [ ] Structs
+    [x] Structs
     [ ] Enums (identifiers)
     [x] Lists
     [x] Tuples

@@ -5,6 +5,7 @@
 #include "frontend.h"
 
 #include <ast/ast.h>
+#include <error/error.h>
 #include <frontend/bison/bison_parser.h>
 #include <frontend/flex/flex_scanner.h>
 #include <support/types.h>
@@ -15,10 +16,10 @@ static Frontend *f = NULL;
 static CompilerState *cs = NULL;
 
 void fe_init(CompilerState *compiler_state) {
-  f = new (Frontend);
+  f = new(Frontend);
   yylex_init(&f->scanner);
   f->parser = yypstate_new();
-  f->location = new (YYLTYPE);
+  f->location = new(YYLTYPE);
   f->scan_logger = logger_create("Scanner", stderr, LOG_ALL);
   f->parse_logger = logger_create("Parser", stderr, LOG_ALL);
 
@@ -160,7 +161,7 @@ static void _log_token(Token *token, LogLevel level) {
 }
 
 Token *fe_create_token(TokenLabel label) {
-  Token *token = new (Token);
+  Token *token = new(Token);
   token->label = label;
   token->ctx = flex_current_context(f);
   token->location = *((Location *)yyget_lloc(f->scanner));
@@ -223,4 +224,22 @@ void fe_parser_log(LogLevel level, const char *const format, ...) {
   va_start(args, format);
   logger_logv(f->parse_logger, level, format, args);
   va_end(args);
+}
+
+void fe_report_syntax_error(SyntaxErrorContext *ctx) {
+  fe_parser_log(LOG_ERROR, "Syntax error at %d:%d", ctx->location->first_line, ctx->location->first_column);
+
+  SyntaxError *error = new(SyntaxError);
+  *error = (SyntaxError){
+    .found = strdup(ctx->found_token),
+    .expected_len = ctx->expected_token_count,
+    .expected = new_array(const char *, ctx->expected_token_count),
+    .loc = *ctx->location,
+  };
+  for (u32 i = 0; i < ctx->expected_token_count; i++) {
+    error->expected[i] = strdup(ctx->expected_tokens[i]);
+  }
+
+  err_report_syntax(error);
+  free(ctx);
 }

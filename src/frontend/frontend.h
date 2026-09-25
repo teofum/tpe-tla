@@ -6,6 +6,13 @@
 #include <support/logger.h>
 
 typedef struct {
+  Location *location;
+  const char *found_token;
+  const char **expected_tokens;
+  u32 expected_token_count;
+} SyntaxErrorContext;
+
+typedef struct {
   char *lexeme;
   u32 len;
 
@@ -40,5 +47,7 @@ CompilationStatus fe_parse();
 
 void fe_scanner_log(LogLevel level, const char *const format, ...);
 void fe_parser_log(LogLevel level, const char *const format, ...);
+
+void fe_report_syntax_error(SyntaxErrorContext *ctx);
 
 #endif

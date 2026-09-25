@@ -3,11 +3,12 @@
 #include <ast/ast.h>
 #include <frontend/frontend.h>
 #include <support/types.h>
+#include <support/util.h>
 
 #include "bison_actions.h"
 #include "bison_parser.h"
 
-void yyerror(YYLTYPE *location, const char *message) {
+static void yyerror(YYLTYPE *location, const char *message) {
   parse_error((Location *) location, message);
 }
 
@@ -16,7 +17,7 @@ void yyerror(YYLTYPE *location, const char *message) {
 %define api.pure full
 %define api.push-pull push
 %define api.value.union.name SemanticValue
-%define parse.error detailed
+%define parse.error custom
 %locations
 
 %union {
@@ -89,63 +90,63 @@ void yyerror(YYLTYPE *location, const char *message) {
 %destructor { ast_free_program($$); } <program>
 
 // Symbols
-%token <token>    PAREN_L
-%token <token>    PAREN_R
-%token <token>    SQUARE_L
-%token <token>    SQUARE_R
-%token <token>    CURLY_L
-%token <token>    CURLY_R
-%token <token>    COLON
-%token <token>    COMMA
-%token <token>    DOT
-%token <token>    MINUS
-%token <token>    PLUS
-%token <token>    STAR
-%token <token>    SLASH
-%token <token>    QUESTION_MARK
-%token <token>    HASH
-%token <token>    EQUAL
-%token <token>    EQUAL_EQUAL
-%token <token>    BANG
-%token <token>    BANG_EQUAL
-%token <token>    GREATER
-%token <token>    GREATER_EQUAL
-%token <token>    LESS
-%token <token>    LESS_EQUAL
+%token <token>    PAREN_L           "'('"
+%token <token>    PAREN_R           "')'"
+%token <token>    SQUARE_L          "'['"
+%token <token>    SQUARE_R          "']'"
+%token <token>    CURLY_L           "'{'"
+%token <token>    CURLY_R           "'}'"
+%token <token>    COLON             "':'"
+%token <token>    COMMA             "','"
+%token <token>    DOT               "'.'"
+%token <token>    MINUS             "'-'"
+%token <token>    PLUS              "'+'"
+%token <token>    STAR              "'*'"
+%token <token>    SLASH             "'/'"
+%token <token>    QUESTION_MARK     "'?'"
+%token <token>    HASH              "'#'"
+%token <token>    EQUAL             "'='"
+%token <token>    EQUAL_EQUAL       "'=='"
+%token <token>    BANG              "'!'"
+%token <token>    BANG_EQUAL        "'!='"
+%token <token>    GREATER           "'>'"
+%token <token>    GREATER_EQUAL     "'>='"
+%token <token>    LESS              "'<'"
+%token <token>    LESS_EQUAL        "'<='"
 
 // Keywords
-%token <token>    IF
-%token <token>    ELSE
-%token <token>    FOR
-%token <token>    IN
-%token <token>    NIL
-%token <token>    IS
-%token <token>    OF
-%token <token>    AND
-%token <token>    OR
-%token <token>    NOT
-%token <token>    STRUCT
-%token <token>    UNION
-%token <token>    ENUM
-%token <token>    FUNCTION
-%token <token>    IMPORT
+%token <token>    IF                "'if'"
+%token <token>    ELSE              "'else'"
+%token <token>    FOR               "'for'"
+%token <token>    IN                "'in'"
+%token <token>    NIL               "'nil'"
+%token <token>    IS                "'is'"
+%token <token>    OF                "'of'"
+%token <token>    AND               "'and'"
+%token <token>    OR                "'or'"
+%token <token>    NOT               "'not'"
+%token <token>    STRUCT            "'struct'"
+%token <token>    UNION             "'union'"
+%token <token>    ENUM              "'enum'"
+%token <token>    FUNCTION          "'function'"
+%token <token>    IMPORT            "'import'"
 
 // Identifiers
-%token <identifier> IDENTIFIER
+%token <identifier> IDENTIFIER      "identifier"
 
 // Literals
-%token <integer>  INTEGER
-%token <floating> FLOAT
-%token <string>   STRING
-%token <boolean>  BOOL
+%token <integer>  INTEGER           "integer literal"
+%token <floating> FLOAT             "float literal"
+%token <string>   STRING            "string literal"
+%token <boolean>  BOOL              "boolean literal"
 
 // Newline: statement terminator
-%token <token>    NL
+%token <token>    NL                "<newline>"
 
 // Other
 %token <token>    IGNORED
-%token <token>    UNKNOWN
-%token <token>    END
+%token <token>    UNKNOWN           "<unknown lexeme>"
+%token <token>    END               "<EOF>"
 
 %type <statement>                   statement
 %type <declaration>                 declaration
@@ -340,3 +341,29 @@ nl: NL                                                              {}
   ;
 
 %%
+
+static int yyreport_syntax_error(const yypcontext_t *ctx) {
+  enum {MAX_EXPECTED = 10};
+  yysymbol_kind_t expected[MAX_EXPECTED];
+  int tokens_count = yypcontext_expected_tokens(ctx, expected, MAX_EXPECTED);
+  if (tokens_count < 0) return tokens_count;
+  const bool too_many_expected_tokens = tokens_count == 0 && expected[0] != YYSYMBOL_YYEMPTY;
+  if (too_many_expected_tokens) tokens_count = MAX_EXPECTED;
+
+  yysymbol_kind_t found = yypcontext_token(ctx);
+
+  const YYLTYPE *loc = yypcontext_location(ctx);
+  const char *expected_names[MAX_EXPECTED];
+  for (u32 i = 0; i < tokens_count; i++) expected_names[i] = yysymbol_name(expected[i]);
+  const char *found_name = found != YYSYMBOL_YYEMPTY ? yysymbol_name(found) : NULL;
+
+  SyntaxErrorContext *ectx = new(SyntaxErrorContext);
+  *ectx = (SyntaxErrorContext){
+    .location = (Location *)loc,
+    .found_token = found_name,
+    .expected_tokens = expected_names,
+    .expected_token_count = tokens_count,
+  };
+
+  fe_report_syntax_error(ectx);
+}

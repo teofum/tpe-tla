@@ -42,11 +42,13 @@ if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
     src/main.c
     src/ast/ast.c
     src/ast/dot.c
+    src/error/error.c
     src/frontend/bison/bison_actions.c
     src/frontend/bison/bison_parser.c
     src/frontend/flex/flex_actions.c
     src/frontend/flex/flex_scanner.c
     src/frontend/frontend.c
+    src/support/dyn_array.c
     src/support/logger.c
     src/support/str.c
   )
