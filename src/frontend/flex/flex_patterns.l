@@ -80,6 +80,7 @@ id_char         [a-zA-Z0-9_-]
 "::"                          { return lex_operator(COLON_COLON); }
 ","                           { return lex_operator(COMMA); }
 "."                           { return lex_operator(DOT); }
+".."                          { return lex_operator(DOT_DOT); }
 "-"                           { return lex_operator(MINUS); }
 "+"                           { return lex_operator(PLUS); }
 "*"                           { return lex_operator(STAR); }

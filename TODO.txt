@@ -3,9 +3,11 @@
 [x] Fix ambiguity of indexing vs list literals (ignore/weird)
   - Overhauled grammar to separate statements with newlines
 [x] Fix ambiguity of grouping vs 1-uple literal
-  - Tuple types and literals muct have at least two elements (a 1-uple is just... a value with extra steps)
+  - Tuple types and literals muct have at least two elements (a 1-uple is just...
+    a value with extra steps)
 [/] Add nonterminals for optional comma, newline
   - Comma causes weird conflicts, check
+    - Removed trailing commas for now, too many issues. Might try later.
 [x] Simplify the project tree
 [x] Fix Bison location tracking
 
@@ -35,7 +37,7 @@
 
 /--- Parser -------------------------------------------------------------------/
 [x] Base expression node
-  [x] Literal expressions
+  [ ] Literal expressions
     [x] Integers
     [x] Floats
     [x] Strings
@@ -44,13 +46,17 @@
     [x] Structs
     [x] Enums
     [x] Lists
-    [x] Tuples
+      [ ] Repeated value ([0; 5])
+    [-] Tuples
+      - Removed, see NOTES.txt
     [x] Maps
     [ ] Ranges
-  [x] Variable expressions
+  [ ] Variable expressions
     [x] Named variables (identifiers)
     [x] Struct members
     [x] List/tuple/map access
+      [ ] Multiple access (foo[0, 2, 5])
+      [ ] Slices (foo[:8])
   [x] Grouping expressions (parentheses)
   [x] Unary expressions
   [x] Binary expressions
@@ -61,7 +67,7 @@
   [x] Block expressions
   [ ] Function calls
   [ ] Import expressions
-[x] Type expression
+[ ] Type expression
   [x] Simple (identifier) types
   [x] Nil
   [x] Structs
@@ -69,6 +75,7 @@
   [x] Enums
   [x] Lists
   [x] Tuples
+      [ ] Homogeneous shorthand ([int; 5])
   [x] Maps
   [x] Optional
 [x] Statements

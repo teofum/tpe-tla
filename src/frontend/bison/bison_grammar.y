@@ -114,6 +114,7 @@ static void yyerror(YYLTYPE *location, const char *message) {
 %token <token>    COLON_COLON       "'::'"
 %token <token>    COMMA             "','"
 %token <token>    DOT               "'.'"
+%token <token>    DOT_DOT           "'..'"
 %token <token>    MINUS             "'-'"
 %token <token>    PLUS              "'+'"
 %token <token>    STAR              "'*'"
@@ -286,6 +287,16 @@ literal: INTEGER                                                    { $$ = parse
   | SQUARE_L nl map_entry_list nl SQUARE_R                          { $$ = parse_map_literal($3); }
   | IDENTIFIER COLON_COLON IDENTIFIER                               { $$ = parse_enum_literal($3, $1); }
   | COLON_COLON IDENTIFIER                                          { $$ = parse_enum_literal($2, NULL); }
+  | range                                                           {}
+  ;
+
+range: range_value DOT_DOT range_value                              {}
+  | range_value DOT_DOT EQUAL range_value                           {}
+  ;
+
+range_value: INTEGER
+  | variable
+  | group
   ;
 
 map_entry_list: map_entry                                           { $$ = parse_map_entry_list($1, NULL); }
