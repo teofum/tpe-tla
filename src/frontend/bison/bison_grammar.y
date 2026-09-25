@@ -130,6 +130,7 @@ static void yyerror(YYLTYPE *location, const char *message) {
 %token <token>    UNION             "'union'"
 %token <token>    ENUM              "'enum'"
 %token <token>    FUNCTION          "'function'"
+%token <token>    COMPOSE           "'compose'"
 %token <token>    IMPORT            "'import'"
 
 // Identifiers

@@ -35,14 +35,14 @@
 
 /--- Parser -------------------------------------------------------------------/
 [x] Base expression node
-  [ ] Literal expressions
+  [x] Literal expressions
     [x] Integers
     [x] Floats
     [x] Strings
     [x] Booleans
     [x] Nil
     [x] Structs
-    [ ] Enums (identifiers)
+    [x] Enums
     [x] Lists
     [x] Tuples
     [x] Maps

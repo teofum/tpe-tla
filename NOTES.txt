@@ -2,8 +2,8 @@ This file has implementation notes worth keeping in mind for the final report.
 
 #=== Parser ===================================================================#
 
-- Tuple literals and list literals are syntactically identical, so both are
-  parsed as list literals; there is no such thing as a tuple literal in the AST.
+Tuple literals and list literals are syntactically identical, so both are parsed
+as list literals; there is no such thing as a tuple literal in the AST.
   - The backend should interpret list literals contextually: a heterogeneously
     typed literal is always a tuple; a homogeneous one can be either a tuple
     or a list.
@@ -11,3 +11,19 @@ This file has implementation notes worth keeping in mind for the final report.
     as a list; homogeneous tuples MUST be explicitly typed.
 
 #=== Backend ==================================================================#
+
+Function composition implementation ideas: lexical scope capture is hard, do
+we actually need it? On a function call with a compose block:
+  - The block is executed *before* the function call, within the caller's scope
+  - The resulting value is passed to the function as a special parameter
+  - The "compose" expression returns that value
+This is simple to implement (no scope capture needed, as we don't defer
+execution), works perfectly for our purposes, and allows using "compose" as part
+of an expression:
+
+  foo is function() -> string[] {
+    [compose, "is", compose]
+  }
+
+In this example, "compose" is used multiple times, but only evaluated once: from
+the callee's point of view, it's just a special parameter.
