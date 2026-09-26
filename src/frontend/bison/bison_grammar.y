@@ -266,6 +266,8 @@ function_def: IDENTIFIER IS FUNCTION parameters ARROW type nl block { $$ = parse
   ;
 
 parameters: PAREN_L nl parameter_list nl PAREN_R                    { $$ = $3; }
+  | PAREN_L PAREN_R                                                 { $$ = NULL; }
+  | %empty                                                          { $$ = NULL; }
   ;
 
 parameter_list: parameter                                           { $$ = parse_parameter_list($1, NULL); }
@@ -394,6 +396,7 @@ class: DOT IDENTIFIER                                               { $$ = $2; }
   ;
 
 arguments: PAREN_L nl expression_list nl PAREN_R                    { $$ = $3; }
+  | PAREN_L PAREN_R                                                 { $$ = NULL; }
   ;
 
 composable: simple_literal                                          { $$ = parse_literal_expr($1); }

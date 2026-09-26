@@ -1,9 +1,8 @@
-squares is function(ns: int[]) -> int[] {
-  for n in ns { n * n }
-}
-
 // Function call
 s := squares([1, 2, 3])
+
+// Empty parameter list
+hello_str := hello()
 
 // Function call with classlist
 div.flex.flex-row.p-4.rounded-lg.border(id = "myDiv")

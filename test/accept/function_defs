@@ -1,0 +1,10 @@
+// Function definition
+squares is function(ns: int[]) -> int[] {
+  for n in ns { n * n }
+}
+
+// No parameters
+hello is function() -> string { "Hellow" }
+
+// Parameter list can be omitted entirely if function takes no params
+hello is function -> string { "Hellow" }

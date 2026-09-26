@@ -402,7 +402,9 @@ FunctionDef *ast_function_def(Identifier *id, ParameterList *params, Type *retur
     .return_type = return_type,
     .body = body,
   };
-  ast_consume_parameter_list(params, &function->params, &function->params_len);
+  if (params) {
+    ast_consume_parameter_list(params, &function->params, &function->params_len);
+  }
 
   return function;
 }
