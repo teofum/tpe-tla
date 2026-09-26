@@ -113,6 +113,7 @@ static void yyerror(YYLTYPE *location, const char *message) {
 %token <token>    CURLY_R           "'}'"
 %token <token>    COLON             "':'"
 %token <token>    COLON_COLON       "'::'"
+%token <token>    SEMICOLON         "';'"
 %token <token>    COMMA             "','"
 %token <token>    DOT               "'.'"
 %token <token>    DOT_DOT           "'..'"
@@ -178,7 +179,11 @@ static void yyerror(YYLTYPE *location, const char *message) {
 %type <expression>                  range_value
 %type <literal>                     literal
 %type <literal>                     simple_literal
-%type <literal>                     range
+%type <literal>                     struct_literal
+%type <literal>                     list_literal
+%type <literal>                     map_literal
+%type <literal>                     enum_literal
+%type <literal>                     range_literal
 %type <variable>                    variable
 %type <variable>                    indexed_variable
 %type <unary>                       unary
@@ -293,12 +298,11 @@ expression: literal                                                 { $$ = parse
   ;
 
 literal: simple_literal
-  | CURLY_L nl struct_literal_field_list nl CURLY_R                 { $$ = parse_struct_literal($3); }
-  | SQUARE_L nl expression_list nl SQUARE_R                         { $$ = parse_list_literal($3); }
-  | SQUARE_L nl map_entry_list nl SQUARE_R                          { $$ = parse_map_literal($3); }
-  | IDENTIFIER COLON_COLON IDENTIFIER                               { $$ = parse_enum_literal($3, $1); }
-  | COLON_COLON IDENTIFIER                                          { $$ = parse_enum_literal($2, NULL); }
-  | range
+  | struct_literal
+  | list_literal
+  | map_literal
+  | enum_literal
+  | range_literal
   ;
 
 simple_literal: INTEGER                                             { $$ = parse_integer_literal($1); }
@@ -308,13 +312,24 @@ simple_literal: INTEGER                                             { $$ = parse
   | NIL                                                             { $$ = parse_nil_literal(); }
   ;
 
-range: range_value DOT_DOT range_value                              { $$ = parse_range_literal($1, $3, false); }
-  | range_value DOT_DOT EQUAL range_value                           { $$ = parse_range_literal($1, $4, true); }
+struct_literal: CURLY_L nl struct_literal_field_list nl CURLY_R     { $$ = parse_struct_literal($3); }
   ;
 
-range_value: INTEGER                                                { $$ = parse_range_value_int($1); }
-  | variable                                                        { $$ = parse_range_value_var($1); }
-  | group                                                           { $$ = parse_range_value_group($1); }
+struct_literal_field_list: struct_literal_field                     { $$ = parse_struct_literal_field_list($1, NULL); }
+  | struct_literal_field_list COMMA nl struct_literal_field         { $$ = parse_struct_literal_field_list($4, $1); }
+  ;
+
+struct_literal_field: DOT IDENTIFIER EQUAL expression               { $$ = parse_struct_literal_field($2, $4); }
+  ;
+
+list_literal: SQUARE_L nl expression_list nl SQUARE_R               { $$ = parse_list_literal($3); }
+  ;
+
+expression_list: expression                                         { $$ = parse_expr_list($1, NULL); }
+  | expression_list COMMA nl expression                             { $$ = parse_expr_list($4, $1); }
+  ;
+
+map_literal: SQUARE_L nl map_entry_list nl SQUARE_R                 { $$ = parse_map_literal($3); }
   ;
 
 map_entry_list: map_entry                                           { $$ = parse_map_entry_list($1, NULL); }
@@ -325,11 +340,17 @@ map_entry: literal EQUAL expression                                 { $$ = parse
   | block EQUAL expression                                          { $$ = parse_map_entry_block($1, $3); }
   ;
 
-struct_literal_field_list: struct_literal_field                     { $$ = parse_struct_literal_field_list($1, NULL); }
-  | struct_literal_field_list COMMA nl struct_literal_field         { $$ = parse_struct_literal_field_list($4, $1); }
+enum_literal: IDENTIFIER COLON_COLON IDENTIFIER                     { $$ = parse_enum_literal($3, $1); }
+  | COLON_COLON IDENTIFIER                                          { $$ = parse_enum_literal($2, NULL); }
   ;
 
-struct_literal_field: DOT IDENTIFIER EQUAL expression               { $$ = parse_struct_literal_field($2, $4); }
+range_literal: range_value DOT_DOT range_value                      { $$ = parse_range_literal($1, $3, false); }
+  | range_value DOT_DOT EQUAL range_value                           { $$ = parse_range_literal($1, $4, true); }
+  ;
+
+range_value: INTEGER                                                { $$ = parse_range_value_int($1); }
+  | variable                                                        { $$ = parse_range_value_var($1); }
+  | group                                                           { $$ = parse_range_value_group($1); }
   ;
 
 variable: IDENTIFIER                                                { $$ = parse_named_variable($1); }
@@ -431,10 +452,6 @@ type_list: type                                                     { $$ = parse
 
 identifier_list: IDENTIFIER                                         { $$ = parse_identifier_list($1, NULL); }
   | identifier_list COMMA nl IDENTIFIER                             { $$ = parse_identifier_list($4, $1); }
-  ;
-
-expression_list: expression                                         { $$ = parse_expr_list($1, NULL); }
-  | expression_list COMMA nl expression                             { $$ = parse_expr_list($4, $1); }
   ;
 
 /*-- Utility ---------------------------------------------------------------------------------------------------------*/
