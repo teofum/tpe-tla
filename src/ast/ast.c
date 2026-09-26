@@ -173,6 +173,15 @@ LiteralExpr *ast_enum_literal(Type *type, Identifier *id) {
   return literal;
 }
 
+LiteralExpr *ast_range_literal(Expr *start, Expr *end, bool inclusive) {
+  RangeLiteral *range = new(RangeLiteral);
+  *range = (RangeLiteral){ .start = start, .end = end, .inclusive = inclusive };
+
+  LiteralExpr *literal = new(LiteralExpr);
+  *literal = (LiteralExpr){ .type = L_RANGE, .range = range };
+  return literal;
+}
+
 // -----------------------------------------------------------------------------
 
 VariableExpr *ast_variable_named(Identifier *id) {
@@ -500,6 +509,7 @@ void ast_free_literal(LiteralExpr *literal) {
     case L_MAP: ast_free_map_literal(literal->map); break;
     case L_STRUCT: ast_free_struct_literal(literal->struct_literal); break;
     case L_ENUM: ast_free_enum_literal(literal->enum_literal); break;
+    case L_RANGE: ast_free_range_literal(literal->range); break;
     case L_NIL: break;
   }
   free(literal);
@@ -639,6 +649,14 @@ void ast_free_enum_literal(EnumLiteral *l) {
 
   ast_free_type(l->type);
   ast_free_identifier(l->value);
+  free(l);
+}
+
+void ast_free_range_literal(RangeLiteral *l) {
+  if (!l) return;
+
+  ast_free_expr(l->start);
+  ast_free_expr(l->end);
   free(l);
 }
 

@@ -199,6 +199,12 @@ static void dot_literal(LiteralExpr *literal, u64 pid) {
         dot_struct_literal_field(literal->struct_literal->fields[i], id);
       }
       break;
+    case L_RANGE:
+      label = new_array(char, 256);
+      snprintf(label, 256, literal->range->inclusive ? "Inclusive range" : "Range");
+      dot_expr(literal->range->start, id);
+      dot_expr(literal->range->end, id);
+      break;
   }
 
   _node(id, label, NODE_BASE);

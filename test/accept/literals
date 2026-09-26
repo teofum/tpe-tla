@@ -15,3 +15,8 @@ false
 // Strings
 "Hello, world!"
 ""
+
+// Ranges
+0..5
+4..=77
+0..foo[2]

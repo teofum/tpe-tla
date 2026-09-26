@@ -50,7 +50,7 @@
     [-] Tuples
       - Removed, see NOTES.txt
     [x] Maps
-    [ ] Ranges
+    [x] Ranges
   [ ] Variable expressions
     [x] Named variables (identifiers)
     [x] Struct members

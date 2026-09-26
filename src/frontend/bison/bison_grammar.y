@@ -173,7 +173,9 @@ static void yyerror(YYLTYPE *location, const char *message) {
 %type <type_alias>                  type_alias
 
 %type <expression>                  expression
+%type <expression>                  range_value
 %type <literal>                     literal
+%type <literal>                     range
 %type <variable>                    variable
 %type <unary>                       unary
 %type <binary>                      binary
@@ -220,6 +222,7 @@ static void yyerror(YYLTYPE *location, const char *message) {
 %nonassoc GREATER_EQUAL LESS_EQUAL GREATER LESS
 %left PLUS MINUS
 %left STAR SLASH
+%left DOT_DOT
 %left BANG
 %left DOT
 
@@ -287,16 +290,16 @@ literal: INTEGER                                                    { $$ = parse
   | SQUARE_L nl map_entry_list nl SQUARE_R                          { $$ = parse_map_literal($3); }
   | IDENTIFIER COLON_COLON IDENTIFIER                               { $$ = parse_enum_literal($3, $1); }
   | COLON_COLON IDENTIFIER                                          { $$ = parse_enum_literal($2, NULL); }
-  | range                                                           {}
+  | range
   ;
 
-range: range_value DOT_DOT range_value                              {}
-  | range_value DOT_DOT EQUAL range_value                           {}
+range: range_value DOT_DOT range_value                              { $$ = parse_range_literal($1, $3, false); }
+  | range_value DOT_DOT EQUAL range_value                           { $$ = parse_range_literal($1, $4, true); }
   ;
 
-range_value: INTEGER
-  | variable
-  | group
+range_value: INTEGER                                                { $$ = parse_range_value_int($1); }
+  | variable                                                        { $$ = parse_range_value_var($1); }
+  | group                                                           { $$ = parse_range_value_group($1); }
   ;
 
 map_entry_list: map_entry                                           { $$ = parse_map_entry_list($1, NULL); }
@@ -321,6 +324,7 @@ variable: IDENTIFIER                                                { $$ = parse
 
 unary: BANG expression                                              { $$ = parse_unary($1, $2); }
   | NOT expression                                                  { $$ = parse_unary($1, $2); }
+  | MINUS expression                                                { $$ = parse_unary($1, $2); }
   ;
 
 binary: expression PLUS expression                                  { $$ = parse_binary($1, $2, $3); }

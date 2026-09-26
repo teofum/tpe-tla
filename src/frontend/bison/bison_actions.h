@@ -32,6 +32,11 @@ LiteralExpr *parse_list_literal(ExprList *exprs);
 LiteralExpr *parse_map_literal(MapEntryList *entries);
 LiteralExpr *parse_struct_literal(StructLiteralFieldList *fields);
 LiteralExpr *parse_enum_literal(Identifier *id, Identifier *typename);
+LiteralExpr *parse_range_literal(Expr *start, Expr *end, bool inclusive);
+
+Expr *parse_range_value_int(IntegerLiteral *i);
+Expr *parse_range_value_var(VariableExpr *var);
+Expr *parse_range_value_group(GroupExpr *group);
 
 VariableExpr *parse_named_variable(Identifier *id);
 VariableExpr *parse_struct_member_variable(VariableExpr *struct_expr, Identifier *id);

@@ -108,6 +108,24 @@ LiteralExpr *parse_enum_literal(Identifier *id, Identifier *typename) {
   return ast_enum_literal(map(typename, ast_named_type), id);
 }
 
+LiteralExpr *parse_range_literal(Expr *start, Expr *end, bool inclusive) {
+  fe_parser_log(LOG_DEBUG, "Range Literal");
+  return ast_range_literal(start, end, inclusive);
+}
+
+Expr *parse_range_value_int(IntegerLiteral *i) {
+  return parse_literal_expr(parse_integer_literal(i));
+}
+
+Expr *parse_range_value_var(VariableExpr *var) {
+  return parse_variable_expr(var);
+}
+
+Expr *parse_range_value_group(GroupExpr *group) {
+  return parse_group_expr(group);
+}
+
+
 // -----------------------------------------------------------------------------
 
 VariableExpr *parse_named_variable(Identifier *id) {
