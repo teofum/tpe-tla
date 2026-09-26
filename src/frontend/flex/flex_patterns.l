@@ -67,6 +67,7 @@ id_char         [a-zA-Z0-9_-]
 "//".*\n                      { return lex_newline(); }
 "/*"								          { return lex_begin_multiline_comment(MULTILINE_COMMENT); }
 <MULTILINE_COMMENT>"*/"				{ return lex_end_multiline_comment(); }
+<MULTILINE_COMMENT>"*/"\n		  { return lex_end_multiline_comment(); }
 <MULTILINE_COMMENT>[^*]+			{ return lex_ignored(); }
 <MULTILINE_COMMENT>.				  { return lex_ignored(); }
 

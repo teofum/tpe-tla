@@ -10,6 +10,7 @@
     - Removed trailing commas for now, too many issues. Might try later.
 [x] Simplify the project tree
 [x] Fix Bison location tracking
+[x] Fix multiline/block comments
 
 #=== General ==================================================================#
 
