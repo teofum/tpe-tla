@@ -237,12 +237,12 @@ void fe_report_syntax_error(SyntaxErrorContext *ctx) {
     .found = strdup(ctx->found_token),
     .expected_len = ctx->expected_token_count,
     .expected = new_array(const char *, ctx->expected_token_count),
-    .loc = *ctx->location,
   };
   for (u32 i = 0; i < ctx->expected_token_count; i++) {
     error->expected[i] = strdup(ctx->expected_tokens[i]);
   }
 
-  err_report_syntax(error);
+  // Syntax errors are always unrecoverable
+  err_report_syntax(error, ctx->location, ERR_ERROR);
   free(ctx);
 }

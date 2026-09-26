@@ -23,6 +23,7 @@ Expr *parse_if_expr(IfExpr *if_expr);
 Expr *parse_for_expr(ForExpr *for_expr);
 Expr *parse_block_expr(BlockExpr *block);
 Expr *parse_function_call_expr(FunctionCallExpr *function_call);
+Expr *parse_import_expr(ImportExpr *import);
 
 LiteralExpr *parse_integer_literal(IntegerLiteral *i);
 LiteralExpr *parse_float_literal(FloatLiteral *f);
@@ -52,6 +53,7 @@ IfExpr *parse_if(Expr *condition, BlockExpr *true_branch, BlockExpr *false_branc
 IfExpr *parse_nested_if(Expr *condition, BlockExpr *true_branch, IfExpr *false_branch);
 ForExpr *parse_for(Identifier *var, Identifier *idx, Expr *iterable, BlockExpr *body);
 BlockExpr *parse_block(StmtList *statements);
+ImportExpr *parse_import(Identifier *import_type, Type *data_type, StringLiteral *path, Location *type_loc);
 
 Type *parse_named_type(Identifier *id);
 Type *parse_list_type(Type *item);

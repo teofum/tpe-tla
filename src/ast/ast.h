@@ -35,6 +35,7 @@ typedef enum {
   EXPR_FOR,
   EXPR_BLOCK,
   EXPR_FUNCTION_CALL,
+  EXPR_IMPORT,
 } ExprType;
 
 typedef enum {
@@ -56,6 +57,13 @@ typedef enum {
   V_STRUCT_MEMBER,
   V_INDEX,
 } VariableType;
+
+typedef enum {
+  IMPORT_URL,
+  IMPORT_CSV,
+  IMPORT_TYPE_COUNT,
+} ImportType;
+extern const char *import_type_str[];
 
 typedef enum {
   T_NAMED,
@@ -100,6 +108,7 @@ typedef struct ForExpr ForExpr;
 typedef struct BlockExpr BlockExpr;
 typedef struct FunctionCallExpr FunctionCallExpr;
 typedef struct Argument Argument;
+typedef struct ImportExpr ImportExpr;
 
 typedef struct IntegerLiteral IntegerLiteral;
 typedef struct FloatLiteral FloatLiteral;
@@ -188,6 +197,7 @@ struct Expr {
     ForExpr *for_expr;
     BlockExpr *block;
     FunctionCallExpr *function_call;
+    ImportExpr *import;
   };
 };
 
@@ -264,6 +274,12 @@ struct FunctionCallExpr {
 struct Argument {
   Identifier *name;
   Expr *value;
+};
+
+struct ImportExpr {
+  ImportType type;
+  Type *data_type;
+  StringLiteral *path;
 };
 
 // -----------------------------------------------------------------------------
@@ -452,6 +468,7 @@ Expr *ast_expr_if(IfExpr *if_expr);
 Expr *ast_expr_for(ForExpr *for_expr);
 Expr *ast_expr_block(BlockExpr *block);
 Expr *ast_expr_function_call(FunctionCallExpr *function_call);
+Expr *ast_expr_import(ImportExpr *import);
 
 LiteralExpr *ast_integer_literal(IntegerLiteral *i);
 LiteralExpr *ast_float_literal(FloatLiteral *f);
@@ -477,6 +494,7 @@ IfExpr *ast_if(Expr *condition, Expr *true_branch, Expr *false_branch);
 ForExpr *ast_for(Identifier *var, Identifier *idx, Expr *iterable, Expr *body);
 BlockExpr *ast_block(StmtList *statements);
 FunctionCallExpr *ast_function_call(Identifier *id, ArgumentList *args, Expr *composable);
+ImportExpr *ast_import(ImportType type, Type *data_type, StringLiteral *path);
 
 Type *ast_named_type(Identifier *id);
 Type *ast_list_type(Type *item_type);
@@ -515,6 +533,7 @@ void ast_free_if(IfExpr *if_expr);
 void ast_free_for(ForExpr *for_expr);
 void ast_free_block(BlockExpr *block);
 void ast_free_function_call(FunctionCallExpr *function_call);
+void ast_free_import(ImportExpr *import);
 
 void ast_free_int_literal(IntegerLiteral *l);
 void ast_free_float_literal(FloatLiteral *l);

@@ -8,6 +8,7 @@
 
 #include "bison_actions.h"
 #include "bison_parser.h"
+#include "error/error.h"
 
 Stmt *parse_expr_stmt(Expr *expr) {
   fe_parser_log(LOG_DEBUG, "Expression Stmt");
@@ -62,6 +63,7 @@ PARSE_EXPR_FUNC(if, IfExpr, "If Expr")
 PARSE_EXPR_FUNC(for, ForExpr, "For Expr")
 PARSE_EXPR_FUNC(block, BlockExpr, "Block Expr (len=%u)", expr->len)
 PARSE_EXPR_FUNC(function_call, FunctionCallExpr, "Function Call Expr %s", expr->name->lexeme)
+PARSE_EXPR_FUNC(import, ImportExpr, "Import Expr %s", expr->path->meta->lexeme)
 
 // -----------------------------------------------------------------------------
 
@@ -204,6 +206,28 @@ BlockExpr *parse_block(StmtList *statements) {
   BlockExpr *block = ast_block(statements);
   fe_parser_log(LOG_DEBUG, "Block (len=%u)", block->len);
   return block;
+}
+
+ImportExpr *parse_import(Identifier *import_type, Type *data_type, StringLiteral *path, Location *type_loc) {
+  fe_parser_log(LOG_DEBUG, "Import %s '%s'", import_type->lexeme, path->meta->lexeme);
+
+  ImportType type = -1;
+  for (u32 i = 0; i < IMPORT_TYPE_COUNT; i++) {
+    if (strcmp(import_type->lexeme, import_type_str[i]) == 0) type = (ImportType)i;
+  }
+  if (type == -1) {
+    ImportTypeError *error = new(ImportTypeError);
+    error->type = strdup(import_type->lexeme);
+    err_report_import_type(error, type_loc, ERR_ERROR);
+
+    ast_free_identifier(import_type);
+    ast_free_type(data_type);
+    ast_free_string_literal(path);
+    return NULL;
+  }
+
+  ast_free_identifier(import_type);
+  return ast_import(type, data_type, path);
 }
 
 // -----------------------------------------------------------------------------

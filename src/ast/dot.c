@@ -16,6 +16,7 @@ typedef enum {
   NODE_STMT,
   NODE_BASE,
   NODE_TYPE,
+  NODE_IMPORT,
   NODE_ERROR,
 } NodeType;
 
@@ -24,6 +25,7 @@ static const char *attrs_for_type[] = {
   [NODE_BASE] = ",style=filled",
   [NODE_STMT] = ",style=filled,fillcolor=\"#a0ffc0\"",
   [NODE_TYPE] = ",style=filled,fillcolor=\"#ffc0ff\"",
+  [NODE_IMPORT] = ",style=filled,fillcolor=\"#ffffc0\"",
   [NODE_ERROR] = ",style=filled,fillcolor=\"#ffc0c0\"",
 };
 
@@ -337,6 +339,17 @@ static void dot_function_call(FunctionCallExpr *function, u64 pid) {
   if (function->composable) dot_expr(function->composable, id);
 }
 
+static void dot_import(ImportExpr *import, u64 pid) {
+  u64 id = next_id();
+  char label[256];
+  char *path = str_to_cstring(import->path->value);
+  snprintf(label, 256, "Import %s\\nFrom '%s'", import_type_str[import->type], path);
+  free(path);
+  _node(id, label, NODE_IMPORT);
+  _edge(pid, id);
+  if (import->data_type) dot_type(import->data_type, id);
+}
+
 static void dot_expr(Expr *expr, u64 pid) {
   switch (expr->type) {
     case EXPR_LITERAL: return dot_literal(expr->literal, pid);
@@ -349,6 +362,7 @@ static void dot_expr(Expr *expr, u64 pid) {
     case EXPR_FOR: return dot_for(expr->for_expr, pid);
     case EXPR_BLOCK: return dot_block(expr->block, pid);
     case EXPR_FUNCTION_CALL: return dot_function_call(expr->function_call, pid);
+    case EXPR_IMPORT: return dot_import(expr->import, pid);
   }
 }
 

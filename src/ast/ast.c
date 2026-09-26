@@ -5,6 +5,11 @@
 
 #include "ast.h"
 
+const char *import_type_str[] = {
+  [IMPORT_URL] = "url",
+  [IMPORT_CSV] = "csv",
+};
+
 // -----------------------------------------------------------------------------
 
 #define AST_LIST_IMPL(T, name)                                            \
@@ -115,6 +120,7 @@ AST_EXPR_FUNC(ast_expr_if, IfExpr, EXPR_IF, if_expr)
 AST_EXPR_FUNC(ast_expr_for, ForExpr, EXPR_FOR, for_expr)
 AST_EXPR_FUNC(ast_expr_block, BlockExpr, EXPR_BLOCK, block)
 AST_EXPR_FUNC(ast_expr_function_call, FunctionCallExpr, EXPR_FUNCTION_CALL, function_call)
+AST_EXPR_FUNC(ast_expr_import, ImportExpr, EXPR_IMPORT, import)
 
 // -----------------------------------------------------------------------------
 
@@ -318,6 +324,17 @@ FunctionCallExpr *ast_function_call(Identifier *id, ArgumentList *args, Expr *co
   ast_consume_argument_list(args, &function_call->args, &function_call->args_len);
 
   return function_call;
+}
+
+ImportExpr *ast_import(ImportType type, Type *data_type, StringLiteral *path) {
+  ImportExpr *import = new(ImportExpr);
+  *import = (ImportExpr){
+    .type = type,
+    .data_type = data_type,
+    .path = path,
+  };
+
+  return import;
 }
 
 // -----------------------------------------------------------------------------
@@ -537,6 +554,7 @@ void ast_free_expr(Expr *expr) {
     case EXPR_FOR: ast_free_for(expr->for_expr); break;
     case EXPR_BLOCK: ast_free_block(expr->block); break;
     case EXPR_FUNCTION_CALL: ast_free_function_call(expr->function_call); break;
+    case EXPR_IMPORT: ast_free_import(expr->import); break;
   }
 
   free(expr);
@@ -641,6 +659,14 @@ void ast_free_function_call(FunctionCallExpr *function_call) {
   }
   if (function_call->args) free(function_call->args);
   free(function_call);
+}
+
+void ast_free_import(ImportExpr *import) {
+  if (!import) return;
+
+  ast_free_type(import->data_type);
+  ast_free_string_literal(import->path);
+  free(import);
 }
 
 void ast_free_int_literal(IntegerLiteral *l) {

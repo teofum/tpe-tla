@@ -1,12 +1,5 @@
-// "import url" toma un path a recursos en el directorio fuente.
-// En compilación, se transforma en url relativa de salida.
 my_cool_image := import url "img/cool.png"
 tailwind_css := import url "css/tailwind.css"
-
-/* block comment */
-/*
- * multi line comment
- */
 
 html: {
   head: {

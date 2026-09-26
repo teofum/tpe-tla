@@ -45,6 +45,7 @@ static void yyerror(YYLTYPE *location, const char *message) {
   ForExpr *for_expr;
   BlockExpr *block;
   FunctionCallExpr *function_call;
+  ImportExpr *import;
 
   Type *type;
   StructField *struct_field;
@@ -194,8 +195,10 @@ static void yyerror(YYLTYPE *location, const char *message) {
 %type <for_expr>                    for_expr
 %type <block>                       block
 %type <function_call>               function_call
+%type <import>                      import
 
 %type <type>                        type
+%type <type>                        import_type
 %type <struct_field>                struct_field
 %type <struct_literal_field>        struct_literal_field
 %type <map_entry>                   map_entry
@@ -295,6 +298,7 @@ expression: literal                                                 { $$ = parse
   | for_expr                                                        { $$ = parse_for_expr($1); }
   | block                                                           { $$ = parse_block_expr($1); }
   | function_call                                                   { $$ = parse_function_call_expr($1); }
+  | import                                                          { $$ = parse_import_expr($1); }
   ;
 
 literal: simple_literal
@@ -425,6 +429,15 @@ arguments: PAREN_L nl expression_list nl PAREN_R                    { $$ = $3; }
 composable: simple_literal                                          { $$ = parse_literal_expr($1); }
   | group                                                           { $$ = parse_group_expr($1); }
   | block                                                           { $$ = parse_block_expr($1); }
+  ;
+
+/*-- Expressions: import ---------------------------------------------------------------------------------------------*/
+
+import: IMPORT IDENTIFIER import_type STRING                        { $$ = parse_import($2, $3, $4, (Location *)&@2); }
+  ;
+
+import_type: OF type                                                { $$ = $2; }
+  | %empty                                                          { $$ = NULL; }
   ;
 
 /*-- Types -----------------------------------------------------------------------------------------------------------*/
