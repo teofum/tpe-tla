@@ -246,6 +246,11 @@ Type *parse_tuple_type(TypeList *types) {
   return ast_tuple_type(types);
 }
 
+Type *parse_short_tuple_type(Type *type, Expr *count) {
+  fe_parser_log(LOG_DEBUG, "Tuple Shorthand");
+  return ast_short_tuple_type(type, count);
+}
+
 Type *parse_enum_type(IdentifierList *values) {
   fe_parser_log(LOG_DEBUG, "Enum");
   return ast_enum_type(values);

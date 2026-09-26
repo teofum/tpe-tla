@@ -385,6 +385,16 @@ Type *ast_tuple_type(TypeList *types) {
   return type;
 }
 
+Type *ast_short_tuple_type(Type *inner_type, Expr *count) {
+  ShortTupleType *tuple = new(ShortTupleType);
+  *tuple = (ShortTupleType){ .type = inner_type, .count = count };
+
+  Type *type = new(Type);
+  *type = (Type){ .type = T_TUPLE_SHORT, .short_tuple = tuple };
+
+  return type;
+}
+
 Type *ast_enum_type(IdentifierList *values) {
   EnumType *enum_type = new(EnumType);
   ast_consume_identifier_list(values, &enum_type->values, &enum_type->len);
@@ -749,6 +759,7 @@ void ast_free_type(Type *t) {
     case T_STRUCT: ast_free_struct_type(t->struct_type); break;
     case T_UNION: ast_free_union_type(t->union_type); break;
     case T_TUPLE: ast_free_tuple_type(t->tuple); break;
+    case T_TUPLE_SHORT: ast_free_short_tuple_type(t->short_tuple); break;
     case T_ENUM: ast_free_enum_type(t->enum_type); break;
     case T_NIL: break;
   }
@@ -804,6 +815,14 @@ void ast_free_tuple_type(TupleType *t) {
     ast_free_type(t->types[i]);
   }
   free(t->types);
+  free(t);
+}
+
+void ast_free_short_tuple_type(ShortTupleType *t) {
+  if (!t) return;
+
+  ast_free_type(t->type);
+  ast_free_expr(t->count);
   free(t);
 }
 

@@ -131,6 +131,11 @@ static void dot_type(Type *type, u64 pid) {
         dot_type(type->tuple->types[i], id);
       }
       break;
+    case T_TUPLE_SHORT:
+      snprintf(label, 18, "Tuple Shorthand");
+      dot_type(type->short_tuple->type, id);
+      dot_expr(type->short_tuple->count, id);
+      break;
     case T_ENUM:
       snprintf(label, 8, "Enum");
       for (u32 i = 0; i < type->enum_type->len; i++) {

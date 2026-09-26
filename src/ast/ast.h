@@ -64,6 +64,7 @@ typedef enum {
   T_LIST,
   T_MAP,
   T_TUPLE,
+  T_TUPLE_SHORT,
   T_ENUM,
   T_NIL,
 } TypeType;
@@ -125,6 +126,7 @@ typedef struct StructField StructField;
 typedef struct StructType StructType;
 typedef struct UnionType UnionType;
 typedef struct TupleType TupleType;
+typedef struct ShortTupleType ShortTupleType;
 typedef struct EnumType EnumType;
 
 typedef struct FunctionDef FunctionDef;
@@ -354,6 +356,7 @@ struct Type {
     StructType *struct_type;
     UnionType *union_type;
     TupleType *tuple;
+    ShortTupleType *short_tuple;
     EnumType *enum_type;
   };
 };
@@ -384,6 +387,11 @@ struct UnionType {
 struct TupleType {
   u32 len;
   Type **types;
+};
+
+struct ShortTupleType {
+  Type *type;
+  Expr *count;
 };
 
 struct EnumType {
@@ -476,6 +484,7 @@ Type *ast_map_type(Type *key_type, Type *value_type);
 Type *ast_struct_type(StructFieldList *fields);
 Type *ast_union_type(TypeList *types);
 Type *ast_tuple_type(TypeList *types);
+Type *ast_short_tuple_type(Type *type, Expr *count);
 Type *ast_enum_type(IdentifierList *values);
 Type *ast_nil_type();
 
@@ -529,6 +538,7 @@ void ast_free_map_type(MapType *t);
 void ast_free_struct_type(StructType *t);
 void ast_free_union_type(UnionType *t);
 void ast_free_tuple_type(TupleType *t);
+void ast_free_short_tuple_type(ShortTupleType *t);
 void ast_free_enum_type(EnumType *t);
 
 void ast_free_function_def(FunctionDef *f);

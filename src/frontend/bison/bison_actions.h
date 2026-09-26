@@ -60,6 +60,7 @@ Type *parse_struct_type(StructFieldList *fields);
 Type *parse_union_type(TypeList *types);
 Type *parse_optional_type(Type *type);
 Type *parse_tuple_type(TypeList *types);
+Type *parse_short_tuple_type(Type *type, Expr *count);
 Type *parse_enum_type(IdentifierList *values);
 Type *parse_nil_type();
 

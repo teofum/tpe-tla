@@ -1,6 +1,9 @@
 // Simple tuple literal
 foo: [int, string] = [5, "hello"]
 
+// Tuple shorthand syntax
+bar: [int; 1000] = [0; 1000]
+
 // Expressions in tuple
 foo := [1 + 3, y < z and x == y, 1 * (2 + 3)]
 

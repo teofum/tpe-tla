@@ -37,7 +37,7 @@
 
 /--- Parser -------------------------------------------------------------------/
 [x] Base expression node
-  [ ] Literal expressions
+  [x] Literal expressions
     [x] Integers
     [x] Floats
     [x] Strings
@@ -46,7 +46,7 @@
     [x] Structs
     [x] Enums
     [x] Lists
-      [ ] Repeated value ([0; 5])
+      [x] Shorthand ([0; 5])
     [-] Tuples
       - Removed, see NOTES.txt
     [x] Maps
