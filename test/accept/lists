@@ -1,6 +1,9 @@
 // Simple list literal
 foo: int[] = [1, 2, 3]
 
+// Shorthand list literal
+foo: int[] = [0; 1000]
+
 // Expressions in list
 foo := [1 + 3, 2 - 5, 6 * 6 + 5]
 

@@ -96,6 +96,12 @@ LiteralExpr *parse_list_literal(ExprList *exprs) {
   return literal;
 }
 
+LiteralExpr *parse_short_list_literal(Expr *value, Expr *count) {
+  LiteralExpr *literal = ast_short_list_literal(value, count);
+  fe_parser_log(LOG_DEBUG, "Shorthand List Literal", literal->list->len);
+  return literal;
+}
+
 LiteralExpr *parse_map_literal(MapEntryList *entries) {
   LiteralExpr *literal = ast_map_literal(entries);
   fe_parser_log(LOG_DEBUG, "Map Literal (len=%u)", literal->map->len);

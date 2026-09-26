@@ -141,10 +141,19 @@ LiteralExpr *ast_nil_literal() {
 
 LiteralExpr *ast_list_literal(ExprList *exprs) {
   ListLiteral *list = new(ListLiteral);
-  ast_consume_expr_list(exprs, &list->exprs, &list->len);
+  if (exprs) ast_consume_expr_list(exprs, &list->exprs, &list->len);
 
   LiteralExpr *literal = new(LiteralExpr);
   *literal = (LiteralExpr){ .type = L_LIST, .list = list };
+  return literal;
+}
+
+LiteralExpr *ast_short_list_literal(Expr *value, Expr *count) {
+  ShortListLiteral *list = new(ShortListLiteral);
+  *list = (ShortListLiteral){ .value = value, .count = count };
+
+  LiteralExpr *literal = new(LiteralExpr);
+  *literal = (LiteralExpr){ .type = L_LIST_SHORT, .short_list = list };
   return literal;
 }
 
@@ -532,6 +541,7 @@ void ast_free_literal(LiteralExpr *literal) {
     case L_STRING: ast_free_string_literal(literal->string); break;
     case L_BOOL: ast_free_bool_literal(literal->boolean); break;
     case L_LIST: ast_free_list_literal(literal->list); break;
+    case L_LIST_SHORT: ast_free_short_list_literal(literal->short_list); break;
     case L_MAP: ast_free_map_literal(literal->map); break;
     case L_STRUCT: ast_free_struct_literal(literal->struct_literal); break;
     case L_ENUM: ast_free_enum_literal(literal->enum_literal); break;
@@ -658,7 +668,15 @@ void ast_free_list_literal(ListLiteral *l) {
   for (u32 i = 0; i < l->len; i++) {
     ast_free_expr(l->exprs[i]);
   }
-  free(l->exprs);
+  if (l->exprs) free(l->exprs);
+  free(l);
+}
+
+void ast_free_short_list_literal(ShortListLiteral *l) {
+  if (!l) return;
+
+  ast_free_expr(l->value);
+  ast_free_expr(l->count);
   free(l);
 }
 

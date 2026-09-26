@@ -180,6 +180,12 @@ static void dot_literal(LiteralExpr *literal, u64 pid) {
         dot_expr(literal->list->exprs[i], id);
       }
       break;
+    case L_LIST_SHORT:
+      label = new_array(char, 15);
+      snprintf(label, 15, "Shorthand List");
+      dot_expr(literal->short_list->value, id);
+      dot_expr(literal->short_list->count, id);
+      break;
     case L_MAP:
       label = new_array(char, 6);
       snprintf(label, 6, "Map");

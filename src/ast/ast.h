@@ -44,6 +44,7 @@ typedef enum {
   L_BOOL,
   L_NIL,
   L_LIST,
+  L_LIST_SHORT,
   L_MAP,
   L_STRUCT,
   L_ENUM,
@@ -104,6 +105,7 @@ typedef struct FloatLiteral FloatLiteral;
 typedef struct StringLiteral StringLiteral;
 typedef struct BooleanLiteral BooleanLiteral;
 typedef struct ListLiteral ListLiteral;
+typedef struct ShortListLiteral ShortListLiteral;
 typedef struct MapLiteral MapLiteral;
 typedef struct MapEntry MapEntry;
 typedef struct StructLiteral StructLiteral;
@@ -195,6 +197,7 @@ struct LiteralExpr {
     StringLiteral *string;
     BooleanLiteral *boolean;
     ListLiteral *list;
+    ShortListLiteral *short_list;
     MapLiteral *map;
     StructLiteral *struct_literal;
     EnumLiteral *enum_literal;
@@ -286,6 +289,11 @@ struct BooleanLiteral {
 struct ListLiteral {
   u32 len;
   Expr **exprs;
+};
+
+struct ShortListLiteral {
+  Expr *value;
+  Expr *count;
 };
 
 struct MapLiteral {
@@ -442,6 +450,7 @@ LiteralExpr *ast_float_literal(FloatLiteral *f);
 LiteralExpr *ast_string_literal(StringLiteral *s);
 LiteralExpr *ast_boolean_literal(BooleanLiteral *b);
 LiteralExpr *ast_list_literal(ExprList *exprs);
+LiteralExpr *ast_short_list_literal(Expr *value, Expr *count);
 LiteralExpr *ast_map_literal(MapEntryList *entries);
 LiteralExpr *ast_struct_literal(StructLiteralFieldList *fields);
 LiteralExpr *ast_enum_literal(Type *type, Identifier *id);
@@ -503,6 +512,7 @@ void ast_free_float_literal(FloatLiteral *l);
 void ast_free_string_literal(StringLiteral *l);
 void ast_free_bool_literal(BooleanLiteral *l);
 void ast_free_list_literal(ListLiteral *l);
+void ast_free_short_list_literal(ShortListLiteral *l);
 void ast_free_map_literal(MapLiteral *l);
 void ast_free_struct_literal(StructLiteral *l);
 void ast_free_enum_literal(EnumLiteral *l);

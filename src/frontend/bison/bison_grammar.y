@@ -323,6 +323,8 @@ struct_literal_field: DOT IDENTIFIER EQUAL expression               { $$ = parse
   ;
 
 list_literal: SQUARE_L nl expression_list nl SQUARE_R               { $$ = parse_list_literal($3); }
+  | SQUARE_L SQUARE_R                                               { $$ = parse_list_literal(NULL); }
+  | SQUARE_L nl expression SEMICOLON expression nl SQUARE_R         { $$ = parse_short_list_literal($3, $5); }
   ;
 
 expression_list: expression                                         { $$ = parse_expr_list($1, NULL); }
