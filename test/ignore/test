@@ -8,15 +8,15 @@ tailwind_css := import url "css/tailwind.css"
  * multi line comment
  */
 
-html {
-  head {
-    title "My cool website"
+html: {
+  head: {
+    title: "My cool website"
     stylesheet(tailwind_css)
   }
   body.p-8.pb-16 {
-    main.max-w-2xl.mx-auto {
-      h1.text-2xl.font-bold.mb-4 "Hello, world!"
-      p.text-sm.text-black/80.mb-2 {
+    main.max-w-2xl.mx-auto: {
+      h1.text-2xl.font-bold.mb-4: "Hello, world!"
+      p.text-sm.text-black/80.mb-2: {
         "This is some text"
         "and this is some more text"
       }

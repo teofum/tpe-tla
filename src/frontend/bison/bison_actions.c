@@ -1,9 +1,13 @@
+#include <string.h>
+
 #include <ast/ast.h>
 #include <frontend/frontend.h>
+#include <support/str.h>
 #include <support/types.h>
 #include <support/util.h>
 
 #include "bison_actions.h"
+#include "bison_parser.h"
 
 Stmt *parse_expr_stmt(Expr *expr) {
   fe_parser_log(LOG_DEBUG, "Expression Stmt");
@@ -57,6 +61,7 @@ PARSE_EXPR_FUNC(assignment, AssignmentExpr, "Assignment Expr")
 PARSE_EXPR_FUNC(if, IfExpr, "If Expr")
 PARSE_EXPR_FUNC(for, ForExpr, "For Expr")
 PARSE_EXPR_FUNC(block, BlockExpr, "Block Expr (len=%u)", expr->len)
+PARSE_EXPR_FUNC(function_call, FunctionCallExpr, "Function Call Expr %s", expr->name->lexeme)
 
 // -----------------------------------------------------------------------------
 
@@ -133,8 +138,16 @@ VariableExpr *parse_named_variable(Identifier *id) {
   return ast_variable_named(id);
 }
 
-VariableExpr *parse_struct_member_variable(VariableExpr *struct_expr, Identifier *id) {
+VariableExpr *parse_struct_member_variable(VariableExpr *struct_expr, IdentifierList *ids) {
+  Identifier *id = ids->head;
   fe_parser_log(LOG_DEBUG, "Struct Member %s", id->lexeme);
+
+  if (ids->tail) {
+    struct_expr = parse_struct_member_variable(struct_expr, ids->tail);
+    ids->tail = NULL; // Recursive call freed the tail, set it to NULL to avoid double free
+  }
+  ast_free_identifier_list(ids, false);
+
   return ast_variable_struct_member(struct_expr, id);
 }
 
@@ -242,6 +255,100 @@ Type *parse_nil_type() {
 FunctionDef *parse_function_def(Identifier *id, ParameterList *params, Type *return_type, BlockExpr *body) {
   fe_parser_log(LOG_DEBUG, "Function Definition %s", id->lexeme);
   return ast_function_def(id, params, return_type, body);
+}
+
+static Argument *_parse_argument(Expr *expr, Location *arg_loc) {
+  Argument *arg = NULL;
+
+  if (expr->type == EXPR_ASSIGNMENT) {
+    VariableExpr *var = expr->assignment->left;
+    if (var->type == V_NAMED) {
+      arg = ast_argument(var->named->name, expr->assignment->right);
+      free(var->named);
+      free(var);
+      free(expr->assignment);
+      free(expr);
+    } else {
+      const char *expected = "identifier";
+
+      SyntaxErrorContext *ctx = new(SyntaxErrorContext);
+      *ctx = (SyntaxErrorContext) {
+        .expected_token_count = 1,
+        .expected_tokens = &expected,
+        .found_token = "variable path",
+        .location = arg_loc,
+      };
+
+      fe_report_syntax_error(ctx);
+      ast_free_expr(expr);
+    }
+  } else {
+    arg = ast_argument(NULL, expr);
+  }
+
+  return arg;
+}
+
+static Expr *_id_to_string(Identifier *id) {
+  StringLiteral *str_l = new(StringLiteral);
+  *str_l = (StringLiteral){ .meta = id, .value = str_from_cstring(id->lexeme) };
+
+  return ast_expr_literal(ast_string_literal(str_l));
+}
+
+static ExprList *_id_to_string_list(IdentifierList *id_list) {
+  if (!id_list) return NULL;
+
+  ExprList *exprs = ast_expr_list(_id_to_string(id_list->head), _id_to_string_list(id_list->tail));
+  id_list->tail = NULL;
+  ast_free_identifier_list(id_list, false);
+
+  return exprs;
+}
+
+FunctionCallExpr *parse_function_call(Identifier *id, ExprList *arg_exprs, Expr *composable, IdentifierList *classlist, Location *arg_loc) {
+  fe_parser_log(LOG_DEBUG, "Function Call %s", id->lexeme);
+
+  ArgumentList *args = new(ArgumentList);
+  ArgumentList *args_tail = args;
+  ExprList *expr_list = arg_exprs;
+  while (expr_list) {
+    // This passes the location of the arguments list, would be nice to have the location of each argument instead
+    args_tail->head = _parse_argument(expr_list->head, arg_loc);
+
+    args_tail->len = expr_list->len;
+    if (expr_list->tail) {
+      args_tail->tail = new(ArgumentList);
+      args_tail = args_tail->tail;
+    }
+    expr_list = expr_list->tail;
+  }
+
+  if (classlist) {
+    // Convert classlist to string literals
+    ExprList *class_string_list = _id_to_string_list(classlist);
+
+    Identifier *name = new(Identifier);
+    *name = (Identifier){ .label = IDENTIFIER, .len = 5, .lexeme = strndup("class", 5) };
+
+    // If there is a class named argument, append classlist to it, otherwise add an arg
+    Argument *class_arg = new(Argument);
+    *class_arg = (Argument) {
+      .name = name,
+      .value = ast_expr_literal(ast_list_literal(class_string_list)),
+    };
+
+    ArgumentList *args_with_class = new(ArgumentList);
+    *args_with_class = (ArgumentList){
+      .len = args->len + 1,
+      .tail = args,
+      .head = class_arg,
+    };
+    args = args_with_class;
+  }
+
+  ast_free_expr_list(arg_exprs, false);
+  return ast_function_call(id, args, composable);
 }
 
 // -----------------------------------------------------------------------------

@@ -26,7 +26,7 @@ void ast_free_##name##_list(T##List *list, bool free_items) {             \
   ast_free_##name##_list(list->tail, free_items);                         \
   free(list);                                                             \
 }                                                                         \
-static void _consume_##name##_list(T##List *list, T ***items, u32 *len) { \
+void ast_consume_##name##_list(T##List *list, T ***items, u32 *len) { \
   *items = new_array(T *, list->len);                                     \
   *len = list->len;                                                       \
   T##List *tail = list;                                                   \
@@ -45,6 +45,7 @@ AST_LIST_IMPL(MapEntry, map_entry)
 AST_LIST_IMPL(Type, type)
 AST_LIST_IMPL(Identifier, identifier)
 AST_LIST_IMPL(Parameter, parameter)
+AST_LIST_IMPL(Argument, argument)
 
 // -----------------------------------------------------------------------------
 
@@ -113,6 +114,7 @@ AST_EXPR_FUNC(ast_expr_assignment, AssignmentExpr, EXPR_ASSIGNMENT, assignment)
 AST_EXPR_FUNC(ast_expr_if, IfExpr, EXPR_IF, if_expr)
 AST_EXPR_FUNC(ast_expr_for, ForExpr, EXPR_FOR, for_expr)
 AST_EXPR_FUNC(ast_expr_block, BlockExpr, EXPR_BLOCK, block)
+AST_EXPR_FUNC(ast_expr_function_call, FunctionCallExpr, EXPR_FUNCTION_CALL, function_call)
 
 // -----------------------------------------------------------------------------
 
@@ -139,7 +141,7 @@ LiteralExpr *ast_nil_literal() {
 
 LiteralExpr *ast_list_literal(ExprList *exprs) {
   ListLiteral *list = new(ListLiteral);
-  _consume_expr_list(exprs, &list->exprs, &list->len);
+  ast_consume_expr_list(exprs, &list->exprs, &list->len);
 
   LiteralExpr *literal = new(LiteralExpr);
   *literal = (LiteralExpr){ .type = L_LIST, .list = list };
@@ -148,7 +150,7 @@ LiteralExpr *ast_list_literal(ExprList *exprs) {
 
 LiteralExpr *ast_map_literal(MapEntryList *entries) {
   MapLiteral *map = new(MapLiteral);
-  _consume_map_entry_list(entries, &map->entries, &map->len);
+  ast_consume_map_entry_list(entries, &map->entries, &map->len);
 
   LiteralExpr *literal = new(LiteralExpr);
   *literal = (LiteralExpr){ .type = L_MAP, .map = map };
@@ -157,7 +159,7 @@ LiteralExpr *ast_map_literal(MapEntryList *entries) {
 
 LiteralExpr *ast_struct_literal(StructLiteralFieldList *fields) {
   StructLiteral *struct_literal = new(StructLiteral);
-  _consume_struct_literal_field_list(fields, &struct_literal->fields, &struct_literal->len);
+  ast_consume_struct_literal_field_list(fields, &struct_literal->fields, &struct_literal->len);
 
   LiteralExpr *literal = new(LiteralExpr);
   *literal = (LiteralExpr){ .type = L_STRUCT, .struct_literal = struct_literal };
@@ -294,8 +296,19 @@ ForExpr *ast_for(Identifier *var, Identifier *idx, Expr *iterable, Expr *body) {
 
 BlockExpr *ast_block(StmtList *statements) {
   BlockExpr* block = new(BlockExpr);
-  _consume_stmt_list(statements, &block->statements, &block->len);
+  ast_consume_stmt_list(statements, &block->statements, &block->len);
   return block;
+}
+
+FunctionCallExpr *ast_function_call(Identifier *id, ArgumentList *args, Expr *composable) {
+  FunctionCallExpr *function_call = new(FunctionCallExpr);
+  *function_call = (FunctionCallExpr){
+    .name = id,
+    .composable = composable,
+  };
+  ast_consume_argument_list(args, &function_call->args, &function_call->args_len);
+
+  return function_call;
 }
 
 // -----------------------------------------------------------------------------
@@ -335,7 +348,7 @@ Type *ast_map_type(Type *key_type, Type *value_type) {
 
 Type *ast_struct_type(StructFieldList *fields) {
   StructType *struct_type = new(StructType);
-  _consume_struct_field_list(fields, &struct_type->fields, &struct_type->len);
+  ast_consume_struct_field_list(fields, &struct_type->fields, &struct_type->len);
 
   Type *type = new(Type);
   *type = (Type){ .type = T_STRUCT, .struct_type = struct_type };
@@ -345,7 +358,7 @@ Type *ast_struct_type(StructFieldList *fields) {
 
 Type *ast_union_type(TypeList *types) {
   UnionType *union_type = new(UnionType);
-  _consume_type_list(types, &union_type->types, &union_type->len);
+  ast_consume_type_list(types, &union_type->types, &union_type->len);
 
   Type *type = new(Type);
   *type = (Type){ .type = T_UNION, .union_type = union_type };
@@ -355,7 +368,7 @@ Type *ast_union_type(TypeList *types) {
 
 Type *ast_tuple_type(TypeList *types) {
   TupleType *tuple = new(TupleType);
-  _consume_type_list(types, &tuple->types, &tuple->len);
+  ast_consume_type_list(types, &tuple->types, &tuple->len);
 
   Type *type = new(Type);
   *type = (Type){ .type = T_TUPLE, .tuple = tuple };
@@ -365,7 +378,7 @@ Type *ast_tuple_type(TypeList *types) {
 
 Type *ast_enum_type(IdentifierList *values) {
   EnumType *enum_type = new(EnumType);
-  _consume_identifier_list(values, &enum_type->values, &enum_type->len);
+  ast_consume_identifier_list(values, &enum_type->values, &enum_type->len);
 
   Type *type = new(Type);
   *type = (Type){ .type = T_ENUM, .enum_type = enum_type };
@@ -389,7 +402,7 @@ FunctionDef *ast_function_def(Identifier *id, ParameterList *params, Type *retur
     .return_type = return_type,
     .body = body,
   };
-  _consume_parameter_list(params, &function->params, &function->params_len);
+  ast_consume_parameter_list(params, &function->params, &function->params_len);
 
   return function;
 }
@@ -438,11 +451,21 @@ Parameter *ast_parameter(Identifier *id, Type *type, Expr *default_value) {
   return param;
 }
 
+Argument *ast_argument(Identifier *id, Expr *value) {
+  Argument *arg = new(Argument);
+  *arg = (Argument){
+    .name = id,
+    .value = value,
+  };
+
+  return arg;
+}
+
 // -----------------------------------------------------------------------------
 
 Program *ast_program(StmtList *statements) {
   Program *prog = new(Program);
-  _consume_stmt_list(statements, &prog->statements, &prog->len);
+  ast_consume_stmt_list(statements, &prog->statements, &prog->len);
   return prog;
 }
 
@@ -492,6 +515,7 @@ void ast_free_expr(Expr *expr) {
     case EXPR_IF: ast_free_if(expr->if_expr); break;
     case EXPR_FOR: ast_free_for(expr->for_expr); break;
     case EXPR_BLOCK: ast_free_block(expr->block); break;
+    case EXPR_FUNCTION_CALL: ast_free_function_call(expr->function_call); break;
   }
 
   free(expr);
@@ -583,6 +607,18 @@ void ast_free_block(BlockExpr *block) {
   }
   free(block->statements);
   free(block);
+}
+
+void ast_free_function_call(FunctionCallExpr *function_call) {
+  if (!function_call) return;
+
+  ast_free_identifier(function_call->name);
+  ast_free_expr(function_call->composable);
+  for (u32 i = 0; i < function_call->args_len; i++) {
+    ast_free_argument(function_call->args[i]);
+  }
+  if (function_call->args) free(function_call->args);
+  free(function_call);
 }
 
 void ast_free_int_literal(IntegerLiteral *l) {
@@ -806,6 +842,14 @@ void ast_free_parameter(Parameter *p) {
   ast_free_type(p->type);
   ast_free_expr(p->default_value);
   free(p);
+}
+
+void ast_free_argument(Argument *a) {
+  if (!a) return;
+
+  ast_free_identifier(a->name);
+  ast_free_expr(a->value);
+  free(a);
 }
 
 void ast_free_identifier(Identifier *id) {

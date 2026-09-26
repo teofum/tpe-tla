@@ -17,3 +17,5 @@ foo: Book = {
 }
 
 foo: Book = { .isbn = "xxxxx", .title = "asfd", .authors = [{ .name = "John Doe" }], .stock = 42 }
+
+bar := foo.authors[0].name

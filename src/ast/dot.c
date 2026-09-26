@@ -301,6 +301,31 @@ static void dot_block(BlockExpr *block, u64 pid) {
   }
 }
 
+static void dot_argument(Argument *arg, u32 idx, u64 pid) {
+  u64 id = next_id();
+  char label[256];
+  if (arg->name) {
+    snprintf(label, 256, "%s", arg->name->lexeme);
+  } else {
+    snprintf(label, 256, "[%u]", idx);
+  }
+  _node(id, label, NODE_BASE);
+  _edge(pid, id);
+  dot_expr(arg->value, id);
+}
+
+static void dot_function_call(FunctionCallExpr *function, u64 pid) {
+  u64 id = next_id();
+  char label[256];
+  snprintf(label, 256, "Function Call\\n%s", function->name->lexeme);
+  _node(id, label, NODE_STMT);
+  _edge(pid, id);
+  for (u32 i = 0; i < function->args_len; i++) {
+    dot_argument(function->args[i], i, id);
+  }
+  if (function->composable) dot_expr(function->composable, id);
+}
+
 static void dot_expr(Expr *expr, u64 pid) {
   switch (expr->type) {
     case EXPR_LITERAL: return dot_literal(expr->literal, pid);
@@ -312,6 +337,7 @@ static void dot_expr(Expr *expr, u64 pid) {
     case EXPR_IF: return dot_if(expr->if_expr, pid);
     case EXPR_FOR: return dot_for(expr->for_expr, pid);
     case EXPR_BLOCK: return dot_block(expr->block, pid);
+    case EXPR_FUNCTION_CALL: return dot_function_call(expr->function_call, pid);
   }
 }
 

@@ -22,6 +22,7 @@ Expr *parse_assignment_expr(AssignmentExpr *assign);
 Expr *parse_if_expr(IfExpr *if_expr);
 Expr *parse_for_expr(ForExpr *for_expr);
 Expr *parse_block_expr(BlockExpr *block);
+Expr *parse_function_call_expr(FunctionCallExpr *function_call);
 
 LiteralExpr *parse_integer_literal(IntegerLiteral *i);
 LiteralExpr *parse_float_literal(FloatLiteral *f);
@@ -39,7 +40,7 @@ Expr *parse_range_value_var(VariableExpr *var);
 Expr *parse_range_value_group(GroupExpr *group);
 
 VariableExpr *parse_named_variable(Identifier *id);
-VariableExpr *parse_struct_member_variable(VariableExpr *struct_expr, Identifier *id);
+VariableExpr *parse_struct_member_variable(VariableExpr *struct_expr, IdentifierList *ids);
 VariableExpr *parse_indexed_variable(VariableExpr *container, Expr *index);
 
 UnaryExpr *parse_unary(TokenLabel op, Expr *expr);
@@ -62,6 +63,7 @@ Type *parse_enum_type(IdentifierList *values);
 Type *parse_nil_type();
 
 FunctionDef *parse_function_def(Identifier *id, ParameterList *params, Type *return_type, BlockExpr *body);
+FunctionCallExpr *parse_function_call(Identifier *id, ExprList *args, Expr *composable, IdentifierList *classlist, Location *arg_loc);
 
 StructFieldList *parse_struct_field_list(StructField *head, StructFieldList *tail);
 StructLiteralFieldList *parse_struct_literal_field_list(StructLiteralField *head, StructLiteralFieldList *tail);

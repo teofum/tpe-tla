@@ -65,7 +65,7 @@
   [x] If expressions
   [x] For expressions
   [x] Block expressions
-  [ ] Function calls
+  [x] Function calls
   [ ] Import expressions
 [ ] Type expression
   [x] Simple (identifier) types

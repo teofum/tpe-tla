@@ -1,0 +1,8 @@
+// In a function call context dots denote classes
+div.flex.flex-col.gap-2: {
+  for book in books {
+    // In an expression context, dots denote struct member access
+    p.font-bold.text-sm: (book.title)
+    p.text-sm.text-neutral-700: { book.authors[0].name }
+  }
+}

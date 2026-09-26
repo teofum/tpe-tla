@@ -3,15 +3,16 @@
 
 #include <support/types.h>
 
-#define AST_LIST(T, name)                                     \
-typedef struct T##List T##List;                               \
-struct T##List {                                              \
-  u32 len;                                                    \
-  T *head;                                                    \
-  T##List *tail;                                              \
-};                                                            \
-T##List *ast_##name##_list(T *head, T##List *tail);           \
-void ast_free_##name##_list(T##List *list, bool free_items);  \
+#define AST_LIST(T, name)                                             \
+typedef struct T##List T##List;                                       \
+struct T##List {                                                      \
+  u32 len;                                                            \
+  T *head;                                                            \
+  T##List *tail;                                                      \
+};                                                                    \
+T##List *ast_##name##_list(T *head, T##List *tail);                   \
+void ast_free_##name##_list(T##List *list, bool free_items);          \
+void ast_consume_##name##_list(T##List *list, T ***items, u32 *len);  \
 
 // -----------------------------------------------------------------------------
 
@@ -33,6 +34,7 @@ typedef enum {
   EXPR_IF,
   EXPR_FOR,
   EXPR_BLOCK,
+  EXPR_FUNCTION_CALL,
 } ExprType;
 
 typedef enum {
@@ -94,6 +96,8 @@ typedef struct AssignmentExpr AssignmentExpr;
 typedef struct IfExpr IfExpr;
 typedef struct ForExpr ForExpr;
 typedef struct BlockExpr BlockExpr;
+typedef struct FunctionCallExpr FunctionCallExpr;
+typedef struct Argument Argument;
 
 typedef struct IntegerLiteral IntegerLiteral;
 typedef struct FloatLiteral FloatLiteral;
@@ -134,6 +138,7 @@ AST_LIST(MapEntry, map_entry);
 AST_LIST(Type, type);
 AST_LIST(Identifier, identifier);
 AST_LIST(Parameter, parameter);
+AST_LIST(Argument, argument);
 
 // -----------------------------------------------------------------------------
 
@@ -178,6 +183,7 @@ struct Expr {
     IfExpr *if_expr;
     ForExpr *for_expr;
     BlockExpr *block;
+    FunctionCallExpr *function_call;
   };
 };
 
@@ -241,6 +247,18 @@ struct ForExpr {
 struct BlockExpr {
   u32 len;
   Stmt **statements;
+};
+
+struct FunctionCallExpr {
+  Identifier *name;
+  u32 args_len;
+  Argument **args;
+  Expr *composable;
+};
+
+struct Argument {
+  Identifier *name;
+  Expr *value;
 };
 
 // -----------------------------------------------------------------------------
@@ -417,6 +435,7 @@ Expr *ast_expr_assignment(AssignmentExpr *assign);
 Expr *ast_expr_if(IfExpr *if_expr);
 Expr *ast_expr_for(ForExpr *for_expr);
 Expr *ast_expr_block(BlockExpr *block);
+Expr *ast_expr_function_call(FunctionCallExpr *function_call);
 
 LiteralExpr *ast_integer_literal(IntegerLiteral *i);
 LiteralExpr *ast_float_literal(FloatLiteral *f);
@@ -440,6 +459,7 @@ AssignmentExpr *ast_assignment(VariableExpr *left, Expr *right);
 IfExpr *ast_if(Expr *condition, Expr *true_branch, Expr *false_branch);
 ForExpr *ast_for(Identifier *var, Identifier *idx, Expr *iterable, Expr *body);
 BlockExpr *ast_block(StmtList *statements);
+FunctionCallExpr *ast_function_call(Identifier *id, ArgumentList *args, Expr *composable);
 
 Type *ast_named_type(Identifier *id);
 Type *ast_list_type(Type *item_type);
@@ -456,6 +476,7 @@ StructField *ast_struct_field(Identifier *id, Type *type, Expr *default_value);
 StructLiteralField *ast_struct_literal_field(Identifier *id, Expr *value);
 MapEntry *ast_map_entry(Expr *key, Expr *value);
 Parameter *ast_parameter(Identifier *id, Type *type, Expr *default_value);
+Argument *ast_argument(Identifier *id, Expr *value);
 
 Program *ast_program(StmtList *statements);
 
@@ -475,6 +496,7 @@ void ast_free_assignment(AssignmentExpr *assign);
 void ast_free_if(IfExpr *if_expr);
 void ast_free_for(ForExpr *for_expr);
 void ast_free_block(BlockExpr *block);
+void ast_free_function_call(FunctionCallExpr *function_call);
 
 void ast_free_int_literal(IntegerLiteral *l);
 void ast_free_float_literal(FloatLiteral *l);
@@ -505,6 +527,7 @@ void ast_free_struct_field(StructField *f);
 void ast_free_struct_literal_field(StructLiteralField *f);
 void ast_free_map_entry(MapEntry *e);
 void ast_free_parameter(Parameter *p);
+void ast_free_argument(Argument *a);
 
 void ast_free_identifier(Identifier *id);
 void ast_free_token(TokenMeta *meta);

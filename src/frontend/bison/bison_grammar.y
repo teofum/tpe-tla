@@ -44,6 +44,7 @@ static void yyerror(YYLTYPE *location, const char *message) {
   IfExpr *if_expr;
   ForExpr *for_expr;
   BlockExpr *block;
+  FunctionCallExpr *function_call;
 
   Type *type;
   StructField *struct_field;
@@ -173,10 +174,13 @@ static void yyerror(YYLTYPE *location, const char *message) {
 %type <type_alias>                  type_alias
 
 %type <expression>                  expression
+%type <expression>                  composable
 %type <expression>                  range_value
 %type <literal>                     literal
+%type <literal>                     simple_literal
 %type <literal>                     range
 %type <variable>                    variable
+%type <variable>                    indexed_variable
 %type <unary>                       unary
 %type <binary>                      binary
 %type <group>                       group
@@ -184,6 +188,7 @@ static void yyerror(YYLTYPE *location, const char *message) {
 %type <if_expr>                     if_expr
 %type <for_expr>                    for_expr
 %type <block>                       block
+%type <function_call>               function_call
 
 %type <type>                        type
 %type <struct_field>                struct_field
@@ -193,6 +198,9 @@ static void yyerror(YYLTYPE *location, const char *message) {
 %type <function_def>                function_def
 %type <parameter>                   parameter
 
+%type <identifier>                  class
+%type <identifier_list>             classlist
+
 %type <program>                     program
 %type <statement_list>              statement_list
 %type <struct_field_list>           struct_field_list
@@ -201,6 +209,7 @@ static void yyerror(YYLTYPE *location, const char *message) {
 %type <type_list>                   type_list
 %type <identifier_list>             identifier_list
 %type <expression_list>             expression_list
+%type <expression_list>             arguments
 %type <parameter_list>              parameter_list
 %type <parameter_list>              parameters
 
@@ -278,19 +287,23 @@ expression: literal                                                 { $$ = parse
   | if_expr                                                         { $$ = parse_if_expr($1); }
   | for_expr                                                        { $$ = parse_for_expr($1); }
   | block                                                           { $$ = parse_block_expr($1); }
+  | function_call                                                   { $$ = parse_function_call_expr($1); }
   ;
 
-literal: INTEGER                                                    { $$ = parse_integer_literal($1); }
-  | FLOAT                                                           { $$ = parse_float_literal($1); }
-  | STRING                                                          { $$ = parse_string_literal($1); }
-  | BOOL                                                            { $$ = parse_boolean_literal($1); }
-  | NIL                                                             { $$ = parse_nil_literal(); }
+literal: simple_literal
   | CURLY_L nl struct_literal_field_list nl CURLY_R                 { $$ = parse_struct_literal($3); }
   | SQUARE_L nl expression_list nl SQUARE_R                         { $$ = parse_list_literal($3); }
   | SQUARE_L nl map_entry_list nl SQUARE_R                          { $$ = parse_map_literal($3); }
   | IDENTIFIER COLON_COLON IDENTIFIER                               { $$ = parse_enum_literal($3, $1); }
   | COLON_COLON IDENTIFIER                                          { $$ = parse_enum_literal($2, NULL); }
   | range
+  ;
+
+simple_literal: INTEGER                                             { $$ = parse_integer_literal($1); }
+  | FLOAT                                                           { $$ = parse_float_literal($1); }
+  | STRING                                                          { $$ = parse_string_literal($1); }
+  | BOOL                                                            { $$ = parse_boolean_literal($1); }
+  | NIL                                                             { $$ = parse_nil_literal(); }
   ;
 
 range: range_value DOT_DOT range_value                              { $$ = parse_range_literal($1, $3, false); }
@@ -318,8 +331,12 @@ struct_literal_field: DOT IDENTIFIER EQUAL expression               { $$ = parse
   ;
 
 variable: IDENTIFIER                                                { $$ = parse_named_variable($1); }
-  | variable DOT IDENTIFIER                                         { $$ = parse_struct_member_variable($1, $3); }
-  | variable SQUARE_L expression SQUARE_R                           { $$ = parse_indexed_variable($1, $3); }
+  | IDENTIFIER classlist                                            { $$ = parse_struct_member_variable(parse_named_variable($1), $2); }
+  | indexed_variable classlist                                      { $$ = parse_struct_member_variable($1, $2); }
+  | indexed_variable
+  ;
+
+indexed_variable: variable SQUARE_L expression SQUARE_R             { $$ = parse_indexed_variable($1, $3); }
   ;
 
 unary: BANG expression                                              { $$ = parse_unary($1, $2); }
@@ -357,6 +374,31 @@ for_expr: FOR IDENTIFIER COMMA IDENTIFIER IN expression block       { $$ = parse
   ;
 
 block: CURLY_L nl statement_list nl CURLY_R                         { $$ = parse_block($3); }
+  ;
+
+/*-- Expressions: function calls -------------------------------------------------------------------------------------*/
+
+function_call: IDENTIFIER arguments                                 { $$ = parse_function_call($1, $2, NULL, NULL, (Location *)&@2); }
+  | IDENTIFIER arguments COLON composable                           { $$ = parse_function_call($1, $2, $4, NULL, (Location *)&@2); }
+  | IDENTIFIER COLON composable                                     { $$ = parse_function_call($1, NULL, $3, NULL, NULL); }
+  | IDENTIFIER classlist arguments                                  { $$ = parse_function_call($1, $3, NULL, $2, (Location *)&@3); }
+  | IDENTIFIER classlist arguments COLON composable                 { $$ = parse_function_call($1, $3, $5, $2, (Location *)&@3); }
+  | IDENTIFIER classlist COLON composable                           { $$ = parse_function_call($1, NULL, $4, $2, NULL); }
+  ;
+
+classlist: class                                                    { $$ = parse_identifier_list($1, NULL); }
+  | classlist class                                                 { $$ = parse_identifier_list($2, $1); }
+  ;
+
+class: DOT IDENTIFIER                                               { $$ = $2; }
+  ;
+
+arguments: PAREN_L nl expression_list nl PAREN_R                    { $$ = $3; }
+  ;
+
+composable: simple_literal                                          { $$ = parse_literal_expr($1); }
+  | group                                                           { $$ = parse_group_expr($1); }
+  | block                                                           { $$ = parse_block_expr($1); }
   ;
 
 /*-- Types -----------------------------------------------------------------------------------------------------------*/
