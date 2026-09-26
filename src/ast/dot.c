@@ -341,6 +341,12 @@ static void dot_function_call(FunctionCallExpr *function, u64 pid) {
 
 static void dot_import(ImportExpr *import, u64 pid) {
   u64 id = next_id();
+  if (import->type == IMPORT_UNKNOWN) {
+    _node(id, "Import ERROR\\nUnknown type", NODE_ERROR);
+    _edge(pid, id);
+    return;
+  }
+
   char label[256];
   char *path = str_to_cstring(import->path->value);
   snprintf(label, 256, "Import %s\\nFrom '%s'", import_type_str[import->type], path);

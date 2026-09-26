@@ -62,6 +62,7 @@ typedef enum {
   IMPORT_URL,
   IMPORT_CSV,
   IMPORT_TYPE_COUNT,
+  IMPORT_UNKNOWN,
 } ImportType;
 extern const char *import_type_str[];
 

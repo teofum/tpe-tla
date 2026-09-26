@@ -9,6 +9,7 @@
 #include "bison_actions.h"
 #include "bison_parser.h"
 #include "error/error.h"
+#include "support/logger.h"
 
 Stmt *parse_expr_stmt(Expr *expr) {
   fe_parser_log(LOG_DEBUG, "Expression Stmt");
@@ -211,19 +212,15 @@ BlockExpr *parse_block(StmtList *statements) {
 ImportExpr *parse_import(Identifier *import_type, Type *data_type, StringLiteral *path, Location *type_loc) {
   fe_parser_log(LOG_DEBUG, "Import %s '%s'", import_type->lexeme, path->meta->lexeme);
 
-  ImportType type = -1;
+  ImportType type = IMPORT_UNKNOWN;
   for (u32 i = 0; i < IMPORT_TYPE_COUNT; i++) {
     if (strcmp(import_type->lexeme, import_type_str[i]) == 0) type = (ImportType)i;
   }
-  if (type == -1) {
+  if (type == IMPORT_UNKNOWN) {
     ImportTypeError *error = new(ImportTypeError);
     error->type = strdup(import_type->lexeme);
     err_report_import_type(error, type_loc, ERR_ERROR);
-
-    ast_free_identifier(import_type);
-    ast_free_type(data_type);
-    ast_free_string_literal(path);
-    return NULL;
+    fe_parser_log(LOG_ERROR, "Unknown import type '%s'", import_type->lexeme);
   }
 
   ast_free_identifier(import_type);
