@@ -32,11 +32,12 @@ typedef i32 TokenLabel;
 typedef u32 FlexContext;
 
 typedef enum {
-  SUCCEEDED = 0,
-  FAILED = 1,
-  OUT_OF_MEMORY = 2,
-  UNKNOWN_ERROR = 3,
-  IN_PROGRESS = 4,
+  STATUS_SUCCEEDED = 0,
+  STATUS_FAILED = 1,
+  STATUS_OUT_OF_MEMORY = 2,
+  STATUS_UNKNOWN_ERROR = 3,
+  STATUS_IN_PROGRESS = 4,
+  STATUS_NOT_STARTED = 100,
 } CompilationStatus;
 
 typedef union SemanticValue SemanticValue;

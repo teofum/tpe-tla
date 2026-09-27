@@ -27,7 +27,7 @@ CompilationStatus lex_operator(TokenLabel label) {
 
   fe_push_token(token);
   fe_free_token(token);
-  return IN_PROGRESS;
+  return STATUS_IN_PROGRESS;
 }
 
 CompilationStatus lex_keyword(TokenLabel label) {
@@ -36,7 +36,7 @@ CompilationStatus lex_keyword(TokenLabel label) {
 
   fe_push_token(token);
   fe_free_token(token);
-  return IN_PROGRESS;
+  return STATUS_IN_PROGRESS;
 }
 
 CompilationStatus lex_integer_literal() {
@@ -50,7 +50,7 @@ CompilationStatus lex_integer_literal() {
 
   fe_push_token(token);
   fe_free_token(token);
-  return IN_PROGRESS;
+  return STATUS_IN_PROGRESS;
 }
 
 CompilationStatus lex_float_literal() {
@@ -64,7 +64,7 @@ CompilationStatus lex_float_literal() {
 
   fe_push_token(token);
   fe_free_token(token);
-  return IN_PROGRESS;
+  return STATUS_IN_PROGRESS;
 }
 
 CompilationStatus lex_string_literal() {
@@ -80,7 +80,7 @@ CompilationStatus lex_string_literal() {
 
   fe_push_token(token);
   fe_free_token(token);
-  return IN_PROGRESS;
+  return STATUS_IN_PROGRESS;
 }
 
 CompilationStatus lex_boolean_literal() {
@@ -94,7 +94,7 @@ CompilationStatus lex_boolean_literal() {
 
   fe_push_token(token);
   fe_free_token(token);
-  return IN_PROGRESS;
+  return STATUS_IN_PROGRESS;
 }
 
 CompilationStatus lex_identifier() {
@@ -103,17 +103,17 @@ CompilationStatus lex_identifier() {
 
   fe_push_token(token);
   fe_free_token(token);
-  return IN_PROGRESS;
+  return STATUS_IN_PROGRESS;
 }
 
 CompilationStatus lex_begin_multiline_comment(FlexContext ctx) {
   fe_enter_context(ctx);
-  return IN_PROGRESS;
+  return STATUS_IN_PROGRESS;
 }
 
 CompilationStatus lex_end_multiline_comment() {
   fe_leave_context();
-  return IN_PROGRESS;
+  return STATUS_IN_PROGRESS;
 }
 
 CompilationStatus lex_newline() {
@@ -122,19 +122,19 @@ CompilationStatus lex_newline() {
 
   fe_push_token(token);
   fe_free_token(token);
-  return IN_PROGRESS;
+  return STATUS_IN_PROGRESS;
 }
 
 CompilationStatus lex_ignored() {
   Token *token = fe_create_token(IGNORED);
   fe_free_token(token);
-  return IN_PROGRESS;
+  return STATUS_IN_PROGRESS;
 }
 
 CompilationStatus lex_unknown() {
   Token *token = fe_create_token(UNKNOWN);
   fe_free_token(token);
-  return FAILED;
+  return STATUS_FAILED;
 }
 
 CompilationStatus lex_eof() {
@@ -143,5 +143,5 @@ CompilationStatus lex_eof() {
 
   fe_push_token(token);
   fe_free_token(token);
-  return SUCCEEDED;
+  return STATUS_SUCCEEDED;
 }

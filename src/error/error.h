@@ -2,6 +2,7 @@
 #define ERROR_HEADER
 
 #include <ast/ast.h>
+#include <support/state.h>
 
 typedef enum {
   ERR_SYNTAX,
@@ -42,7 +43,7 @@ struct ImportTypeError {
   char *type;
 };
 
-void err_init();
+void err_init(CompilerState *compiler_state);
 void err_shutdown();
 
 void err_report_syntax(SyntaxError *error, Location *location, ErrorLevel level);

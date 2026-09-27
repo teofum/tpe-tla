@@ -3,11 +3,13 @@
 
 #include <support/dyn_array.h>
 #include <support/logger.h>
+#include <support/state.h>
 #include <support/str.h>
 #include <support/util.h>
 
 #include "error.h"
 #include "ast/ast.h"
+#include "support/types.h"
 
 #define FMT_LOCATION "In %s:%u:%u: "
 #define INDENTED_NL "\n\t\t"
@@ -18,24 +20,27 @@ typedef struct {
 } ErrorState;
 
 static ErrorState *e;
+static CompilerState *cs = NULL;
 
 static LogLevel _error_to_log_level[] = {
   [ERR_ERROR] = LOG_ERROR,
   [ERR_WARNING] = LOG_WARNING,
 };
 
-void err_init() {
+void err_init(CompilerState *compiler_state) {
+  cs = compiler_state;
+
   e = new(ErrorState);
   e->errors = new_dyn_array_d(Error, err_free_error);
-  e->logger = logger_create("Errors", stderr, LOG_INFO);
-  logger_set_flags(e->logger, LOGGER_LOG_NAME, false);
+  e->logger = cs->logger;
 }
 
 void err_shutdown() {
   dyn_array_free(e->errors);
-  logger_free(e->logger);
   free(e);
+
   e = NULL;
+  cs = NULL;
 }
 
 void err_report_syntax(SyntaxError *s, Location *location, ErrorLevel level) {
@@ -133,6 +138,7 @@ bool err_gate() {
   }
 
   dyn_array_clear(e->errors);
+  if (errors > 0) cs->status = STATUS_FAILED;
   return errors == 0;
 }
 

@@ -51,6 +51,7 @@ if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
     src/support/dyn_array.c
     src/support/env.c
     src/support/logger.c
+    src/support/options.c
     src/support/str.c
   )
   target_include_directories(Flex-Bison-Compiler PRIVATE src)

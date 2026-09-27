@@ -156,12 +156,6 @@ AST_LIST(Argument, argument);
 
 // -----------------------------------------------------------------------------
 
-typedef struct {
-  Program *ast;
-} CompilerState;
-
-// -----------------------------------------------------------------------------
-
 struct Stmt {
   StmtType type;
   union {

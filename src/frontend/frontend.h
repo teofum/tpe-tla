@@ -2,6 +2,7 @@
 #define FRONTEND_HEADER
 
 #include <ast/ast.h>
+#include <support/state.h>
 #include <support/types.h>
 #include <support/logger.h>
 

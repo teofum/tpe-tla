@@ -17,24 +17,16 @@ static Frontend *f = NULL;
 static CompilerState *cs = NULL;
 
 void fe_init(CompilerState *compiler_state) {
+  cs = compiler_state;
+
   f = new(Frontend);
   yylex_init(&f->scanner);
   f->parser = yypstate_new();
   f->location = new(YYLTYPE);
-  f->scan_logger = logger_create(
-    "Scanner",
-    stderr,
-    logger_str_to_level(env_str("SCANNER_LOG_LEVEL", "none"))
-  );
-  f->parse_logger = logger_create(
-    "Parser",
-    stderr,
-    logger_str_to_level(env_str("PARSER_LOG_LEVEL", "none"))
-  );
+  f->scan_logger = logger_create("Scanner", stderr, cs->options.scanner_log_level);
+  f->parse_logger = logger_create("Parser", stderr, cs->options.parser_log_level);
 
   flex_enter_context(f, 0);
-
-  cs = compiler_state;
 }
 
 void fe_shutdown() {
@@ -218,8 +210,8 @@ static CompilationStatus _next() {
 }
 
 CompilationStatus fe_parse() {
-  CompilationStatus status = IN_PROGRESS;
-  while (status == IN_PROGRESS) status = _next();
+  CompilationStatus status = STATUS_IN_PROGRESS;
+  while (status == STATUS_IN_PROGRESS) status = _next();
 
   return status;
 }

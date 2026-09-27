@@ -7,5 +7,6 @@
 #define new_array(T, n) calloc(n, sizeof(T))
 
 #define map(x, f) ((x) ? f((x)) : NULL)
+#define or_default(x, d) ((x) ? (x) : (d))
 
 #endif
