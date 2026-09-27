@@ -6,3 +6,8 @@ foo : = 5 + 8
 foo := 5 + 8 // Equivalent
 
 foo: bool = bar.baz[2] > 5
+
+// Multi declaration
+foo, bar := [5, 8]
+
+head, tail: string = some_array[0, 1..]

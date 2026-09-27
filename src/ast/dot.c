@@ -376,10 +376,13 @@ static void dot_expr(Expr *expr, u64 pid) {
 
 static void dot_decl(DeclarationStmt *decl, u64 pid) {
   u64 id = next_id();
-  char label[256];
-  snprintf(label, 256, "Declaration\\n%s", decl->left->lexeme);
-  _node(id, label, NODE_STMT);
+  str label = str_format("Declaration\\n%s", decl->left[0]->lexeme);
+  for (u32 i = 1; i < decl->left_count; i++) str_append_temp(&label, str_format(", %s", decl->left[i]->lexeme));
+  char *clabel = str_to_cstring(label);
+  _node(id, clabel, NODE_STMT);
   _edge(pid, id);
+  free(clabel);
+  str_free(label);
   if (decl->type) dot_type(decl->type, id);
   dot_expr(decl->right, id);
 }

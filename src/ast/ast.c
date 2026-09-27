@@ -65,9 +65,22 @@ Stmt *f_name(T *p_name) {                         \
 }                                                 \
 
 AST_STMT_FUNC(ast_stmt_expr, Expr, STMT_EXPR, expr)
-AST_STMT_FUNC(ast_stmt_decl, DeclarationStmt, STMT_DECLARATION, decl)
 AST_STMT_FUNC(ast_stmt_alias, TypeAliasStmt, STMT_TYPE_ALIAS, type_alias)
 AST_STMT_FUNC(ast_stmt_function_def, FunctionDef, STMT_FUNCTION_DEF, function_def)
+
+Stmt *ast_stmt_decl(PartialDeclarationStmt *pdecl) {
+  DeclarationStmt *decl = new(DeclarationStmt);
+  *decl = (DeclarationStmt){ .type = pdecl->type, .right = pdecl->right };
+  ast_consume_identifier_list(pdecl->left, &decl->left, &decl->left_count);
+  free(pdecl);
+
+  Stmt *stmt = new(Stmt);
+  *stmt = (Stmt){
+    .type = STMT_DECLARATION,
+    .decl = decl,
+  };
+  return stmt;
+}
 
 Stmt *ast_stmt_error() {
   Stmt *stmt = new(Stmt);
@@ -77,10 +90,10 @@ Stmt *ast_stmt_error() {
 
 // -----------------------------------------------------------------------------
 
-DeclarationStmt *ast_declaration(Identifier *id, Type *type, Expr *expr) {
-  DeclarationStmt *decl = new(DeclarationStmt);
-  *decl = (DeclarationStmt){
-    .left = id,
+PartialDeclarationStmt *ast_declaration(IdentifierList *ids, Type *type, Expr *expr) {
+  PartialDeclarationStmt *decl = new(PartialDeclarationStmt);
+  *decl = (PartialDeclarationStmt){
+    .left = ids,
     .right = expr,
     .type = type,
   };
@@ -524,7 +537,19 @@ void ast_free_stmt(Stmt *stmt) {
 void ast_free_decl(DeclarationStmt *decl) {
   if (!decl) return;
 
-  ast_free_identifier(decl->left);
+  for (u32 i = 0; i < decl->left_count; i++) {
+    ast_free_identifier(decl->left[i]);
+  }
+  free(decl->left);
+  ast_free_expr(decl->right);
+  ast_free_type(decl->type);
+  free(decl);
+}
+
+void ast_free_partial_decl(PartialDeclarationStmt *decl) {
+  if (!decl) return;
+
+  ast_free_identifier_list(decl->left, true);
   ast_free_expr(decl->right);
   ast_free_type(decl->type);
   free(decl);

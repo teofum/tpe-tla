@@ -16,7 +16,7 @@ Stmt *parse_expr_stmt(Expr *expr) {
   return ast_stmt_expr(expr);
 }
 
-Stmt *parse_declaration_stmt(DeclarationStmt *decl) {
+Stmt *parse_declaration_stmt(PartialDeclarationStmt *decl) {
   fe_parser_log(LOG_DEBUG, "Declaration Stmt");
   return ast_stmt_decl(decl);
 }
@@ -36,9 +36,32 @@ Stmt *parse_error_stmt() {
   return ast_stmt_error();
 }
 
-DeclarationStmt *parse_declaration(Identifier *left, Type *type, Expr *right) {
+PartialDeclarationStmt *parse_declaration(Identifier *left, Type *type, Expr *right) {
   fe_parser_log(LOG_DEBUG, "Declaration for %s", left->lexeme);
-  return ast_declaration(left, type, right);
+
+  IdentifierList *ids = new(IdentifierList);
+  *ids = (IdentifierList){ .len = 1, .head = left, .tail = NULL };
+  return ast_declaration(ids, type, right);
+}
+
+PartialDeclarationStmt *parse_declaration_decomp(Identifier *left, PartialDeclarationStmt *base) {
+  fe_parser_log(LOG_DEBUG, "Declaration for %s", left->lexeme);
+
+  Type *type = base->type;
+  Expr *right = base->right;
+  IdentifierList *ids = base->left;
+  free(base);
+
+  IdentifierList *last = ids;
+  while (last->tail) {
+    last->len += 1;
+    last = last->tail;
+  }
+  last->len = 2;
+  last->tail = new(IdentifierList);
+  *last->tail = (IdentifierList){ .len = 1, .head = left, .tail = NULL };
+
+  return ast_declaration(ids, type, right);
 }
 
 TypeAliasStmt *parse_type_alias(Identifier *left, Type *right) {

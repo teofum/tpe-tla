@@ -31,7 +31,7 @@ static void yyerror(YYLTYPE *location, const char *message) {
 	BooleanLiteral *boolean;
 
 	Stmt *statement;
-  DeclarationStmt *declaration;
+  PartialDeclarationStmt *declaration;
   TypeAliasStmt *type_alias;
 
 	Expr *expression;
@@ -85,7 +85,7 @@ static void yyerror(YYLTYPE *location, const char *message) {
 %destructor { ast_free_if($$); } <if_expr>
 %destructor { ast_free_for($$); } <for_expr>
 %destructor { ast_free_block($$); } <block>
-%destructor { ast_free_decl($$); } <declaration>
+%destructor { ast_free_partial_decl($$); } <declaration>
 %destructor { ast_free_alias($$); } <type_alias>
 %destructor { ast_free_type($$); } <type>
 %destructor { ast_free_function_def($$); } <function_def>
@@ -267,6 +267,7 @@ statement: expression                                               { $$ = parse
 
 declaration: IDENTIFIER COLON type EQUAL expression                 { $$ = parse_declaration($1, $3, $5); }
   | IDENTIFIER COLON EQUAL expression                               { $$ = parse_declaration($1, NULL, $4); }
+  | IDENTIFIER COMMA declaration                                    { $$ = parse_declaration_decomp($1, $3); }
   ;
 
 type_alias: IDENTIFIER IS type                                      { $$ = parse_type_alias($1, $3); }

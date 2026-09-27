@@ -95,6 +95,7 @@ typedef TokenMeta Identifier;
 
 typedef struct Stmt Stmt;
 typedef struct DeclarationStmt DeclarationStmt;
+typedef struct PartialDeclarationStmt PartialDeclarationStmt;
 typedef struct TypeAliasStmt TypeAliasStmt;
 
 typedef struct Expr Expr;
@@ -167,7 +168,14 @@ struct Stmt {
 };
 
 struct DeclarationStmt {
-  Identifier *left;
+  u32 left_count;
+  Identifier **left;
+  Expr *right;
+  Type *type;
+};
+
+struct PartialDeclarationStmt {
+  IdentifierList *left;
   Expr *right;
   Type *type;
 };
@@ -446,12 +454,12 @@ extern const char *TOKEN_LABEL_STR[];
 extern const char *TOKEN_LEXEME[];
 
 Stmt *ast_stmt_expr(Expr *expr);
-Stmt *ast_stmt_decl(DeclarationStmt *decl);
+Stmt *ast_stmt_decl(PartialDeclarationStmt *decl);
 Stmt *ast_stmt_alias(TypeAliasStmt *alias);
 Stmt *ast_stmt_function_def(FunctionDef *function);
 Stmt *ast_stmt_error();
 
-DeclarationStmt *ast_declaration(Identifier *id, Type *type, Expr *expr);
+PartialDeclarationStmt *ast_declaration(IdentifierList *ids, Type *type, Expr *expr);
 TypeAliasStmt *ast_type_alias(Identifier *id, Type *type);
 
 Expr *ast_expr_literal(LiteralExpr *literal);
@@ -516,6 +524,7 @@ Program *ast_program(StmtList *statements);
 
 void ast_free_stmt(Stmt *stmt);
 void ast_free_decl(DeclarationStmt *decl);
+void ast_free_partial_decl(PartialDeclarationStmt *decl);
 void ast_free_alias(TypeAliasStmt *alias);
 
 void ast_free_expr(Expr *expr);

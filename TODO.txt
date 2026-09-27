@@ -73,13 +73,12 @@
   [x] Unary expressions
   [x] Binary expressions
   [x] Assignment expressions
-    [ ] Tuple/List decomposition (x, y = some_list)
-    [ ] Partial list decomposition (head, ...tail = list)
-    [ ] MAYBE: Multiple assignment (x, y = 6, 7)
   [x] Declaration expressions
-    [ ] Tuple/List decomposition (x, y := some_list)
-    [ ] Partial list decomposition (head, ...tail := list)
-    [ ] MAYBE: Multiple assignment (x, y := 6, 7)
+    [x] Tuple/List decomposition (x, y := some_list)
+    [-] Partial list decomposition (head, ...tail := list)
+      - Redundant: can just use slicing instead (head, tail := list[0, 1..])
+    [-] MAYBE: Multiple declaration (x, y := 6, 7)
+      - Redundant: can just decompose a tuple (x, y := [6, 7])
   [x] If expressions
   [x] For expressions
   [x] Block expressions
