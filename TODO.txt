@@ -21,6 +21,10 @@
     [x] Import type errors
   [ ] Error output on gate
 
+[ ] Read environment variables for log levels
+[ ] FUTURE: log to files, read environment variables for paths
+[ ] Read input from file/directory, rather than stdin
+
 #=== Frontend =================================================================#
 
 [x] Project structure and build

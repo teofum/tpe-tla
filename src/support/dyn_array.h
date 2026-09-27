@@ -3,18 +3,22 @@
 
 #include <support/types.h>
 
-typedef void (*destructor_t)(void *);
+typedef void (*destructor_t)(void **);
 
 typedef struct dyn_array dyn_array;
 
 #define new_dyn_array(T) dyn_array_create(sizeof(T), NULL)
 #define new_dyn_array_d(T, destructor) dyn_array_create(sizeof(T), (destructor_t)destructor)
 
+#define for_each(T, it_name, da) \
+for (T *it_name = dyn_array_get(da, 0); it_name != NULL; it_name = dyn_array_next(da, it_name))
+
 dyn_array *dyn_array_create(usize el_size, destructor_t destructor);
 void dyn_array_free(dyn_array *da);
 
 void dyn_array_push(dyn_array *da, void *v);
 void *dyn_array_get(dyn_array *da, usize i);
+void *dyn_array_next(dyn_array *da, void *v);
 
 void dyn_array_remove(dyn_array *da, usize i);
 void dyn_array_remove_unordered(dyn_array *da, usize i);

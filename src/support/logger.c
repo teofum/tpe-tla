@@ -7,28 +7,30 @@
 
 #include "logger.h"
 
-#define FATAL_COLOR "\033[0;31m"
+#define FATAL_COLOR "\033[1;31m"
 #define ERROR_COLOR "\033[1;31m"
 #define WARNING_COLOR "\033[0;33m"
 #define INFO_COLOR "\033[0;34m"
 #define VERBOSE_COLOR "\033[0m"
 #define DEBUG_COLOR "\033[0;35m"
-#define RESET "\033[0m"
+
+static LoggerFlags default_flags = LOGGER_LOG_NAME | LOGGER_LOG_LEVEL;
 
 struct Logger {
   char *name;
   FILE *out_file;
   LogLevel level;
+  LoggerFlags flags;
 };
 
 static const char *log_level_str[] = {
   [LOG_ALL] = "",
-  [LOG_DEBUG] = "[" DEBUG_COLOR "DEBUG" RESET "]",
-  [LOG_VERBOSE] = "[" VERBOSE_COLOR "VERBOSE" RESET "]",
-  [LOG_INFO] = "[" INFO_COLOR "INFO" RESET "]",
-  [LOG_WARNING] = "[" WARNING_COLOR "WARNING" RESET "]",
-  [LOG_ERROR] = "[" ERROR_COLOR "ERROR" RESET "]",
-  [LOG_FATAL] = "[" FATAL_COLOR "FATAL" RESET "]",
+  [LOG_DEBUG] = "[" DEBUG_COLOR "DEBUG" RESET "] ",
+  [LOG_VERBOSE] = "[" VERBOSE_COLOR "VERBOSE" RESET "] ",
+  [LOG_INFO] = "[" INFO_COLOR "INFO" RESET "] ",
+  [LOG_WARNING] = "[" WARNING_COLOR "WARNING" RESET "] ",
+  [LOG_ERROR] = "[" ERROR_COLOR "ERROR" RESET "] ",
+  [LOG_FATAL] = "[" FATAL_COLOR "FATAL" RESET "] ",
 };
 
 Logger *logger_create(const char *name, FILE *out_file, LogLevel level) {
@@ -37,6 +39,7 @@ Logger *logger_create(const char *name, FILE *out_file, LogLevel level) {
     .name = malloc(1 + strlen(name)),
     .out_file = out_file,
     .level = level,
+    .flags = default_flags,
   };
   strcpy(logger->name, name);
 
@@ -50,11 +53,24 @@ void logger_free(Logger *logger) {
   free(logger);
 }
 
+void logger_set_flags(Logger *logger, LoggerFlags flags, bool active) {
+  if (active) {
+    logger->flags |= flags;
+  } else {
+    logger->flags &= ~flags;
+  }
+}
+
 void logger_logv(Logger *logger, LogLevel level, const char *format, va_list args) {
   if (level < logger->level) return;
 
   char *log_fmt = malloc(21 + 2 + strlen(logger->name) + strlen(format));
-  sprintf(log_fmt, "[%s]%s %s\n", logger->name, log_level_str[level], format);
+  bool log_level = logger->flags & LOGGER_LOG_LEVEL;
+  if (logger->flags & LOGGER_LOG_NAME) {
+    sprintf(log_fmt, "[%s]%s%s\n", logger->name, log_level ? log_level_str[level] : "", format);
+  } else {
+    sprintf(log_fmt, "%s%s\n", log_level ? log_level_str[level] : "", format);
+  }
   vfprintf(logger->out_file, log_fmt, args);
   free(log_fmt);
 }
