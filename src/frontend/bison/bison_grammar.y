@@ -118,6 +118,7 @@ static void yyerror(YYLTYPE *location, const char *message) {
 %token <token>    COMMA             "','"
 %token <token>    DOT               "'.'"
 %token <token>    DOT_DOT           "'..'"
+%token <token>    DOT_DOT_EQUAL     "'..='"
 %token <token>    MINUS             "'-'"
 %token <token>    PLUS              "'+'"
 %token <token>    STAR              "'*'"
@@ -225,6 +226,7 @@ static void yyerror(YYLTYPE *location, const char *message) {
 
 %left NL
 %left COMMA
+%left COLON
 %left FOR IN
 %left IF
 %left ELSE
@@ -239,7 +241,7 @@ static void yyerror(YYLTYPE *location, const char *message) {
 %nonassoc GREATER_EQUAL LESS_EQUAL GREATER LESS
 %left PLUS MINUS
 %left STAR SLASH
-%left DOT_DOT
+%nonassoc DOT_DOT DOT_DOT_EQUAL
 %left BANG
 %left DOT
 
@@ -351,7 +353,11 @@ enum_literal: IDENTIFIER COLON_COLON IDENTIFIER                     { $$ = parse
   ;
 
 range_literal: range_value DOT_DOT range_value                      { $$ = parse_range_literal($1, $3, false); }
-  | range_value DOT_DOT EQUAL range_value                           { $$ = parse_range_literal($1, $4, true); }
+  | range_value DOT_DOT_EQUAL range_value                           { $$ = parse_range_literal($1, $3, true); }
+  | range_value DOT_DOT                                             { $$ = parse_range_literal($1, NULL, false); }
+  | DOT_DOT range_value                                             { $$ = parse_range_literal(NULL, $2, false); }
+  | DOT_DOT_EQUAL range_value                                       { $$ = parse_range_literal(NULL, $2, true); }
+  | DOT_DOT                                                         { $$ = parse_range_literal(NULL, NULL, false); }
   ;
 
 range_value: INTEGER                                                { $$ = parse_range_value_int($1); }

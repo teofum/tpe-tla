@@ -67,7 +67,8 @@
     [x] Struct members
     [x] List/tuple/map access
       [x] Multiple access (foo[0, 2, 5])
-      [ ] Slices (foo[:8])
+      [x] Slices (foo[:8])
+        - Implemented as indexing by range, allow incomplete range expressions
   [x] Grouping expressions (parentheses)
   [x] Unary expressions
   [x] Binary expressions

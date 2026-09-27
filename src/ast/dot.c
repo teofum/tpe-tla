@@ -215,8 +215,8 @@ static void dot_literal(LiteralExpr *literal, u64 pid) {
     case L_RANGE:
       label = new_array(char, 256);
       snprintf(label, 256, literal->range->inclusive ? "Inclusive range" : "Range");
-      dot_expr(literal->range->start, id);
-      dot_expr(literal->range->end, id);
+      if (literal->range->start) dot_expr(literal->range->start, id);
+      if (literal->range->end) dot_expr(literal->range->end, id);
       break;
   }
 

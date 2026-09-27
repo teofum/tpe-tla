@@ -20,3 +20,14 @@ foo[1]
 
 // Multiple list access
 foo[0, 2, 5 + bar]
+
+// List slices: index by a range expression
+foo[0..5]
+
+// Incomplete range expressions are allowed
+foo[2..]
+foo[..15]
+foo[..]
+
+// Multi-slicing
+foo[..8, 10..15, 24..]
