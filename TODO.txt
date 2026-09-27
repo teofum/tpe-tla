@@ -14,16 +14,20 @@
 
 #=== General ==================================================================#
 
-[ ] Error handling: structured reporting of errors
+[x] Error handling: structured reporting of errors
   [x] Error handling service
   [x] Error gates
   [x] Syntax errors
     [x] Import type errors
-  [ ] Error output on gate
+  [x] Error output on gate
 
-[ ] Read environment variables for log levels
-[ ] FUTURE: log to files, read environment variables for paths
+[x] Read environment variables for log levels
+[x] Read environment variable for AST debug view
+[ ] Read and parse command line options
 [ ] Read input from file/directory, rather than stdin
+[ ] FUTURE: log to files, read environment variables for paths
+
+[ ] Improve and update README.md
 
 #=== Frontend =================================================================#
 
