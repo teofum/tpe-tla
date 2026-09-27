@@ -31,6 +31,18 @@ static const char *log_level_str[] = {
   [LOG_WARNING] = "[" WARNING_COLOR "WARNING" RESET "] ",
   [LOG_ERROR] = "[" ERROR_COLOR "ERROR" RESET "] ",
   [LOG_FATAL] = "[" FATAL_COLOR "FATAL" RESET "] ",
+  [LOG_NONE] = "",
+};
+
+static const char *log_level_name[] = {
+  [LOG_ALL] = "all",
+  [LOG_DEBUG] = "debug",
+  [LOG_VERBOSE] = "verbose",
+  [LOG_INFO] = "info",
+  [LOG_WARNING] = "warning",
+  [LOG_ERROR] = "error",
+  [LOG_FATAL] = "fatal",
+  [LOG_NONE] = "none",
 };
 
 Logger *logger_create(const char *name, FILE *out_file, LogLevel level) {
@@ -62,7 +74,7 @@ void logger_set_flags(Logger *logger, LoggerFlags flags, bool active) {
 }
 
 void logger_logv(Logger *logger, LogLevel level, const char *format, va_list args) {
-  if (level < logger->level) return;
+  if (level > logger->level) return;
 
   char *log_fmt = malloc(21 + 2 + strlen(logger->name) + strlen(format));
   bool log_level = logger->flags & LOGGER_LOG_LEVEL;
@@ -80,4 +92,14 @@ void logger_log(Logger *logger, LogLevel level, const char *const format, ...) {
   va_start(args, format);
   logger_logv(logger, level, format, args);
   va_end(args);
+}
+
+LogLevel logger_str_to_level(const char *level_str) {
+  if (!level_str) return LOG_INFO; // Default to info
+
+  for (LogLevel l = LOG_NONE; l < LOG_ALL; l++) {
+    if (strcasecmp(level_str, log_level_name[l]) == 0) return l;
+  }
+
+  return LOG_INFO;
 }

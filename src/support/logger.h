@@ -23,13 +23,14 @@
 #define BW "\033[97m"
 
 typedef enum {
-  LOG_ALL,
-  LOG_DEBUG,
-  LOG_VERBOSE,
-  LOG_INFO,
-  LOG_WARNING,
-  LOG_ERROR,
+  LOG_NONE,
   LOG_FATAL,
+  LOG_ERROR,
+  LOG_WARNING,
+  LOG_INFO,
+  LOG_VERBOSE,
+  LOG_DEBUG,
+  LOG_ALL,
 } LogLevel;
 
 typedef enum {
@@ -47,5 +48,7 @@ void logger_set_flags(Logger *logger, LoggerFlags flags, bool active);
 
 void logger_logv(Logger *logger, LogLevel level, const char *const format, va_list args);
 void logger_log(Logger *logger, LogLevel level, const char *const format, ...);
+
+LogLevel logger_str_to_level(const char *level_str);
 
 #endif

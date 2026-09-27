@@ -8,6 +8,7 @@
 #include <error/error.h>
 #include <frontend/bison/bison_parser.h>
 #include <frontend/flex/flex_scanner.h>
+#include <support/env.h>
 #include <support/types.h>
 #include <support/util.h>
 #include <support/logger.h>
@@ -20,8 +21,16 @@ void fe_init(CompilerState *compiler_state) {
   yylex_init(&f->scanner);
   f->parser = yypstate_new();
   f->location = new(YYLTYPE);
-  f->scan_logger = logger_create("Scanner", stderr, LOG_ALL);
-  f->parse_logger = logger_create("Parser", stderr, LOG_ALL);
+  f->scan_logger = logger_create(
+    "Scanner",
+    stderr,
+    logger_str_to_level(env_str("SCANNER_LOG_LEVEL", "none"))
+  );
+  f->parse_logger = logger_create(
+    "Parser",
+    stderr,
+    logger_str_to_level(env_str("PARSER_LOG_LEVEL", "none"))
+  );
 
   flex_enter_context(f, 0);
 
