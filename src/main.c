@@ -11,6 +11,11 @@
 
 i32 main(i32 argc, char *const*argv) {
   CompilerOptions opts = options(argc, argv);
+  if (opts.task == TASK_HELP) {
+    printf("TODO: helpful text :)\n");
+    return 0;
+  }
+
   CompilerState cs = {
     .options = opts,
     .status = STATUS_NOT_STARTED,
