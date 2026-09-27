@@ -230,12 +230,10 @@ VariableExpr *ast_variable_struct_member(VariableExpr *struct_expr, Identifier *
   return var;
 }
 
-VariableExpr *ast_variable_indexed(VariableExpr *container, Expr *index) {
+VariableExpr *ast_variable_indexed(VariableExpr *container, ExprList *indices) {
   IndexedVariable *idx_var = new(IndexedVariable);
-  *idx_var = (IndexedVariable){
-    .container = container,
-    .index = index,
-  };
+  *idx_var = (IndexedVariable){ .container = container };
+  ast_consume_expr_list(indices, &idx_var->indices, &idx_var->index_count);
 
   VariableExpr *var = new(VariableExpr);
   *var = (VariableExpr){
@@ -771,7 +769,10 @@ void ast_free_indexed_variable(IndexedVariable *v) {
   if (!v) return;
 
   ast_free_variable(v->container);
-  ast_free_expr(v->index);
+  for (u32 i = 0; i < v->index_count; i++) {
+    ast_free_expr(v->indices[i]);
+  }
+  free(v->indices);
   free(v);
 }
 

@@ -36,6 +36,7 @@
 [x] Bison setup
 [x] Logging
 [x] AST debugging with graphviz
+[ ] Location tracking up to AST nodes
 
 /--- Scanner ------------------------------------------------------------------/
 [x] Simple tokens (operators, keywords)
@@ -65,7 +66,7 @@
     [x] Named variables (identifiers)
     [x] Struct members
     [x] List/tuple/map access
-      [ ] Multiple access (foo[0, 2, 5])
+      [x] Multiple access (foo[0, 2, 5])
       [ ] Slices (foo[:8])
   [x] Grouping expressions (parentheses)
   [x] Unary expressions

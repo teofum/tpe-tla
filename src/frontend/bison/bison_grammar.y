@@ -365,7 +365,7 @@ variable: IDENTIFIER                                                { $$ = parse
   | indexed_variable
   ;
 
-indexed_variable: variable SQUARE_L expression SQUARE_R             { $$ = parse_indexed_variable($1, $3); }
+indexed_variable: variable SQUARE_L nl expression_list nl SQUARE_R  { $$ = parse_indexed_variable($1, $4); }
   ;
 
 unary: BANG expression                                              { $$ = parse_unary($1, $2); }

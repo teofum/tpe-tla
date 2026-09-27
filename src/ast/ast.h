@@ -353,7 +353,8 @@ struct StructMemberVariable {
 
 struct IndexedVariable {
   VariableExpr *container;
-  Expr *index;
+  u32 index_count;
+  Expr **indices;
 };
 
 // -----------------------------------------------------------------------------
@@ -479,7 +480,7 @@ LiteralExpr *ast_nil_literal();
 
 VariableExpr *ast_variable_named(Identifier *id);
 VariableExpr *ast_variable_struct_member(VariableExpr *struct_expr, Identifier *id);
-VariableExpr *ast_variable_indexed(VariableExpr *container, Expr *index);
+VariableExpr *ast_variable_indexed(VariableExpr *container, ExprList *indices);
 
 UnaryExpr *ast_unary(TokenLabel op, Expr *expr);
 BinaryExpr *ast_binary(Expr *left, TokenLabel op, Expr *right);

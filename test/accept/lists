@@ -14,3 +14,9 @@ foo: int[][] = [
     n * n
   }
 ]
+
+// Simple list access
+foo[1]
+
+// Multiple list access
+foo[0, 2, 5 + bar]

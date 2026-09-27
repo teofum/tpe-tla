@@ -43,7 +43,7 @@ Expr *parse_range_value_group(GroupExpr *group);
 
 VariableExpr *parse_named_variable(Identifier *id);
 VariableExpr *parse_struct_member_variable(VariableExpr *struct_expr, IdentifierList *ids);
-VariableExpr *parse_indexed_variable(VariableExpr *container, Expr *index);
+VariableExpr *parse_indexed_variable(VariableExpr *container, ExprList *indices);
 
 UnaryExpr *parse_unary(TokenLabel op, Expr *expr);
 BinaryExpr *parse_binary(Expr *left, TokenLabel op, Expr *right);

@@ -243,7 +243,9 @@ static void dot_variable(VariableExpr *var, u64 pid) {
       label = new_array(char, 6);
       snprintf(label, 6, "Index");
       dot_variable(var->indexed->container, id);
-      dot_expr(var->indexed->index, id);
+      for (u32 i = 0; i < var->indexed->index_count; i++) {
+        dot_expr(var->indexed->indices[i], id);
+      }
       break;
   }
 

@@ -160,9 +160,9 @@ VariableExpr *parse_struct_member_variable(VariableExpr *struct_expr, Identifier
   return ast_variable_struct_member(struct_expr, id);
 }
 
-VariableExpr *parse_indexed_variable(VariableExpr *container, Expr *index) {
+VariableExpr *parse_indexed_variable(VariableExpr *container, ExprList *indices) {
   fe_parser_log(LOG_DEBUG, "Indexed variable");
-  return ast_variable_indexed(container, index);
+  return ast_variable_indexed(container, indices);
 }
 
 // -----------------------------------------------------------------------------
