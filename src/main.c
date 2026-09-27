@@ -21,6 +21,7 @@ i32 main(i32 argc, char *const*argv) {
     .status = STATUS_NOT_STARTED,
     .ast = NULL,
     .logger = logger_create("Main", stdout, opts.log_level),
+    .current_filepath = NULL,
   };
   logger_set_flags(cs.logger, LOGGER_LOG_NAME, false);
 
@@ -29,11 +30,10 @@ i32 main(i32 argc, char *const*argv) {
   fe_init(&cs);
 
   // Run parser
-  cs.status = fe_parse();
-  fe_parser_log(LOG_INFO, "Parsing done");
+  cs.status = fe_parse(cs.options.input_filename);
 
   // AST graphviz output for debugging
-  if (cs.options.emit_ast_dot) {
+  if (cs.options.emit_ast_dot && cs.status == STATUS_SUCCEEDED) {
     FILE *dot_output = fopen(cs.options.ast_dot_filename, "w");
     ast_generate_dot(cs.ast, dot_output);
     fclose(dot_output);

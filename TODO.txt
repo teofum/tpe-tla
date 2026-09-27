@@ -24,7 +24,7 @@
 [x] Read environment variables for log levels
 [x] Read environment variable for AST debug view
 [x] Read and parse command line options
-[ ] Read input from file/directory, rather than stdin
+[x] Read input from file/directory, rather than stdin
 [ ] FUTURE: log to files, read environment variables for paths
 
 [ ] Improve and update README.md

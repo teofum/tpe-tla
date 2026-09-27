@@ -33,6 +33,6 @@ test: .build/Flex-Bison-Compiler
 	docker compose run -q --rm compiler .script/test.sh
 
 run: .build/Flex-Bison-Compiler
-	docker compose run -q --rm compiler .script/run.sh $(src) -h
+	docker compose run -q --rm compiler .script/run.sh $(src)
 
 .PHONY: clean clean-build configure test

@@ -44,7 +44,7 @@ void fe_leave_context();
 
 void fe_set_ast(Program *ast);
 
-CompilationStatus fe_parse();
+CompilationStatus fe_parse(const char *filepath);
 
 void fe_scanner_log(LogLevel level, const char *const format, ...);
 void fe_parser_log(LogLevel level, const char *const format, ...);

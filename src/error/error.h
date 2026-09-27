@@ -26,6 +26,7 @@ typedef struct {
   ErrorLevel level;
   CompilationStage stage;
   Location loc;
+  const char *filepath;
 
   union {
     SyntaxError *syntax;

@@ -49,7 +49,8 @@ void err_report_syntax(SyntaxError *s, Location *location, ErrorLevel level) {
     .stage = CS_PARSE,
     .level = level,
     .syntax = s,
-    .loc = *location
+    .loc = *location,
+    .filepath = cs->current_filepath,
   };
   dyn_array_push(e->errors, &error);
 }
@@ -60,7 +61,8 @@ void err_report_import_type(ImportTypeError *i, Location *location, ErrorLevel l
     .stage = CS_PARSE,
     .level = level,
     .import_type = i,
-    .loc = *location
+    .loc = *location,
+    .filepath = cs->current_filepath,
   };
   dyn_array_push(e->errors, &error);
 }
@@ -92,7 +94,7 @@ static void _log_syntax_error(Error *error) {
 
   _log(error,
     FMT_LOCATION "%.*s",
-    "<input>", error->loc.first_line, error->loc.first_column,
+    error->filepath, error->loc.first_line, error->loc.first_column,
     error_str.len, error_str.ptr
   );
   str_free(error_str);
@@ -109,7 +111,7 @@ static void _log_import_type_error(Error *error) {
   _log(error,
     FMT_LOCATION "unrecognized import type \"%s\""
       INDENTED_NL "Accepted import types are: %.*s",
-    "<input>", error->loc.first_line, error->loc.first_column,
+    error->filepath, error->loc.first_line, error->loc.first_column,
     it->type, accepted.len, accepted.ptr
   );
   str_free(accepted);
@@ -132,7 +134,7 @@ bool err_gate() {
 
   if (errors > 0) {
     logger_log(e->logger, LOG_FATAL,
-      R "Found %u error%s; compilation stopped." RESET,
+      R "Found %u error%s; stopped." RESET,
       errors, errors > 1 ? "s" : ""
     );
   }

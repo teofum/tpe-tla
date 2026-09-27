@@ -13,6 +13,7 @@ static CompilerOptions _options_default() {
   return (CompilerOptions){
     .task = TASK_COMPILE,
     .log_level = LOG_INFO,
+    .input_filename = NULL,
 
     .emit_ast_dot = false,
     .ast_dot_filename = "ast.gv",
@@ -67,6 +68,12 @@ static void _options_cli_args(CompilerOptions *options, i32 argc, char *const*ar
         if (optarg) options->ast_dot_filename = strdup(optarg);
         break;
     }
+  }
+
+  if (optind >= argc) {
+    fprintf(stderr, "Expected input file after options\n");
+  } else {
+    options->input_filename = argv[optind];
   }
 }
 

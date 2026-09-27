@@ -1,6 +1,5 @@
 #!/opt/homebrew/bin/fish
 
-set -l file $argv[1]
-make run src=test/$file
+docker compose run -q --rm compiler .script/run.sh $argv
 dot -Tpng ast.gv -o ast.png
 open ast.png

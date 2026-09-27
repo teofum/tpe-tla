@@ -11,6 +11,7 @@ typedef struct {
   CompilationStatus status;
   Program *ast;
   Logger *logger;
+  const char *current_filepath;
 } CompilerState;
 
 #endif

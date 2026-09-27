@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -209,10 +210,37 @@ static CompilationStatus _next() {
   return yylex(NULL, f->location, f->scanner);
 }
 
-CompilationStatus fe_parse() {
+// TODO move error handling to the error module
+CompilationStatus fe_parse(const char *filepath) {
+  if (!filepath) {
+    logger_log(cs->logger, LOG_FATAL, "No input file");
+    return STATUS_FAILED;
+  }
+
+  logger_log(cs->logger, LOG_VERBOSE, "%s", filepath);
+  FILE *file = fopen(filepath, "r");
+  if (!file) {
+    switch (errno) {
+      case EACCES:
+        logger_log(cs->logger, LOG_FATAL, "Unable to open %s: permission denied", filepath);
+        break;
+      case ENOENT: case ENOTDIR:
+        logger_log(cs->logger, LOG_FATAL, "Unable to open %s: file not found", filepath);
+        break;
+      default:
+        break;
+    }
+
+    return STATUS_FAILED;
+  }
+
+  cs->current_filepath = filepath;
+  yyset_in(file, f->scanner);
+
   CompilationStatus status = STATUS_IN_PROGRESS;
   while (status == STATUS_IN_PROGRESS) status = _next();
 
+  cs->current_filepath = NULL;
   return status;
 }
 
