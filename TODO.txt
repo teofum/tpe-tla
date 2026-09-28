@@ -36,7 +36,7 @@
 [x] Bison setup
 [x] Logging
 [x] AST debugging with graphviz
-[ ] Location tracking up to AST nodes
+[x] Location tracking up to AST nodes
 
 /--- Scanner ------------------------------------------------------------------/
 [x] Simple tokens (operators, keywords)
@@ -100,6 +100,7 @@
   [x] Declarations
   [x] Type aliases
   [x] Function definitions
+  [ ] Export statement/qualifier
 [x] Expression lists
 [x] Statement lists
 [x] Program
