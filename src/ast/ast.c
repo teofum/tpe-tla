@@ -12,9 +12,26 @@ const char *import_type_str[] = {
 
 // -----------------------------------------------------------------------------
 
+static Location *_next_loc = NULL;
+static u64 _next_id = 0;
+
+void ast_set_next_location(Location *loc) {
+  _next_loc = loc;
+}
+
+static ASTNodeMetadata _ast_get_metadata() {
+  return (ASTNodeMetadata){
+    .id = _next_id++,
+    .loc = *_next_loc,
+  };
+}
+
+// -----------------------------------------------------------------------------
+
 #define AST_LIST_IMPL(T, name)                                            \
 T##List *ast_##name##_list(T *head, T##List *tail) {                      \
   T##List* list = new(T##List);                                           \
+  list->meta = _ast_get_metadata();                                       \
   list->head = head;                                                      \
   if (tail) {                                                             \
     list->tail = tail;                                                    \
@@ -58,6 +75,7 @@ AST_LIST_IMPL(Argument, argument)
 Stmt *f_name(T *p_name) {                         \
   Stmt *stmt = new(Stmt);                         \
   *stmt = (Stmt){                                 \
+    .meta = _ast_get_metadata(),                  \
     .type = stmt_t,                               \
     .p_name = p_name,                             \
   };                                              \
@@ -76,6 +94,7 @@ Stmt *ast_stmt_decl(PartialDeclarationStmt *pdecl) {
 
   Stmt *stmt = new(Stmt);
   *stmt = (Stmt){
+    .meta = _ast_get_metadata(),
     .type = STMT_DECLARATION,
     .decl = decl,
   };
@@ -84,6 +103,7 @@ Stmt *ast_stmt_decl(PartialDeclarationStmt *pdecl) {
 
 Stmt *ast_stmt_error() {
   Stmt *stmt = new(Stmt);
+  stmt->meta = _ast_get_metadata();
   stmt->type = STMT_PARSE_ERROR;
   return stmt;
 }
@@ -93,6 +113,7 @@ Stmt *ast_stmt_error() {
 PartialDeclarationStmt *ast_declaration(IdentifierList *ids, Type *type, Expr *expr) {
   PartialDeclarationStmt *decl = new(PartialDeclarationStmt);
   *decl = (PartialDeclarationStmt){
+    .meta = _ast_get_metadata(),
     .left = ids,
     .right = expr,
     .type = type,
@@ -104,6 +125,7 @@ PartialDeclarationStmt *ast_declaration(IdentifierList *ids, Type *type, Expr *e
 TypeAliasStmt *ast_type_alias(Identifier *id, Type *type) {
   TypeAliasStmt *alias = new(TypeAliasStmt);
   *alias = (TypeAliasStmt){
+    .meta = _ast_get_metadata(),
     .alias = id,
     .type = type,
   };
@@ -117,6 +139,7 @@ TypeAliasStmt *ast_type_alias(Identifier *id, Type *type) {
 Expr *f_name(T *p_name) {                         \
   Expr *expr = new(Expr);                         \
   *expr = (Expr){                                 \
+    .meta = _ast_get_metadata(),                  \
     .type = expr_t,                               \
     .p_name = p_name,                             \
   };                                              \
@@ -141,6 +164,7 @@ AST_EXPR_FUNC(ast_expr_import, ImportExpr, EXPR_IMPORT, import)
 LiteralExpr *f_name(T *p_name) {                        \
   LiteralExpr *literal = new(LiteralExpr);              \
   *literal = (LiteralExpr){                             \
+    .meta = _ast_get_metadata(),                        \
     .type = literal_t,                                  \
     .p_name = p_name,                                   \
   };                                                    \
@@ -154,61 +178,102 @@ AST_LITERAL_FUNC(ast_boolean_literal, BooleanLiteral, L_BOOL, boolean)
 
 LiteralExpr *ast_nil_literal() {
   LiteralExpr *literal = new(LiteralExpr);
+  literal->meta = _ast_get_metadata();
   literal->type = L_NIL;
   return literal;
 }
 
 LiteralExpr *ast_list_literal(ExprList *exprs) {
   ListLiteral *list = new(ListLiteral);
+  list->meta = _ast_get_metadata();
   if (exprs) ast_consume_expr_list(exprs, &list->exprs, &list->len);
 
   LiteralExpr *literal = new(LiteralExpr);
-  *literal = (LiteralExpr){ .type = L_LIST, .list = list };
+  *literal = (LiteralExpr){
+    .meta = _ast_get_metadata(),
+    .type = L_LIST,
+    .list = list
+  };
   return literal;
 }
 
 LiteralExpr *ast_short_list_literal(Expr *value, Expr *count) {
   ShortListLiteral *list = new(ShortListLiteral);
-  *list = (ShortListLiteral){ .value = value, .count = count };
+  *list = (ShortListLiteral){
+    .meta = _ast_get_metadata(),
+    .value = value,
+    .count = count
+  };
 
   LiteralExpr *literal = new(LiteralExpr);
-  *literal = (LiteralExpr){ .type = L_LIST_SHORT, .short_list = list };
+  *literal = (LiteralExpr){
+    .meta = _ast_get_metadata(),
+    .type = L_LIST_SHORT,
+    .short_list = list
+  };
   return literal;
 }
 
 LiteralExpr *ast_map_literal(MapEntryList *entries) {
   MapLiteral *map = new(MapLiteral);
+  map->meta = _ast_get_metadata();
   ast_consume_map_entry_list(entries, &map->entries, &map->len);
 
   LiteralExpr *literal = new(LiteralExpr);
-  *literal = (LiteralExpr){ .type = L_MAP, .map = map };
+  *literal = (LiteralExpr){
+    .meta = _ast_get_metadata(),
+    .type = L_MAP,
+    .map = map
+  };
   return literal;
 }
 
 LiteralExpr *ast_struct_literal(StructLiteralFieldList *fields) {
   StructLiteral *struct_literal = new(StructLiteral);
+  struct_literal->meta = _ast_get_metadata();
   ast_consume_struct_literal_field_list(fields, &struct_literal->fields, &struct_literal->len);
 
   LiteralExpr *literal = new(LiteralExpr);
-  *literal = (LiteralExpr){ .type = L_STRUCT, .struct_literal = struct_literal };
+  *literal = (LiteralExpr){
+    .meta = _ast_get_metadata(),
+    .type = L_STRUCT,
+    .struct_literal = struct_literal
+  };
   return literal;
 }
 
 LiteralExpr *ast_enum_literal(Type *type, Identifier *id) {
   EnumLiteral *enum_literal = new(EnumLiteral);
-  *enum_literal = (EnumLiteral){ .type = type, .value = id };
+  *enum_literal = (EnumLiteral){
+    .meta = _ast_get_metadata(),
+    .type = type,
+    .value = id
+  };
 
   LiteralExpr *literal = new(LiteralExpr);
-  *literal = (LiteralExpr){ .type = L_ENUM, .enum_literal = enum_literal };
+  *literal = (LiteralExpr){
+    .meta = _ast_get_metadata(),
+    .type = L_ENUM,
+    .enum_literal = enum_literal
+  };
   return literal;
 }
 
 LiteralExpr *ast_range_literal(Expr *start, Expr *end, bool inclusive) {
   RangeLiteral *range = new(RangeLiteral);
-  *range = (RangeLiteral){ .start = start, .end = end, .inclusive = inclusive };
+  *range = (RangeLiteral){
+    .meta = _ast_get_metadata(),
+    .start = start,
+    .end = end,
+    .inclusive = inclusive
+  };
 
   LiteralExpr *literal = new(LiteralExpr);
-  *literal = (LiteralExpr){ .type = L_RANGE, .range = range };
+  *literal = (LiteralExpr){
+    .meta = _ast_get_metadata(),
+    .type = L_RANGE,
+    .range = range
+  };
   return literal;
 }
 
@@ -216,10 +281,14 @@ LiteralExpr *ast_range_literal(Expr *start, Expr *end, bool inclusive) {
 
 VariableExpr *ast_variable_named(Identifier *id) {
   NamedVariable *named_var = new(NamedVariable);
-  *named_var = (NamedVariable){ .name = id };
+  *named_var = (NamedVariable){
+    .meta = _ast_get_metadata(),
+    .name = id
+  };
 
   VariableExpr *var = new(VariableExpr);
   *var = (VariableExpr){
+    .meta = _ast_get_metadata(),
     .type = V_NAMED,
     .named = named_var,
   };
@@ -230,12 +299,14 @@ VariableExpr *ast_variable_named(Identifier *id) {
 VariableExpr *ast_variable_struct_member(VariableExpr *struct_expr, Identifier *id) {
   StructMemberVariable *struct_var = new(StructMemberVariable);
   *struct_var = (StructMemberVariable){
+    .meta = _ast_get_metadata(),
     .struct_expr = struct_expr,
     .name = id,
   };
 
   VariableExpr *var = new(VariableExpr);
   *var = (VariableExpr){
+    .meta = _ast_get_metadata(),
     .type = V_STRUCT_MEMBER,
     .struct_member = struct_var,
   };
@@ -245,11 +316,15 @@ VariableExpr *ast_variable_struct_member(VariableExpr *struct_expr, Identifier *
 
 VariableExpr *ast_variable_indexed(VariableExpr *container, ExprList *indices) {
   IndexedVariable *idx_var = new(IndexedVariable);
-  *idx_var = (IndexedVariable){ .container = container };
+  *idx_var = (IndexedVariable){
+    .meta = _ast_get_metadata(),
+    .container = container
+  };
   ast_consume_expr_list(indices, &idx_var->indices, &idx_var->index_count);
 
   VariableExpr *var = new(VariableExpr);
   *var = (VariableExpr){
+    .meta = _ast_get_metadata(),
     .type = V_INDEX,
     .indexed = idx_var,
   };
@@ -262,6 +337,7 @@ VariableExpr *ast_variable_indexed(VariableExpr *container, ExprList *indices) {
 UnaryExpr *ast_unary(TokenLabel op, Expr *expr) {
   UnaryExpr *unary = new(UnaryExpr);
   *unary = (UnaryExpr){
+    .meta = _ast_get_metadata(),
     .op = op,
     .expr = expr,
   };
@@ -272,6 +348,7 @@ UnaryExpr *ast_unary(TokenLabel op, Expr *expr) {
 BinaryExpr *ast_binary(Expr *left, TokenLabel op, Expr *right) {
   BinaryExpr *binary = new(BinaryExpr);
   *binary = (BinaryExpr){
+    .meta = _ast_get_metadata(),
     .left = left,
     .op = op,
     .right = right,
@@ -282,7 +359,10 @@ BinaryExpr *ast_binary(Expr *left, TokenLabel op, Expr *right) {
 
 GroupExpr *ast_group(Expr *expr) {
   GroupExpr *group = new(GroupExpr);
-  *group = (GroupExpr){ .inner_expr = expr };
+  *group = (GroupExpr){
+    .meta = _ast_get_metadata(),
+    .inner_expr = expr
+  };
 
   return group;
 }
@@ -290,6 +370,7 @@ GroupExpr *ast_group(Expr *expr) {
 AssignmentExpr *ast_assignment(VariableExpr *left, Expr *right) {
   AssignmentExpr *assign = new(AssignmentExpr);
   *assign = (AssignmentExpr){
+    .meta = _ast_get_metadata(),
     .left = left,
     .right = right,
   };
@@ -300,6 +381,7 @@ AssignmentExpr *ast_assignment(VariableExpr *left, Expr *right) {
 IfExpr *ast_if(Expr *condition, Expr *true_branch, Expr *false_branch) {
   IfExpr *if_expr = new(IfExpr);
   *if_expr = (IfExpr){
+    .meta = _ast_get_metadata(),
     .condition = condition,
     .true_branch = true_branch,
     .false_branch = false_branch,
@@ -311,6 +393,7 @@ IfExpr *ast_if(Expr *condition, Expr *true_branch, Expr *false_branch) {
 ForExpr *ast_for(Identifier *var, Identifier *idx, Expr *iterable, Expr *body) {
   ForExpr *for_expr = new(ForExpr);
   *for_expr = (ForExpr){
+    .meta = _ast_get_metadata(),
     .var_id = var,
     .idx_id = idx,
     .iterable = iterable,
@@ -322,6 +405,7 @@ ForExpr *ast_for(Identifier *var, Identifier *idx, Expr *iterable, Expr *body) {
 
 BlockExpr *ast_block(StmtList *statements) {
   BlockExpr* block = new(BlockExpr);
+  block->meta = _ast_get_metadata();
   ast_consume_stmt_list(statements, &block->statements, &block->len);
   return block;
 }
@@ -329,6 +413,7 @@ BlockExpr *ast_block(StmtList *statements) {
 FunctionCallExpr *ast_function_call(Identifier *id, ArgumentList *args, Expr *composable) {
   FunctionCallExpr *function_call = new(FunctionCallExpr);
   *function_call = (FunctionCallExpr){
+    .meta = _ast_get_metadata(),
     .name = id,
     .composable = composable,
   };
@@ -340,6 +425,7 @@ FunctionCallExpr *ast_function_call(Identifier *id, ArgumentList *args, Expr *co
 ImportExpr *ast_import(ImportType type, Type *data_type, StringLiteral *path) {
   ImportExpr *import = new(ImportExpr);
   *import = (ImportExpr){
+    .meta = _ast_get_metadata(),
     .type = type,
     .data_type = data_type,
     .path = path,
@@ -352,10 +438,17 @@ ImportExpr *ast_import(ImportType type, Type *data_type, StringLiteral *path) {
 
 Type *ast_named_type(Identifier *id) {
   NamedType *named_type = new(NamedType);
-  *named_type = (NamedType){ .name = id };
+  *named_type = (NamedType){
+    .meta = _ast_get_metadata(),
+    .name = id
+  };
 
   Type *type = new(Type);
-  *type = (Type){ .type = T_NAMED, .named = named_type };
+  *type = (Type){
+    .meta = _ast_get_metadata(),
+    .type = T_NAMED,
+    .named = named_type
+  };
 
   return type;
 }
@@ -365,7 +458,11 @@ Type *ast_list_type(Type *item_type) {
   *list = (ListType){ .item_type = item_type };
 
   Type *type = new(Type);
-  *type = (Type){ .type = T_LIST, .list = list };
+  *type = (Type){
+    .meta = _ast_get_metadata(),
+    .type = T_LIST,
+    .list = list
+  };
 
   return type;
 }
@@ -373,69 +470,105 @@ Type *ast_list_type(Type *item_type) {
 Type *ast_map_type(Type *key_type, Type *value_type) {
   MapType *map = new(MapType);
   *map = (MapType){
+    .meta = _ast_get_metadata(),
     .key_type = key_type,
     .value_type = value_type,
   };
 
   Type *type = new(Type);
-  *type = (Type){ .type = T_MAP, .map = map };
+  *type = (Type){
+    .meta = _ast_get_metadata(),
+    .type = T_MAP,
+    .map = map
+  };
 
   return type;
 }
 
 Type *ast_struct_type(StructFieldList *fields) {
   StructType *struct_type = new(StructType);
+  struct_type->meta = _ast_get_metadata();
   ast_consume_struct_field_list(fields, &struct_type->fields, &struct_type->len);
 
   Type *type = new(Type);
-  *type = (Type){ .type = T_STRUCT, .struct_type = struct_type };
+  *type = (Type){
+    .meta = _ast_get_metadata(),
+    .type = T_STRUCT,
+    .struct_type = struct_type
+  };
 
   return type;
 }
 
 Type *ast_union_type(TypeList *types) {
   UnionType *union_type = new(UnionType);
+  union_type->meta = _ast_get_metadata();
   ast_consume_type_list(types, &union_type->types, &union_type->len);
 
   Type *type = new(Type);
-  *type = (Type){ .type = T_UNION, .union_type = union_type };
+  *type = (Type){
+    .meta = _ast_get_metadata(),
+    .type = T_UNION,
+    .union_type = union_type
+  };
 
   return type;
 }
 
 Type *ast_tuple_type(TypeList *types) {
   TupleType *tuple = new(TupleType);
+  tuple->meta = _ast_get_metadata();
   ast_consume_type_list(types, &tuple->types, &tuple->len);
 
   Type *type = new(Type);
-  *type = (Type){ .type = T_TUPLE, .tuple = tuple };
+  *type = (Type){
+    .meta = _ast_get_metadata(),
+    .type = T_TUPLE,
+    .tuple = tuple
+  };
 
   return type;
 }
 
 Type *ast_short_tuple_type(Type *inner_type, Expr *count) {
   ShortTupleType *tuple = new(ShortTupleType);
-  *tuple = (ShortTupleType){ .type = inner_type, .count = count };
+  *tuple = (ShortTupleType){
+    .meta = _ast_get_metadata(),
+    .type = inner_type,
+    .count = count
+  };
 
   Type *type = new(Type);
-  *type = (Type){ .type = T_TUPLE_SHORT, .short_tuple = tuple };
+  *type = (Type){
+    .meta = _ast_get_metadata(),
+    .type = T_TUPLE_SHORT,
+    .short_tuple = tuple
+  };
 
   return type;
 }
 
 Type *ast_enum_type(IdentifierList *values) {
   EnumType *enum_type = new(EnumType);
+  enum_type->meta = _ast_get_metadata();
   ast_consume_identifier_list(values, &enum_type->values, &enum_type->len);
 
   Type *type = new(Type);
-  *type = (Type){ .type = T_ENUM, .enum_type = enum_type };
+  *type = (Type){
+    .meta = _ast_get_metadata(),
+    .type = T_ENUM,
+    .enum_type = enum_type
+  };
 
   return type;
 }
 
 Type *ast_nil_type() {
   Type *type = new(Type);
-  *type = (Type){ .type = T_NIL };
+  *type = (Type){
+    .meta = _ast_get_metadata(),
+    .type = T_NIL
+  };
 
   return type;
 }
@@ -445,6 +578,7 @@ Type *ast_nil_type() {
 FunctionDef *ast_function_def(Identifier *id, ParameterList *params, Type *return_type, BlockExpr *body) {
   FunctionDef *function = new(FunctionDef);
   *function = (FunctionDef){
+    .meta = _ast_get_metadata(),
     .name = id,
     .return_type = return_type,
     .body = body,
@@ -461,6 +595,7 @@ FunctionDef *ast_function_def(Identifier *id, ParameterList *params, Type *retur
 StructField *ast_struct_field(Identifier *id, Type *type, Expr *default_value) {
   StructField *field = new(StructField);
   *field = (StructField){
+    .meta = _ast_get_metadata(),
     .name = id,
     .type = type,
     .default_value = default_value,
@@ -472,6 +607,7 @@ StructField *ast_struct_field(Identifier *id, Type *type, Expr *default_value) {
 StructLiteralField *ast_struct_literal_field(Identifier *id, Expr *value) {
   StructLiteralField *field = new(StructLiteralField);
   *field = (StructLiteralField){
+    .meta = _ast_get_metadata(),
     .name = id,
     .value = value,
   };
@@ -482,6 +618,7 @@ StructLiteralField *ast_struct_literal_field(Identifier *id, Expr *value) {
 MapEntry *ast_map_entry(Expr *key, Expr *value) {
   MapEntry *entry = new(MapEntry);
   *entry = (MapEntry){
+    .meta = _ast_get_metadata(),
     .key = key,
     .value = value,
   };
@@ -492,6 +629,7 @@ MapEntry *ast_map_entry(Expr *key, Expr *value) {
 Parameter *ast_parameter(Identifier *id, Type *type, Expr *default_value) {
   Parameter *param = new(Parameter);
   *param = (Parameter){
+    .meta = _ast_get_metadata(),
     .name = id,
     .type = type,
     .default_value = default_value,
@@ -503,6 +641,7 @@ Parameter *ast_parameter(Identifier *id, Type *type, Expr *default_value) {
 Argument *ast_argument(Identifier *id, Expr *value) {
   Argument *arg = new(Argument);
   *arg = (Argument){
+    .meta = _ast_get_metadata(),
     .name = id,
     .value = value,
   };
@@ -514,6 +653,7 @@ Argument *ast_argument(Identifier *id, Expr *value) {
 
 Program *ast_program(StmtList *statements) {
   Program *prog = new(Program);
+  prog->meta = _ast_get_metadata();
   ast_consume_stmt_list(statements, &prog->statements, &prog->len);
   return prog;
 }
@@ -695,14 +835,14 @@ void ast_free_import(ImportExpr *import) {
 void ast_free_int_literal(IntegerLiteral *l) {
   if (!l) return;
 
-  ast_free_token(l->meta);
+  ast_free_token(l->token);
   free(l);
 }
 
 void ast_free_float_literal(FloatLiteral *l) {
   if (!l) return;
 
-  ast_free_token(l->meta);
+  ast_free_token(l->token);
   free(l);
 }
 
@@ -710,14 +850,14 @@ void ast_free_string_literal(StringLiteral *l) {
   if (!l) return;
 
   str_free(l->value);
-  ast_free_token(l->meta);
+  ast_free_token(l->token);
   free(l);
 }
 
 void ast_free_bool_literal(BooleanLiteral *l) {
   if (!l) return;
 
-  ast_free_token(l->meta);
+  ast_free_token(l->token);
   free(l);
 }
 

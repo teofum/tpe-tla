@@ -11,17 +11,17 @@ void flex_leave_context(Frontend *la);
 bool flex_has_buffer(Frontend *la);
 
 #define YY_USER_ACTION \
-    yylloc->first_line = yylloc->last_line; \
-    yylloc->first_column = yylloc->last_column; \
-    for(int i = 0; yytext[i] != '\0'; i++) { \
-        if(yytext[i] == '\n') { \
-            yylloc->last_line++; \
-            yylloc->last_column = 0; \
-        } \
-        else { \
-            yylloc->last_column++; \
-        } \
-    }
+  yylloc->first_line = yylloc->last_line; \
+  yylloc->first_column = yylloc->last_column; \
+  for(int i = 0; yytext[i] != '\0'; i++) { \
+    if(yytext[i] == '\n') { \
+      yylloc->last_line++; \
+      yylloc->last_column = 1; \
+    } \
+    else { \
+      yylloc->last_column++; \
+    } \
+  }
 
 }
 

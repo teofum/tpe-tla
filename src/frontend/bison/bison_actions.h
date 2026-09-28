@@ -87,6 +87,8 @@ Parameter *parse_parameter(Identifier *id, Type *type, Expr *default_value);
 
 Program *parse_program(StmtList *statements);
 
+// Bison hooks
 void parse_error(Location *loc, const char *message);
+void parse_set_location(Location *loc);
 
 #endif

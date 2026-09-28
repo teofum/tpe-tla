@@ -6,6 +6,7 @@
 #define AST_LIST(T, name)                                             \
 typedef struct T##List T##List;                                       \
 struct T##List {                                                      \
+  ASTNodeMetadata meta;                                               \
   u32 len;                                                            \
   T *head;                                                            \
   T##List *tail;                                                      \
@@ -91,6 +92,11 @@ typedef struct {
   u32 len;
 } TokenMeta;
 
+typedef struct {
+  u64 id;
+  Location loc;
+} ASTNodeMetadata;
+
 typedef TokenMeta Identifier;
 
 typedef struct Stmt Stmt;
@@ -158,6 +164,7 @@ AST_LIST(Argument, argument);
 // -----------------------------------------------------------------------------
 
 struct Stmt {
+  ASTNodeMetadata meta;
   StmtType type;
   union {
     Expr *expr;
@@ -168,6 +175,7 @@ struct Stmt {
 };
 
 struct DeclarationStmt {
+  ASTNodeMetadata meta;
   u32 left_count;
   Identifier **left;
   Expr *right;
@@ -175,12 +183,14 @@ struct DeclarationStmt {
 };
 
 struct PartialDeclarationStmt {
+  ASTNodeMetadata meta;
   IdentifierList *left;
   Expr *right;
   Type *type;
 };
 
 struct TypeAliasStmt {
+  ASTNodeMetadata meta;
   Identifier *alias;
   Type *type;
 };
@@ -188,6 +198,7 @@ struct TypeAliasStmt {
 // -----------------------------------------------------------------------------
 
 struct Expr {
+  ASTNodeMetadata meta;
   ExprType type;
   union {
     LiteralExpr *literal;
@@ -205,6 +216,7 @@ struct Expr {
 };
 
 struct LiteralExpr {
+  ASTNodeMetadata meta;
   LiteralType type;
   union {
     IntegerLiteral *integer;
@@ -221,6 +233,7 @@ struct LiteralExpr {
 };
 
 struct VariableExpr {
+  ASTNodeMetadata meta;
   VariableType type;
   union {
     NamedVariable *named;
@@ -230,32 +243,38 @@ struct VariableExpr {
 };
 
 struct GroupExpr {
+  ASTNodeMetadata meta;
   Expr *inner_expr;
 };
 
 struct UnaryExpr {
+  ASTNodeMetadata meta;
   TokenLabel op;
   Expr *expr;
 };
 
 struct BinaryExpr {
+  ASTNodeMetadata meta;
   TokenLabel op;
   Expr *left;
   Expr *right;
 };
 
 struct AssignmentExpr {
+  ASTNodeMetadata meta;
   VariableExpr *left;
   Expr *right;
 };
 
 struct IfExpr {
+  ASTNodeMetadata meta;
   Expr *condition;
   Expr *true_branch;
   Expr *false_branch;
 };
 
 struct ForExpr {
+  ASTNodeMetadata meta;
   Identifier *var_id;
   Identifier *idx_id;
   Expr *iterable;
@@ -263,11 +282,13 @@ struct ForExpr {
 };
 
 struct BlockExpr {
+  ASTNodeMetadata meta;
   u32 len;
   Stmt **statements;
 };
 
 struct FunctionCallExpr {
+  ASTNodeMetadata meta;
   Identifier *name;
   u32 args_len;
   Argument **args;
@@ -275,11 +296,13 @@ struct FunctionCallExpr {
 };
 
 struct Argument {
+  ASTNodeMetadata meta;
   Identifier *name;
   Expr *value;
 };
 
 struct ImportExpr {
+  ASTNodeMetadata meta;
   ImportType type;
   Type *data_type;
   StringLiteral *path;
@@ -288,61 +311,73 @@ struct ImportExpr {
 // -----------------------------------------------------------------------------
 
 struct IntegerLiteral {
+  ASTNodeMetadata meta;
   i64 value;
-  TokenMeta *meta;
+  TokenMeta *token;
 };
 
 struct FloatLiteral {
+  ASTNodeMetadata meta;
   f64 value;
-  TokenMeta *meta;
+  TokenMeta *token;
 };
 
 struct StringLiteral {
+  ASTNodeMetadata meta;
   str value;
-  TokenMeta *meta;
+  TokenMeta *token;
 };
 
 struct BooleanLiteral {
+  ASTNodeMetadata meta;
   bool value;
-  TokenMeta *meta;
+  TokenMeta *token;
 };
 
 struct ListLiteral {
+  ASTNodeMetadata meta;
   u32 len;
   Expr **exprs;
 };
 
 struct ShortListLiteral {
+  ASTNodeMetadata meta;
   Expr *value;
   Expr *count;
 };
 
 struct MapLiteral {
+  ASTNodeMetadata meta;
   u32 len;
   MapEntry **entries;
 };
 
 struct MapEntry {
+  ASTNodeMetadata meta;
   Expr *key;
   Expr *value;
 };
 
 struct StructLiteral {
+  ASTNodeMetadata meta;
   u32 len;
   StructLiteralField **fields;
 };
 
 struct StructLiteralField {
+  ASTNodeMetadata meta;
   Identifier *name;
   Expr *value;
 };
 
 struct EnumLiteral {
+  ASTNodeMetadata meta;
   Type *type;
   Identifier *value;
 };
 
 struct RangeLiteral {
+  ASTNodeMetadata meta;
   Expr *start;
   Expr *end;
   bool inclusive;
@@ -351,15 +386,18 @@ struct RangeLiteral {
 // -----------------------------------------------------------------------------
 
 struct NamedVariable {
+  ASTNodeMetadata meta;
   Identifier *name;
 };
 
 struct StructMemberVariable {
+  ASTNodeMetadata meta;
   VariableExpr *struct_expr;
   Identifier *name;
 };
 
 struct IndexedVariable {
+  ASTNodeMetadata meta;
   VariableExpr *container;
   u32 index_count;
   Expr **indices;
@@ -368,6 +406,7 @@ struct IndexedVariable {
 // -----------------------------------------------------------------------------
 
 struct Type {
+  ASTNodeMetadata meta;
   TypeType type;
   union {
     NamedType *named;
@@ -382,44 +421,53 @@ struct Type {
 };
 
 struct NamedType {
+  ASTNodeMetadata meta;
   Identifier *name;
 };
 
 struct ListType {
+  ASTNodeMetadata meta;
   Type *item_type;
 };
 
 struct MapType {
+  ASTNodeMetadata meta;
   Type *key_type;
   Type *value_type;
 };
 
 struct StructType {
+  ASTNodeMetadata meta;
   u32 len;
   StructField **fields;
 };
 
 struct UnionType {
+  ASTNodeMetadata meta;
   u32 len;
   Type **types;
 };
 
 struct TupleType {
+  ASTNodeMetadata meta;
   u32 len;
   Type **types;
 };
 
 struct ShortTupleType {
+  ASTNodeMetadata meta;
   Type *type;
   Expr *count;
 };
 
 struct EnumType {
+  ASTNodeMetadata meta;
   u32 len;
   Identifier **values;
 };
 
 struct StructField {
+  ASTNodeMetadata meta;
   Identifier *name;
   Type *type;
   Expr *default_value;
@@ -428,6 +476,7 @@ struct StructField {
 // -----------------------------------------------------------------------------
 
 struct FunctionDef {
+  ASTNodeMetadata meta;
   Identifier *name;
   u32 params_len;
   Parameter **params;
@@ -436,6 +485,7 @@ struct FunctionDef {
 };
 
 struct Parameter {
+  ASTNodeMetadata meta;
   Identifier *name;
   Type *type;
   Expr *default_value;
@@ -444,6 +494,7 @@ struct Parameter {
 // -----------------------------------------------------------------------------
 
 struct Program {
+  ASTNodeMetadata meta;
   u32 len;
   Stmt **statements;
 };
@@ -452,6 +503,10 @@ struct Program {
 
 extern const char *TOKEN_LABEL_STR[];
 extern const char *TOKEN_LEXEME[];
+
+void ast_set_next_location(Location *loc);
+
+// -----------------------------------------------------------------------------
 
 Stmt *ast_stmt_expr(Expr *expr);
 Stmt *ast_stmt_decl(PartialDeclarationStmt *decl);

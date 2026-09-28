@@ -87,7 +87,7 @@ PARSE_EXPR_FUNC(if, IfExpr, "If Expr")
 PARSE_EXPR_FUNC(for, ForExpr, "For Expr")
 PARSE_EXPR_FUNC(block, BlockExpr, "Block Expr (len=%u)", expr->len)
 PARSE_EXPR_FUNC(function_call, FunctionCallExpr, "Function Call Expr %s", expr->name->lexeme)
-PARSE_EXPR_FUNC(import, ImportExpr, "Import Expr %s", expr->path->meta->lexeme)
+PARSE_EXPR_FUNC(import, ImportExpr, "Import Expr %s", expr->path->token->lexeme)
 
 // -----------------------------------------------------------------------------
 
@@ -102,12 +102,12 @@ LiteralExpr *parse_float_literal(FloatLiteral *f) {
 }
 
 LiteralExpr *parse_string_literal(StringLiteral *s) {
-  fe_parser_log(LOG_DEBUG, "String Literal %s", s->meta->lexeme);
+  fe_parser_log(LOG_DEBUG, "String Literal %s", s->token->lexeme);
   return ast_string_literal(s);
 }
 
 LiteralExpr *parse_boolean_literal(BooleanLiteral *b) {
-  fe_parser_log(LOG_DEBUG, "Boolean Literal %s", b->meta->lexeme);
+  fe_parser_log(LOG_DEBUG, "Boolean Literal %s", b->token->lexeme);
   return ast_boolean_literal(b);
 }
 
@@ -233,7 +233,7 @@ BlockExpr *parse_block(StmtList *statements) {
 }
 
 ImportExpr *parse_import(Identifier *import_type, Type *data_type, StringLiteral *path, Location *type_loc) {
-  fe_parser_log(LOG_DEBUG, "Import %s '%s'", import_type->lexeme, path->meta->lexeme);
+  fe_parser_log(LOG_DEBUG, "Import %s '%s'", import_type->lexeme, path->token->lexeme);
 
   ImportType type = IMPORT_UNKNOWN;
   for (u32 i = 0; i < IMPORT_TYPE_COUNT; i++) {
@@ -346,7 +346,7 @@ static Argument *_parse_argument(Expr *expr, Location *arg_loc) {
 
 static Expr *_id_to_string(Identifier *id) {
   StringLiteral *str_l = new(StringLiteral);
-  *str_l = (StringLiteral){ .meta = id, .value = str_from_cstring(id->lexeme) };
+  *str_l = (StringLiteral){ .token = id, .value = str_from_cstring(id->lexeme) };
 
   return ast_expr_literal(ast_string_literal(str_l));
 }
@@ -496,4 +496,8 @@ Program *parse_program(StmtList *statements) {
 
 void parse_error(Location *loc, const char *message) {
   fe_parser_log(LOG_ERROR, "%s\n\tAt line %u, col %u", message, loc->first_line, loc->first_column);
+}
+
+void parse_set_location(Location *loc) {
+  ast_set_next_location(loc);
 }

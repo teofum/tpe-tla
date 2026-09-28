@@ -23,9 +23,11 @@ void fe_init(CompilerState *compiler_state) {
   f = new(Frontend);
   yylex_init(&f->scanner);
   f->parser = yypstate_new();
-  f->location = new(YYLTYPE);
   f->scan_logger = logger_create("Scanner", stderr, cs->options.scanner_log_level);
   f->parse_logger = logger_create("Parser", stderr, cs->options.parser_log_level);
+
+  f->location = new(Location);
+  *f->location = (Location){1, 1, 1, 1};
 
   flex_enter_context(f, 0);
 }
@@ -187,7 +189,7 @@ void fe_free_token(Token *token) {
 }
 
 CompilationStatus fe_push_token(Token *token) {
-  return yypush_parse(f->parser, token->label, token->semantic_value, f->location);
+  return yypush_parse(f->parser, token->label, token->semantic_value, (void *)f->location);
 }
 
 void fe_enter_context(FlexContext ctx) {
@@ -207,7 +209,7 @@ static FlexContext _ctx() {
 }
 
 static CompilationStatus _next() {
-  return yylex(NULL, f->location, f->scanner);
+  return yylex(NULL, (void *)f->location, f->scanner);
 }
 
 // TODO move error handling to the error module

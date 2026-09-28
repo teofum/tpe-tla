@@ -44,7 +44,7 @@ CompilationStatus lex_integer_literal() {
   IntegerLiteral *l = new(IntegerLiteral);
   *l = (IntegerLiteral){
     .value = strtoll(token->lexeme, NULL, 10),
-    .meta = _token_meta(token),
+    .token = _token_meta(token),
   };
   token->semantic_value->integer = l;
 
@@ -58,7 +58,7 @@ CompilationStatus lex_float_literal() {
   FloatLiteral *l = new(FloatLiteral);
   *l = (FloatLiteral){
     .value = strtod(token->lexeme, NULL),
-    .meta = _token_meta(token),
+    .token = _token_meta(token),
   };
   token->semantic_value->floating = l;
 
@@ -73,7 +73,7 @@ CompilationStatus lex_string_literal() {
   StringLiteral *l = new(StringLiteral);
   *l = (StringLiteral){
     .value = str_clone(str_slice(lexeme, 1, -1)),
-    .meta = _token_meta(token),
+    .token = _token_meta(token),
   };
   str_free(lexeme);
   token->semantic_value->string = l;
@@ -88,7 +88,7 @@ CompilationStatus lex_boolean_literal() {
   BooleanLiteral *l = new(BooleanLiteral);
   *l = (BooleanLiteral){
     .value = token->lexeme[0] == 't',
-    .meta = _token_meta(token),
+    .token = _token_meta(token),
   };
   token->semantic_value->boolean = l;
 

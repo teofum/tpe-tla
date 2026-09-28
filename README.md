@@ -7,8 +7,6 @@ A base compiler example, developed with Flex and Bison.
 - [Requirements](#requirements)
 - [Configuration](#configuration)
 - [Commands](#commands)
-- [CI/CD](#cicd)
-- [Recommended Extensions](#recommended-extensions)
 
 ## Requirements
 
@@ -61,40 +59,3 @@ Executes every available unit-test under `test` folder:
 ```bash
 .script/test.sh
 ```
-
-### Stop
-
-Logout, destroy the ephemeral containers and shutdowns the cluster:
-
-```bash
-exit
-docker compose down
-```
-
-### Docker
-
-| Command                                 | Description                                             |
-| :-------------------------------------- | :------------------------------------------------------ |
-| `docker builder prune --all`            | Removes all builds and complete build cache.            |
-| `docker compose --progress=plain build` | Forces a build or rebuild of the images in the cluster. |
-| `docker image prune`                    | Removes all of the dangling images from Docker.         |
-| `docker network prune`                  | Removes unused networks from Docker.                    |
-| `docker volume prune`                   | Removes unused volumes from Docker.                     |
-
-## CI/CD
-
-To trigger an automatic integration on every push or PR (_Pull Request_), you must activate _GitHub Actions_ in the _Settings_ tab. Use the following configuration:
-
-| Key                                                        | Value                                               |
-| :--------------------------------------------------------- | :-------------------------------------------------- |
-| `Actions permissions`                                      | `Allow all actions and reusable workflows`          |
-| `Allow GitHub Actions to create and approve pull requests` | `false`                                             |
-| `Artifact and log retention`                               | `30 days`                                           |
-| `Fork pull request workflows from outside collaborators`   | `Require approval for all outside collaborators`    |
-| `Workflow permissions`                                     | `Read repository contents and packages permissions` |
-
-## Recommended Extensions
-
-- [C/C++](https://marketplace.visualstudio.com/items?itemName=ms-vscode.cpptools)
-- [CMake Tools](https://marketplace.visualstudio.com/items?itemName=ms-vscode.cmake-tools)
-- [Yash](https://marketplace.visualstudio.com/items?itemName=daohong-emilio.yash)

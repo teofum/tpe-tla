@@ -25,7 +25,7 @@ typedef struct {
 } Token;
 
 typedef struct {
-  void *location;
+  Location *location;
   void *parser;
   void *scanner;
   Logger *scan_logger;
