@@ -83,7 +83,7 @@
   [x] For expressions
   [x] Block expressions
   [x] Function calls
-    [ ] ID syntax
+    [x] ID syntax
   [x] Import expressions
   [ ] var/env expressions
 [x] Type expression

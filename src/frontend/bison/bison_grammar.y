@@ -223,6 +223,7 @@ static void yyerror(YYLTYPE *location, const char *message) {
 %type <function_def>                function_def
 %type <parameter>                   parameter
 
+%type <identifier>                  html_id
 %type <identifier>                  class
 %type <identifier_list>             classlist
 
@@ -430,12 +431,12 @@ block: CURLY_L nl statement_list nl CURLY_R                         { $$ = parse
 
 /*-- Expressions: function calls -------------------------------------------------------------------------------------*/
 
-function_call: IDENTIFIER arguments                                 { $$ = parse_function_call($1, $2, NULL, NULL); }
-  | IDENTIFIER arguments COLON composable                           { $$ = parse_function_call($1, $2, $4, NULL); }
-  | IDENTIFIER COLON composable                                     { $$ = parse_function_call($1, NULL, $3, NULL); }
-  | IDENTIFIER classlist arguments                                  { $$ = parse_function_call($1, $3, NULL, $2); }
-  | IDENTIFIER classlist arguments COLON composable                 { $$ = parse_function_call($1, $3, $5, $2); }
-  | IDENTIFIER classlist COLON composable                           { $$ = parse_function_call($1, NULL, $4, $2); }
+function_call: IDENTIFIER arguments                                 { $$ = parse_function_call($1, $2, NULL, NULL, NULL); }
+  | IDENTIFIER arguments COLON composable                           { $$ = parse_function_call($1, $2, $4, NULL, NULL); }
+  | IDENTIFIER COLON composable                                     { $$ = parse_function_call($1, NULL, $3, NULL, NULL); }
+  | IDENTIFIER classlist html_id arguments                          { $$ = parse_function_call($1, $4, NULL, $2, $3); }
+  | IDENTIFIER classlist html_id arguments COLON composable         { $$ = parse_function_call($1, $4, $6, $2, $3); }
+  | IDENTIFIER classlist html_id COLON composable                   { $$ = parse_function_call($1, NULL, $5, $2, $3); }
   ;
 
 classlist: class                                                    { $$ = parse_identifier_list($1, NULL); }
@@ -443,6 +444,10 @@ classlist: class                                                    { $$ = parse
   ;
 
 class: DOT IDENTIFIER                                               { $$ = $2; }
+  ;
+
+html_id: HASH IDENTIFIER                                            { $$ = $2; }
+  | %empty                                                          { $$ = NULL; }
   ;
 
 arguments: PAREN_L nl expression_list nl PAREN_R                    { $$ = $3; }

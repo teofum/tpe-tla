@@ -361,7 +361,24 @@ static ExprList *_id_to_string_list(IdentifierList *id_list) {
   return exprs;
 }
 
-FunctionCallExpr *parse_function_call(Identifier *id, ExprList *arg_exprs, Expr *composable, IdentifierList *classlist) {
+static ArgumentList *_append_arg(ArgumentList *args, const char *name, Expr *value) {
+  usize name_len = strlen(name);
+  Identifier *name_id = new(Identifier);
+  *name_id = (Identifier){ .label = IDENTIFIER, .len = name_len, .lexeme = strndup(name, name_len) };
+
+  Argument *class_arg = new(Argument);
+  *class_arg = (Argument) { .name = name_id, .value = value };
+
+  ArgumentList *args_with_class = new(ArgumentList);
+  *args_with_class = (ArgumentList){
+    .len = args->len + 1,
+    .tail = args,
+    .head = class_arg,
+  };
+  return args_with_class;
+}
+
+FunctionCallExpr *parse_function_call(Identifier *id, ExprList *arg_exprs, Expr *composable, IdentifierList *classlist, Identifier *html_id) {
   fe_parser_log(LOG_DEBUG, "Function Call %s", id->lexeme);
 
   ArgumentList *args = new(ArgumentList);
@@ -381,24 +398,11 @@ FunctionCallExpr *parse_function_call(Identifier *id, ExprList *arg_exprs, Expr 
   if (classlist) {
     // Convert classlist to string literals
     ExprList *class_string_list = _id_to_string_list(classlist);
-
-    Identifier *name = new(Identifier);
-    *name = (Identifier){ .label = IDENTIFIER, .len = 5, .lexeme = strndup("class", 5) };
-
-    // If there is a class named argument, append classlist to it, otherwise add an arg
-    Argument *class_arg = new(Argument);
-    *class_arg = (Argument) {
-      .name = name,
-      .value = ast_expr_literal(ast_list_literal(class_string_list)),
-    };
-
-    ArgumentList *args_with_class = new(ArgumentList);
-    *args_with_class = (ArgumentList){
-      .len = args->len + 1,
-      .tail = args,
-      .head = class_arg,
-    };
-    args = args_with_class;
+    Expr *class_value = ast_expr_literal(ast_list_literal(class_string_list));
+    args = _append_arg(args, "class", class_value);
+  }
+  if (html_id) {
+    args = _append_arg(args, "id", _id_to_string(html_id));
   }
 
   ast_free_expr_list(arg_exprs, false);

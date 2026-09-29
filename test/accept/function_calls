@@ -12,12 +12,12 @@ div: {
   p: "Hello World!"
 }
 
-// Function call with composable and classlist
-div.flex.flex-row: {
+// Function call with composable, classlist and id
+div.flex.flex-row#myDiv: {
   p.text-sm: "Hello World!"
 }
 
 // Function call with everything
-div.flex.flex-row(id = "myDiv"): {
+div.flex.flex-row#myDiv(data-something = "foo"): {
   p.text-sm: "Hello World!"
 }
