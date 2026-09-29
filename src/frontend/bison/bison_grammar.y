@@ -430,12 +430,12 @@ block: CURLY_L nl statement_list nl CURLY_R                         { $$ = parse
 
 /*-- Expressions: function calls -------------------------------------------------------------------------------------*/
 
-function_call: IDENTIFIER arguments                                 { $$ = parse_function_call($1, $2, NULL, NULL, (Location *)&@2); }
-  | IDENTIFIER arguments COLON composable                           { $$ = parse_function_call($1, $2, $4, NULL, (Location *)&@2); }
-  | IDENTIFIER COLON composable                                     { $$ = parse_function_call($1, NULL, $3, NULL, NULL); }
-  | IDENTIFIER classlist arguments                                  { $$ = parse_function_call($1, $3, NULL, $2, (Location *)&@3); }
-  | IDENTIFIER classlist arguments COLON composable                 { $$ = parse_function_call($1, $3, $5, $2, (Location *)&@3); }
-  | IDENTIFIER classlist COLON composable                           { $$ = parse_function_call($1, NULL, $4, $2, NULL); }
+function_call: IDENTIFIER arguments                                 { $$ = parse_function_call($1, $2, NULL, NULL); }
+  | IDENTIFIER arguments COLON composable                           { $$ = parse_function_call($1, $2, $4, NULL); }
+  | IDENTIFIER COLON composable                                     { $$ = parse_function_call($1, NULL, $3, NULL); }
+  | IDENTIFIER classlist arguments                                  { $$ = parse_function_call($1, $3, NULL, $2); }
+  | IDENTIFIER classlist arguments COLON composable                 { $$ = parse_function_call($1, $3, $5, $2); }
+  | IDENTIFIER classlist COLON composable                           { $$ = parse_function_call($1, NULL, $4, $2); }
   ;
 
 classlist: class                                                    { $$ = parse_identifier_list($1, NULL); }
@@ -456,7 +456,7 @@ composable: simple_literal                                          { $$ = parse
 
 /*-- Expressions: import ---------------------------------------------------------------------------------------------*/
 
-import: IMPORT IDENTIFIER import_type STRING                        { $$ = parse_import($2, $3, $4, (Location *)&@2); }
+import: IMPORT IDENTIFIER import_type STRING                        { $$ = parse_import($2, $3, $4); }
   ;
 
 import_type: OF type                                                { $$ = $2; }

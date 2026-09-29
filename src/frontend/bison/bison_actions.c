@@ -232,7 +232,7 @@ BlockExpr *parse_block(StmtList *statements) {
   return block;
 }
 
-ImportExpr *parse_import(Identifier *import_type, Type *data_type, StringLiteral *path, Location *type_loc) {
+ImportExpr *parse_import(Identifier *import_type, Type *data_type, StringLiteral *path) {
   fe_parser_log(LOG_DEBUG, "Import %s '%s'", import_type->lexeme, path->token->lexeme);
 
   ImportType type = IMPORT_UNKNOWN;
@@ -242,7 +242,7 @@ ImportExpr *parse_import(Identifier *import_type, Type *data_type, StringLiteral
   if (type == IMPORT_UNKNOWN) {
     ImportTypeError *error = new(ImportTypeError);
     error->type = strdup(import_type->lexeme);
-    err_report_import_type(error, type_loc, ERR_ERROR);
+    err_report_import_type(error, &import_type->loc, ERR_ERROR);
     fe_parser_log(LOG_ERROR, "Unknown import type '%s'", import_type->lexeme);
   }
 
@@ -312,7 +312,7 @@ FunctionDef *parse_function_def(Identifier *id, ParameterList *params, Type *ret
   return ast_function_def(id, params, return_type, body);
 }
 
-static Argument *_parse_argument(Expr *expr, Location *arg_loc) {
+static Argument *_parse_argument(Expr *expr) {
   Argument *arg = NULL;
 
   if (expr->type == EXPR_ASSIGNMENT) {
@@ -331,7 +331,7 @@ static Argument *_parse_argument(Expr *expr, Location *arg_loc) {
         .expected_token_count = 1,
         .expected_tokens = &expected,
         .found_token = "variable path",
-        .location = arg_loc,
+        .location = &expr->meta.loc,
       };
 
       fe_report_syntax_error(ctx);
@@ -361,15 +361,14 @@ static ExprList *_id_to_string_list(IdentifierList *id_list) {
   return exprs;
 }
 
-FunctionCallExpr *parse_function_call(Identifier *id, ExprList *arg_exprs, Expr *composable, IdentifierList *classlist, Location *arg_loc) {
+FunctionCallExpr *parse_function_call(Identifier *id, ExprList *arg_exprs, Expr *composable, IdentifierList *classlist) {
   fe_parser_log(LOG_DEBUG, "Function Call %s", id->lexeme);
 
   ArgumentList *args = new(ArgumentList);
   ArgumentList *args_tail = args;
   ExprList *expr_list = arg_exprs;
   while (expr_list) {
-    // This passes the location of the arguments list, would be nice to have the location of each argument instead
-    args_tail->head = _parse_argument(expr_list->head, arg_loc);
+    args_tail->head = _parse_argument(expr_list->head);
 
     args_tail->len = expr_list->len;
     if (expr_list->tail) {

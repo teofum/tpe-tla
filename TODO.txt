@@ -83,7 +83,9 @@
   [x] For expressions
   [x] Block expressions
   [x] Function calls
+    [ ] ID syntax
   [x] Import expressions
+  [ ] var/env expressions
 [x] Type expression
   [x] Simple (identifier) types
   [x] Nil
@@ -98,6 +100,7 @@
 [x] Statements
   [x] Expression statements
   [x] Declarations
+  [ ] Constant declarations
   [x] Type aliases
   [x] Function definitions
   [ ] Export statement/qualifier

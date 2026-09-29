@@ -90,6 +90,7 @@ typedef struct {
   TokenLabel label;
   char *lexeme;
   u32 len;
+  Location loc;
 } TokenMeta;
 
 typedef struct {

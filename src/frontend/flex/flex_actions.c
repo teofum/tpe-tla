@@ -17,6 +17,7 @@ static TokenMeta *_token_meta(Token *token) {
     .label = token->label,
     .len = token->len,
     .lexeme = strndup(token->lexeme, token->len),
+    .loc = token->location,
   };
   return meta;
 }

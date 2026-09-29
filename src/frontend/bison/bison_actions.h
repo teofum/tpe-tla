@@ -54,7 +54,7 @@ IfExpr *parse_if(Expr *condition, BlockExpr *true_branch, BlockExpr *false_branc
 IfExpr *parse_nested_if(Expr *condition, BlockExpr *true_branch, IfExpr *false_branch);
 ForExpr *parse_for(Identifier *var, Identifier *idx, Expr *iterable, BlockExpr *body);
 BlockExpr *parse_block(StmtList *statements);
-ImportExpr *parse_import(Identifier *import_type, Type *data_type, StringLiteral *path, Location *type_loc);
+ImportExpr *parse_import(Identifier *import_type, Type *data_type, StringLiteral *path);
 
 Type *parse_named_type(Identifier *id);
 Type *parse_list_type(Type *item);
@@ -68,7 +68,7 @@ Type *parse_enum_type(IdentifierList *values);
 Type *parse_nil_type();
 
 FunctionDef *parse_function_def(Identifier *id, ParameterList *params, Type *return_type, BlockExpr *body);
-FunctionCallExpr *parse_function_call(Identifier *id, ExprList *args, Expr *composable, IdentifierList *classlist, Location *arg_loc);
+FunctionCallExpr *parse_function_call(Identifier *id, ExprList *args, Expr *composable, IdentifierList *classlist);
 
 StructFieldList *parse_struct_field_list(StructField *head, StructFieldList *tail);
 StructLiteralFieldList *parse_struct_literal_field_list(StructLiteralField *head, StructLiteralFieldList *tail);
