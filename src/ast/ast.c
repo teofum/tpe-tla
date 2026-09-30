@@ -85,6 +85,7 @@ Stmt *f_name(T *p_name) {                         \
 AST_STMT_FUNC(ast_stmt_expr, Expr, STMT_EXPR, expr)
 AST_STMT_FUNC(ast_stmt_alias, TypeAliasStmt, STMT_TYPE_ALIAS, type_alias)
 AST_STMT_FUNC(ast_stmt_function_def, FunctionDef, STMT_FUNCTION_DEF, function_def)
+AST_STMT_FUNC(ast_stmt_constant, ConstantStmt, STMT_CONSTANT, constant)
 
 Stmt *ast_stmt_decl(PartialDeclarationStmt *pdecl) {
   DeclarationStmt *decl = new(DeclarationStmt);
@@ -120,6 +121,18 @@ PartialDeclarationStmt *ast_declaration(IdentifierList *ids, Type *type, Expr *e
   };
 
   return decl;
+}
+
+ConstantStmt *ast_constant(Identifier *id, Type *type, Expr *expr) {
+  ConstantStmt *constant = new(ConstantStmt);
+  *constant = (ConstantStmt){
+    .meta = _ast_get_metadata(),
+    .left = id,
+    .right = expr,
+    .type = type,
+  };
+
+  return constant;
 }
 
 TypeAliasStmt *ast_type_alias(Identifier *id, Type *type) {
@@ -666,6 +679,7 @@ void ast_free_stmt(Stmt *stmt) {
   switch (stmt->type) {
     case STMT_EXPR: ast_free_expr(stmt->expr); break;
     case STMT_DECLARATION: ast_free_decl(stmt->decl); break;
+    case STMT_CONSTANT: ast_free_constant(stmt->constant); break;
     case STMT_TYPE_ALIAS: ast_free_alias(stmt->type_alias); break;
     case STMT_FUNCTION_DEF: ast_free_function_def(stmt->function_def); break;
     case STMT_PARSE_ERROR: break;
@@ -685,6 +699,16 @@ void ast_free_decl(DeclarationStmt *decl) {
   ast_free_type(decl->type);
   free(decl);
 }
+
+void ast_free_constant(ConstantStmt *constant) {
+  if (!constant) return;
+
+  ast_free_identifier(constant->left);
+  ast_free_expr(constant->right);
+  ast_free_type(constant->type);
+  free(constant);
+}
+
 
 void ast_free_partial_decl(PartialDeclarationStmt *decl) {
   if (!decl) return;

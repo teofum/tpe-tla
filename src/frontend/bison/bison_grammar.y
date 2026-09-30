@@ -48,6 +48,7 @@ static void yyerror(YYLTYPE *location, const char *message) {
 
 	Stmt *statement;
   PartialDeclarationStmt *declaration;
+  ConstantStmt *constant;
   TypeAliasStmt *type_alias;
 
 	Expr *expression;
@@ -102,6 +103,7 @@ static void yyerror(YYLTYPE *location, const char *message) {
 %destructor { ast_free_for($$); } <for_expr>
 %destructor { ast_free_block($$); } <block>
 %destructor { ast_free_partial_decl($$); } <declaration>
+%destructor { ast_free_constant($$); } <constant>
 %destructor { ast_free_alias($$); } <type_alias>
 %destructor { ast_free_type($$); } <type>
 %destructor { ast_free_function_def($$); } <function_def>
@@ -190,6 +192,7 @@ static void yyerror(YYLTYPE *location, const char *message) {
 
 %type <statement>                   statement
 %type <declaration>                 declaration
+%type <constant>                    constant
 %type <type_alias>                  type_alias
 
 %type <expression>                  expression
@@ -277,6 +280,7 @@ statement_list: statement                                           { $$ = parse
 
 statement: expression                                               { $$ = parse_expr_stmt($1); }
   | declaration                                                     { $$ = parse_declaration_stmt($1); }
+  | constant                                                        { $$ = parse_constant_stmt($1); }
   | type_alias                                                      { $$ = parse_type_alias_stmt($1); }
   | function_def                                                    { $$ = parse_function_def_stmt($1); }
   | error                                                           { $$ = parse_error_stmt(); }
@@ -285,6 +289,10 @@ statement: expression                                               { $$ = parse
 declaration: IDENTIFIER COLON type EQUAL expression                 { $$ = parse_declaration($1, $3, $5); }
   | IDENTIFIER COLON EQUAL expression                               { $$ = parse_declaration($1, NULL, $4); }
   | IDENTIFIER COMMA declaration                                    { $$ = parse_declaration_decomp($1, $3); }
+  ;
+
+constant: IDENTIFIER COLON_COLON type EQUAL expression              { $$ = parse_constant($1, $3, $5); }
+  | IDENTIFIER COLON_COLON EQUAL expression                         { $$ = parse_constant($1, NULL, $4); }
   ;
 
 type_alias: IDENTIFIER IS type                                      { $$ = parse_type_alias($1, $3); }

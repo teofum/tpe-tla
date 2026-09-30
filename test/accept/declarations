@@ -11,3 +11,7 @@ foo: bool = bar.baz[2] > 5
 foo, bar := [5, 8]
 
 head, tail: string = some_array[0, 1..]
+
+// Constant
+baz:: int = 5
+baz ::= 5

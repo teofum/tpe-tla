@@ -387,6 +387,17 @@ static void dot_decl(DeclarationStmt *decl, u64 pid) {
   dot_expr(decl->right, id);
 }
 
+static void dot_const(ConstantStmt *constant, u64 pid) {
+  u64 id = next_id();
+  char *clabel;
+  usize len = asprintf(&clabel, "Constant\\n%s", constant->left->lexeme);
+  _node(id, clabel, NODE_STMT);
+  _edge(pid, id);
+  free(clabel);
+  if (constant->type) dot_type(constant->type, id);
+  dot_expr(constant->right, id);
+}
+
 static void dot_alias(TypeAliasStmt *alias, u64 pid) {
   u64 id = next_id();
   char label[256];
@@ -429,6 +440,7 @@ static void dot_stmt(Stmt *stmt, u64 pid) {
   switch (stmt->type) {
     case STMT_EXPR: return dot_expr(stmt->expr, pid);
     case STMT_DECLARATION: return dot_decl(stmt->decl, pid);
+    case STMT_CONSTANT: return dot_const(stmt->constant, pid);
     case STMT_TYPE_ALIAS: return dot_alias(stmt->type_alias, pid);
     case STMT_FUNCTION_DEF: return dot_function_def(stmt->function_def, pid);
     case STMT_PARSE_ERROR: return dot_error(pid);

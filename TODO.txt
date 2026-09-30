@@ -100,7 +100,7 @@
 [x] Statements
   [x] Expression statements
   [x] Declarations
-  [ ] Constant declarations
+  [x] Constant declarations
   [x] Type aliases
   [x] Function definitions
   [ ] Export statement/qualifier

@@ -20,6 +20,7 @@ void ast_consume_##name##_list(T##List *list, T ***items, u32 *len);  \
 typedef enum {
   STMT_EXPR,
   STMT_DECLARATION,
+  STMT_CONSTANT,
   STMT_TYPE_ALIAS,
   STMT_FUNCTION_DEF,
   STMT_PARSE_ERROR, // Shouldn't exist in any valid AST; only used for debug output
@@ -102,6 +103,7 @@ typedef TokenMeta Identifier;
 
 typedef struct Stmt Stmt;
 typedef struct DeclarationStmt DeclarationStmt;
+typedef struct ConstantStmt ConstantStmt;
 typedef struct PartialDeclarationStmt PartialDeclarationStmt;
 typedef struct TypeAliasStmt TypeAliasStmt;
 
@@ -170,6 +172,7 @@ struct Stmt {
   union {
     Expr *expr;
     DeclarationStmt *decl;
+    ConstantStmt *constant;
     TypeAliasStmt *type_alias;
     FunctionDef *function_def;
   };
@@ -186,6 +189,13 @@ struct DeclarationStmt {
 struct PartialDeclarationStmt {
   ASTNodeMetadata meta;
   IdentifierList *left;
+  Expr *right;
+  Type *type;
+};
+
+struct ConstantStmt {
+  ASTNodeMetadata meta;
+  Identifier *left;
   Expr *right;
   Type *type;
 };
@@ -511,11 +521,13 @@ void ast_set_next_location(Location *loc);
 
 Stmt *ast_stmt_expr(Expr *expr);
 Stmt *ast_stmt_decl(PartialDeclarationStmt *decl);
+Stmt *ast_stmt_constant(ConstantStmt *constant);
 Stmt *ast_stmt_alias(TypeAliasStmt *alias);
 Stmt *ast_stmt_function_def(FunctionDef *function);
 Stmt *ast_stmt_error();
 
 PartialDeclarationStmt *ast_declaration(IdentifierList *ids, Type *type, Expr *expr);
+ConstantStmt *ast_constant(Identifier *id, Type *type, Expr *expr);
 TypeAliasStmt *ast_type_alias(Identifier *id, Type *type);
 
 Expr *ast_expr_literal(LiteralExpr *literal);
@@ -581,6 +593,7 @@ Program *ast_program(StmtList *statements);
 void ast_free_stmt(Stmt *stmt);
 void ast_free_decl(DeclarationStmt *decl);
 void ast_free_partial_decl(PartialDeclarationStmt *decl);
+void ast_free_constant(ConstantStmt *constant);
 void ast_free_alias(TypeAliasStmt *alias);
 
 void ast_free_expr(Expr *expr);

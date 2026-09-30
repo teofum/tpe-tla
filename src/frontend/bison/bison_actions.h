@@ -6,12 +6,14 @@
 
 Stmt *parse_expr_stmt(Expr *expr);
 Stmt *parse_declaration_stmt(PartialDeclarationStmt *decl);
+Stmt *parse_constant_stmt(ConstantStmt *constant);
 Stmt *parse_type_alias_stmt(TypeAliasStmt *alias);
 Stmt *parse_function_def_stmt(FunctionDef *function);
 Stmt *parse_error_stmt();
 
 PartialDeclarationStmt *parse_declaration(Identifier *left, Type *type, Expr *right);
 PartialDeclarationStmt *parse_declaration_decomp(Identifier *left, PartialDeclarationStmt *base);
+ConstantStmt *parse_constant(Identifier *left, Type *type, Expr *right);
 TypeAliasStmt *parse_type_alias(Identifier *left, Type *right);
 
 Expr *parse_literal_expr(LiteralExpr *literal);

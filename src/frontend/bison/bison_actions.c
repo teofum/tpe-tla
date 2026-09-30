@@ -21,6 +21,11 @@ Stmt *parse_declaration_stmt(PartialDeclarationStmt *decl) {
   return ast_stmt_decl(decl);
 }
 
+Stmt *parse_constant_stmt(ConstantStmt *constant) {
+  fe_parser_log(LOG_DEBUG, "Constant Stmt");
+  return ast_stmt_constant(constant);
+}
+
 Stmt *parse_type_alias_stmt(TypeAliasStmt *alias) {
   fe_parser_log(LOG_DEBUG, "Type Alias Stmt");
   return ast_stmt_alias(alias);
@@ -62,6 +67,11 @@ PartialDeclarationStmt *parse_declaration_decomp(Identifier *left, PartialDeclar
   *last->tail = (IdentifierList){ .len = 1, .head = left, .tail = NULL };
 
   return ast_declaration(ids, type, right);
+}
+
+ConstantStmt *parse_constant(Identifier *left, Type *type, Expr *right) {
+  fe_parser_log(LOG_DEBUG, "Constant declaration for %s", left->lexeme);
+  return ast_constant(left, type, right);
 }
 
 TypeAliasStmt *parse_type_alias(Identifier *left, Type *right) {
