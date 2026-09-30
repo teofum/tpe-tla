@@ -115,6 +115,8 @@ id_char         [a-zA-Z0-9_-]
 "enum"                        { return lex_keyword(ENUM); }
 "function"                    { return lex_keyword(FUNCTION); }
 "import"                      { return lex_keyword(IMPORT); }
+"env"                         { return lex_keyword(ENV); }
+"default"                     { return lex_keyword(DEFAULT); }
 "export"                      { return lex_keyword(EXPORT); }
 
 -?{int}                       { return lex_integer_literal(); }

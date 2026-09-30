@@ -14,3 +14,6 @@ foo: Record = 5
 foo: nil = 5
 
 export ListOfInts, Record
+
+bar := env "sda" default 5
+bar := env "no_default"

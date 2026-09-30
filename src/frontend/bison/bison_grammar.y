@@ -64,6 +64,7 @@ static void yyerror(YYLTYPE *location, const char *message) {
   BlockExpr *block;
   FunctionCallExpr *function_call;
   ImportExpr *import;
+  EnvExpr *env;
 
   Type *type;
   StructField *struct_field;
@@ -103,6 +104,9 @@ static void yyerror(YYLTYPE *location, const char *message) {
 %destructor { ast_free_if($$); } <if_expr>
 %destructor { ast_free_for($$); } <for_expr>
 %destructor { ast_free_block($$); } <block>
+%destructor { ast_free_function_call($$); } <function_call>
+%destructor { ast_free_import($$); } <import>
+%destructor { ast_free_env($$); } <env>
 %destructor { ast_free_partial_decl($$); } <declaration>
 %destructor { ast_free_constant($$); } <constant>
 %destructor { ast_free_alias($$); } <type_alias>
@@ -172,6 +176,8 @@ static void yyerror(YYLTYPE *location, const char *message) {
 %token <token>    FUNCTION          "'function'"
 %token <token>    COMPOSE           "'compose'"
 %token <token>    IMPORT            "'import'"
+%token <token>    ENV               "'env'"
+%token <token>    DEFAULT           "'default'"
 %token <token>    EXPORT            "'export'"
 
 // Identifiers
@@ -202,6 +208,7 @@ static void yyerror(YYLTYPE *location, const char *message) {
 %type <expression>                  expression
 %type <expression>                  composable
 %type <expression>                  range_value
+%type <expression>                  default_value
 %type <literal>                     literal
 %type <literal>                     simple_literal
 %type <literal>                     struct_literal
@@ -220,6 +227,7 @@ static void yyerror(YYLTYPE *location, const char *message) {
 %type <block>                       block
 %type <function_call>               function_call
 %type <import>                      import
+%type <env>                         env
 
 %type <type>                        type
 %type <type>                        import_type
@@ -250,6 +258,7 @@ static void yyerror(YYLTYPE *location, const char *message) {
 
 %left NL
 %left COMMA
+%left DEFAULT
 %left COLON
 %left FOR IN
 %left IF
@@ -335,6 +344,7 @@ expression: literal                                                 { $$ = parse
   | block                                                           { $$ = parse_block_expr($1); }
   | function_call                                                   { $$ = parse_function_call_expr($1); }
   | import                                                          { $$ = parse_import_expr($1); }
+  | env                                                             { $$ = parse_env_expr($1); }
   ;
 
 literal: simple_literal
@@ -481,6 +491,13 @@ import: IMPORT IDENTIFIER import_type STRING                        { $$ = parse
   ;
 
 import_type: OF type                                                { $$ = $2; }
+  | %empty                                                          { $$ = NULL; }
+  ;
+
+env: ENV STRING default_value                                       { $$ = parse_env($2, $3); }
+  ;
+
+default_value: DEFAULT expression                                   { $$ = $2; }
   | %empty                                                          { $$ = NULL; }
   ;
 

@@ -179,6 +179,7 @@ AST_EXPR_FUNC(ast_expr_for, ForExpr, EXPR_FOR, for_expr)
 AST_EXPR_FUNC(ast_expr_block, BlockExpr, EXPR_BLOCK, block)
 AST_EXPR_FUNC(ast_expr_function_call, FunctionCallExpr, EXPR_FUNCTION_CALL, function_call)
 AST_EXPR_FUNC(ast_expr_import, ImportExpr, EXPR_IMPORT, import)
+AST_EXPR_FUNC(ast_expr_env, EnvExpr, EXPR_ENV, env)
 
 // -----------------------------------------------------------------------------
 
@@ -454,6 +455,17 @@ ImportExpr *ast_import(ImportType type, Type *data_type, StringLiteral *path) {
   };
 
   return import;
+}
+
+EnvExpr *ast_env(StringLiteral *env_name, Expr *default_value) {
+  EnvExpr *env = new(EnvExpr);
+  *env = (EnvExpr){
+    .meta = _ast_get_metadata(),
+    .env_name = env_name,
+    .default_value = default_value,
+  };
+
+  return env;
 }
 
 // -----------------------------------------------------------------------------
@@ -762,6 +774,7 @@ void ast_free_expr(Expr *expr) {
     case EXPR_BLOCK: ast_free_block(expr->block); break;
     case EXPR_FUNCTION_CALL: ast_free_function_call(expr->function_call); break;
     case EXPR_IMPORT: ast_free_import(expr->import); break;
+    case EXPR_ENV: ast_free_env(expr->env); break;
   }
 
   free(expr);
@@ -874,6 +887,14 @@ void ast_free_import(ImportExpr *import) {
   ast_free_type(import->data_type);
   ast_free_string_literal(import->path);
   free(import);
+}
+
+void ast_free_env(EnvExpr *env) {
+  if (!env) return;
+
+  ast_free_string_literal(env->env_name);
+  ast_free_expr(env->default_value);
+  free(env);
 }
 
 void ast_free_int_literal(IntegerLiteral *l) {

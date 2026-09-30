@@ -108,6 +108,7 @@ PARSE_EXPR_FUNC(for, ForExpr, "For Expr")
 PARSE_EXPR_FUNC(block, BlockExpr, "Block Expr (len=%u)", expr->len)
 PARSE_EXPR_FUNC(function_call, FunctionCallExpr, "Function Call Expr %s", expr->name->lexeme)
 PARSE_EXPR_FUNC(import, ImportExpr, "Import Expr %s", expr->path->token->lexeme)
+PARSE_EXPR_FUNC(env, EnvExpr, "Env Expr %s", expr->env_name->token->lexeme)
 
 // -----------------------------------------------------------------------------
 
@@ -268,6 +269,11 @@ ImportExpr *parse_import(Identifier *import_type, Type *data_type, StringLiteral
 
   ast_free_identifier(import_type);
   return ast_import(type, data_type, path);
+}
+
+EnvExpr *parse_env(StringLiteral *env_name, Expr *default_value) {
+  fe_parser_log(LOG_DEBUG, "Env %s", env_name->token->lexeme);
+  return ast_env(env_name, default_value);
 }
 
 // -----------------------------------------------------------------------------

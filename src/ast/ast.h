@@ -39,6 +39,7 @@ typedef enum {
   EXPR_BLOCK,
   EXPR_FUNCTION_CALL,
   EXPR_IMPORT,
+  EXPR_ENV,
 } ExprType;
 
 typedef enum {
@@ -122,6 +123,7 @@ typedef struct BlockExpr BlockExpr;
 typedef struct FunctionCallExpr FunctionCallExpr;
 typedef struct Argument Argument;
 typedef struct ImportExpr ImportExpr;
+typedef struct EnvExpr EnvExpr;
 
 typedef struct IntegerLiteral IntegerLiteral;
 typedef struct FloatLiteral FloatLiteral;
@@ -232,6 +234,7 @@ struct Expr {
     BlockExpr *block;
     FunctionCallExpr *function_call;
     ImportExpr *import;
+    EnvExpr *env;
   };
 };
 
@@ -326,6 +329,12 @@ struct ImportExpr {
   ImportType type;
   Type *data_type;
   StringLiteral *path;
+};
+
+struct EnvExpr {
+  ASTNodeMetadata meta;
+  StringLiteral *env_name;
+  Expr *default_value;
 };
 
 // -----------------------------------------------------------------------------
@@ -552,6 +561,7 @@ Expr *ast_expr_for(ForExpr *for_expr);
 Expr *ast_expr_block(BlockExpr *block);
 Expr *ast_expr_function_call(FunctionCallExpr *function_call);
 Expr *ast_expr_import(ImportExpr *import);
+Expr *ast_expr_env(EnvExpr *env);
 
 LiteralExpr *ast_integer_literal(IntegerLiteral *i);
 LiteralExpr *ast_float_literal(FloatLiteral *f);
@@ -578,6 +588,7 @@ ForExpr *ast_for(Identifier *var, Identifier *idx, Expr *iterable, Expr *body);
 BlockExpr *ast_block(StmtList *statements);
 FunctionCallExpr *ast_function_call(Identifier *id, ArgumentList *args, Expr *composable);
 ImportExpr *ast_import(ImportType type, Type *data_type, StringLiteral *path);
+EnvExpr *ast_env(StringLiteral *env_name, Expr *default_value);
 
 Type *ast_named_type(Identifier *id);
 Type *ast_list_type(Type *item_type);
@@ -620,6 +631,7 @@ void ast_free_for(ForExpr *for_expr);
 void ast_free_block(BlockExpr *block);
 void ast_free_function_call(FunctionCallExpr *function_call);
 void ast_free_import(ImportExpr *import);
+void ast_free_env(EnvExpr *env);
 
 void ast_free_int_literal(IntegerLiteral *l);
 void ast_free_float_literal(FloatLiteral *l);
