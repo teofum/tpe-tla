@@ -85,7 +85,7 @@
   [x] Function calls
     [x] ID syntax
   [x] Import expressions
-  [ ] var/env expressions
+  [x] Env expressions
 [x] Type expression
   [x] Simple (identifier) types
   [x] Nil
