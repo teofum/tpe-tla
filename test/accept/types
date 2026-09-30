@@ -12,3 +12,5 @@ foo: Record = 5
 
 // Nil type
 foo: nil = 5
+
+export ListOfInts, Record

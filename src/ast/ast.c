@@ -86,6 +86,7 @@ AST_STMT_FUNC(ast_stmt_expr, Expr, STMT_EXPR, expr)
 AST_STMT_FUNC(ast_stmt_alias, TypeAliasStmt, STMT_TYPE_ALIAS, type_alias)
 AST_STMT_FUNC(ast_stmt_function_def, FunctionDef, STMT_FUNCTION_DEF, function_def)
 AST_STMT_FUNC(ast_stmt_constant, ConstantStmt, STMT_CONSTANT, constant)
+AST_STMT_FUNC(ast_stmt_export, ExportStmt, STMT_EXPORT, export)
 
 Stmt *ast_stmt_decl(PartialDeclarationStmt *pdecl) {
   DeclarationStmt *decl = new(DeclarationStmt);
@@ -144,6 +145,14 @@ TypeAliasStmt *ast_type_alias(Identifier *id, Type *type) {
   };
 
   return alias;
+}
+
+ExportStmt *ast_export(IdentifierList *identifiers) {
+  ExportStmt *export = new(ExportStmt);
+  export->meta = _ast_get_metadata();
+  ast_consume_identifier_list(identifiers, &export->ids, &export->len);
+
+  return export;
 }
 
 // -----------------------------------------------------------------------------
@@ -682,6 +691,7 @@ void ast_free_stmt(Stmt *stmt) {
     case STMT_CONSTANT: ast_free_constant(stmt->constant); break;
     case STMT_TYPE_ALIAS: ast_free_alias(stmt->type_alias); break;
     case STMT_FUNCTION_DEF: ast_free_function_def(stmt->function_def); break;
+    case STMT_EXPORT: ast_free_export(stmt->export); break;
     case STMT_PARSE_ERROR: break;
   }
 
@@ -725,6 +735,16 @@ void ast_free_alias(TypeAliasStmt *alias) {
   ast_free_identifier(alias->alias);
   ast_free_type(alias->type);
   free(alias);
+}
+
+void ast_free_export(ExportStmt *e) {
+  if (!e) return;
+
+  for (u32 i = 0; i < e->len; i++) {
+    ast_free_identifier(e->ids[i]);
+  }
+  free(e->ids);
+  free(e);
 }
 
 void ast_free_expr(Expr *expr) {

@@ -36,6 +36,11 @@ Stmt *parse_function_def_stmt(FunctionDef *function) {
   return ast_stmt_function_def(function);
 }
 
+Stmt *parse_export_stmt(ExportStmt *export) {
+  fe_parser_log(LOG_DEBUG, "Export Stmt");
+  return ast_stmt_export(export);
+}
+
 Stmt *parse_error_stmt() {
   fe_parser_log(LOG_DEBUG, "ERROR Stmt");
   return ast_stmt_error();
@@ -77,6 +82,11 @@ ConstantStmt *parse_constant(Identifier *left, Type *type, Expr *right) {
 TypeAliasStmt *parse_type_alias(Identifier *left, Type *right) {
   fe_parser_log(LOG_DEBUG, "Type alias for %s", left->lexeme);
   return ast_type_alias(left, right);
+}
+
+ExportStmt *parse_export(IdentifierList *ids) {
+  fe_parser_log(LOG_DEBUG, "Export");
+  return ast_export(ids);
 }
 
 // -----------------------------------------------------------------------------

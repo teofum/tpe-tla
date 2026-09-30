@@ -103,7 +103,7 @@
   [x] Constant declarations
   [x] Type aliases
   [x] Function definitions
-  [ ] Export statement/qualifier
+  [x] Export statement/qualifier
 [x] Expression lists
 [x] Statement lists
 [x] Program

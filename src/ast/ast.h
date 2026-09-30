@@ -23,6 +23,7 @@ typedef enum {
   STMT_CONSTANT,
   STMT_TYPE_ALIAS,
   STMT_FUNCTION_DEF,
+  STMT_EXPORT,
   STMT_PARSE_ERROR, // Shouldn't exist in any valid AST; only used for debug output
 } StmtType;
 
@@ -106,6 +107,7 @@ typedef struct DeclarationStmt DeclarationStmt;
 typedef struct ConstantStmt ConstantStmt;
 typedef struct PartialDeclarationStmt PartialDeclarationStmt;
 typedef struct TypeAliasStmt TypeAliasStmt;
+typedef struct ExportStmt ExportStmt;
 
 typedef struct Expr Expr;
 typedef struct LiteralExpr LiteralExpr;
@@ -175,6 +177,7 @@ struct Stmt {
     ConstantStmt *constant;
     TypeAliasStmt *type_alias;
     FunctionDef *function_def;
+    ExportStmt *export;
   };
 };
 
@@ -204,6 +207,12 @@ struct TypeAliasStmt {
   ASTNodeMetadata meta;
   Identifier *alias;
   Type *type;
+};
+
+struct ExportStmt {
+  ASTNodeMetadata meta;
+  u32 len;
+  Identifier **ids;
 };
 
 // -----------------------------------------------------------------------------
@@ -524,11 +533,13 @@ Stmt *ast_stmt_decl(PartialDeclarationStmt *decl);
 Stmt *ast_stmt_constant(ConstantStmt *constant);
 Stmt *ast_stmt_alias(TypeAliasStmt *alias);
 Stmt *ast_stmt_function_def(FunctionDef *function);
+Stmt *ast_stmt_export(ExportStmt *export);
 Stmt *ast_stmt_error();
 
 PartialDeclarationStmt *ast_declaration(IdentifierList *ids, Type *type, Expr *expr);
 ConstantStmt *ast_constant(Identifier *id, Type *type, Expr *expr);
 TypeAliasStmt *ast_type_alias(Identifier *id, Type *type);
+ExportStmt *ast_export(IdentifierList *ids);
 
 Expr *ast_expr_literal(LiteralExpr *literal);
 Expr *ast_expr_variable(VariableExpr *var);
@@ -595,6 +606,7 @@ void ast_free_decl(DeclarationStmt *decl);
 void ast_free_partial_decl(PartialDeclarationStmt *decl);
 void ast_free_constant(ConstantStmt *constant);
 void ast_free_alias(TypeAliasStmt *alias);
+void ast_free_export(ExportStmt *export);
 
 void ast_free_expr(Expr *expr);
 void ast_free_literal(LiteralExpr *literal);

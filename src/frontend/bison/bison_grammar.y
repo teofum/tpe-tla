@@ -50,6 +50,7 @@ static void yyerror(YYLTYPE *location, const char *message) {
   PartialDeclarationStmt *declaration;
   ConstantStmt *constant;
   TypeAliasStmt *type_alias;
+  ExportStmt *export;
 
 	Expr *expression;
 	LiteralExpr *literal;
@@ -105,6 +106,7 @@ static void yyerror(YYLTYPE *location, const char *message) {
 %destructor { ast_free_partial_decl($$); } <declaration>
 %destructor { ast_free_constant($$); } <constant>
 %destructor { ast_free_alias($$); } <type_alias>
+%destructor { ast_free_export($$); } <export>
 %destructor { ast_free_type($$); } <type>
 %destructor { ast_free_function_def($$); } <function_def>
 %destructor { ast_free_stmt_list($$, true); } <statement_list>
@@ -170,6 +172,7 @@ static void yyerror(YYLTYPE *location, const char *message) {
 %token <token>    FUNCTION          "'function'"
 %token <token>    COMPOSE           "'compose'"
 %token <token>    IMPORT            "'import'"
+%token <token>    EXPORT            "'export'"
 
 // Identifiers
 %token <identifier> IDENTIFIER      "identifier"
@@ -194,6 +197,7 @@ static void yyerror(YYLTYPE *location, const char *message) {
 %type <declaration>                 declaration
 %type <constant>                    constant
 %type <type_alias>                  type_alias
+%type <export>                      export
 
 %type <expression>                  expression
 %type <expression>                  composable
@@ -283,6 +287,7 @@ statement: expression                                               { $$ = parse
   | constant                                                        { $$ = parse_constant_stmt($1); }
   | type_alias                                                      { $$ = parse_type_alias_stmt($1); }
   | function_def                                                    { $$ = parse_function_def_stmt($1); }
+  | export                                                          { $$ = parse_export_stmt($1); }
   | error                                                           { $$ = parse_error_stmt(); }
   ;
 
@@ -312,6 +317,9 @@ parameter_list: parameter                                           { $$ = parse
 
 parameter: IDENTIFIER COLON type                                    { $$ = parse_parameter($1, $3, NULL); }
   | IDENTIFIER COLON type EQUAL expression                          { $$ = parse_parameter($1, $3, $5); }
+  ;
+
+export: EXPORT identifier_list                                      { $$ = parse_export($2); }
   ;
 
 /*-- Expressions -----------------------------------------------------------------------------------------------------*/

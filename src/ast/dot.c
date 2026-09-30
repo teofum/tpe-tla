@@ -434,6 +434,15 @@ static void dot_function_def(FunctionDef *function, u64 pid) {
   dot_block(function->body, id);
 }
 
+static void dot_export(ExportStmt *export, u64 pid) {
+  u64 id = next_id();
+  _node(id, "Export", NODE_STMT);
+  _edge(pid, id);
+  for (u32 i = 0; i < export->len; i++) {
+    dot_enum_value(export->ids[i], id);
+  }
+}
+
 static void dot_error(u64 pid) {
   u64 id = next_id();
   _node(id, "Parse ERROR", NODE_ERROR);
@@ -447,6 +456,7 @@ static void dot_stmt(Stmt *stmt, u64 pid) {
     case STMT_CONSTANT: return dot_const(stmt->constant, pid);
     case STMT_TYPE_ALIAS: return dot_alias(stmt->type_alias, pid);
     case STMT_FUNCTION_DEF: return dot_function_def(stmt->function_def, pid);
+    case STMT_EXPORT: return dot_export(stmt->export, pid);
     case STMT_PARSE_ERROR: return dot_error(pid);
   }
 }
