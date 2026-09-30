@@ -1,6 +1,8 @@
 #include <stdarg.h>
+#include <stdio.h>
 #include <stdlib.h>
 
+#include <string.h>
 #include <support/dyn_array.h>
 #include <support/logger.h>
 #include <support/state.h>
@@ -13,6 +15,7 @@
 
 #define FMT_LOCATION "In %s:%u:%u: "
 #define INDENTED_NL "\n\t\t"
+#define INDENT "\t\t"
 
 typedef struct {
   dyn_array *errors;
@@ -89,14 +92,42 @@ static void _log_syntax_error(Error *error) {
     }
     str_append_temp(&error_str, expected);
   }
-
-  // TODO: log bad line
-
-  _log(error,
+  str with_loc = str_format(
     FMT_LOCATION "%.*s",
     error->filepath, error->loc.first_line, error->loc.first_column,
     error_str.len, error_str.ptr
   );
+
+  FILE *file = fopen(error->filepath, "r");
+  if (file) {
+    u32 fl = error->loc.first_line - 1, fc_fl = error->loc.first_column - 1;
+    u32 ll = error->loc.last_line - 1, lc_ll = error->loc.last_column - 1;
+    char buf[256];
+    for (u32 line = 0; line < fl; line++) {
+      fgets(buf, 256, file);
+    }
+    for (u32 line = fl; line <= ll; line++) {
+      fgets(buf, 256, file);
+      u32 fc = (line == fl) ? fc_fl : 0;
+      u32 lc = (line == ll) ? lc_ll : strlen(buf);
+      if (lc == 0) continue;
+
+      str_append_temp(&with_loc,
+        str_format(INDENTED_NL "%4u| %.*s" R "%.*s" RESET "%s",
+          line + 1, fc, buf, lc - fc, buf + fc, buf + lc
+        )
+      );
+      for (u32 i = 0; i < lc; i++) {
+        buf[i] = i < fc ? ' ' : i == fc ? '^' : '~';
+      }
+      buf[lc] = 0;
+      str_append_temp(&with_loc, str_format(INDENT R "      %s" RESET, buf));
+    }
+    fclose(file);
+  }
+
+  _log(error, "%.*s", with_loc.len, with_loc.ptr);
+  str_free(with_loc);
   str_free(error_str);
 }
 

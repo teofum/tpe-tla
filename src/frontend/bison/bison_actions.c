@@ -346,6 +346,7 @@ static Argument *_parse_argument(Expr *expr) {
 
       fe_report_syntax_error(ctx);
       ast_free_expr(expr);
+      arg = ast_argument(NULL, NULL);
     }
   } else {
     arg = ast_argument(NULL, expr);
@@ -395,7 +396,8 @@ FunctionCallExpr *parse_function_call(Identifier *id, ExprList *arg_exprs, Expr 
   ArgumentList *args_tail = args;
   ExprList *expr_list = arg_exprs;
   while (expr_list) {
-    args_tail->head = _parse_argument(expr_list->head);
+    Argument *arg = _parse_argument(expr_list->head);
+    args_tail->head = arg;
 
     args_tail->len = expr_list->len;
     if (expr_list->tail) {

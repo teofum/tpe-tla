@@ -318,15 +318,19 @@ static void dot_block(BlockExpr *block, u64 pid) {
 
 static void dot_argument(Argument *arg, u32 idx, u64 pid) {
   u64 id = next_id();
-  char label[256];
-  if (arg->name) {
-    snprintf(label, 256, "%s", arg->name->lexeme);
+  if (arg->value) {
+    char label[256];
+    if (arg->name) {
+      snprintf(label, 256, "%s", arg->name->lexeme);
+    } else {
+      snprintf(label, 256, "[%u]", idx);
+    }
+    dot_expr(arg->value, id);
+    _node(id, label, NODE_BASE);
   } else {
-    snprintf(label, 256, "[%u]", idx);
+    _node(id, "Argument ERROR", NODE_ERROR);
   }
-  _node(id, label, NODE_BASE);
   _edge(pid, id);
-  dot_expr(arg->value, id);
 }
 
 static void dot_function_call(FunctionCallExpr *function, u64 pid) {
