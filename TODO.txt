@@ -27,7 +27,8 @@
 [x] Read input from file/directory, rather than stdin
 [ ] FUTURE: log to files, read environment variables for paths
 
-[ ] Improve and update README.md
+[x] Improve and update README.md
+  [x] Give the dang thing a name
 
 #=== Frontend =================================================================#
 

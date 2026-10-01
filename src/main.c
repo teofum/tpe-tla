@@ -9,10 +9,19 @@
 #include <support/state.h>
 #include <support/types.h>
 
+static const char *frog =
+  "       _     _\n"
+  "      (')-=-(')\n"
+  "    __(   \"   )__\n"
+  "   / _/'-----'\\_ \\\n"
+  "___\\\\ \\\\     // //___\n"
+  ">____)/_\\---/_\\(____<";
+
 i32 main(i32 argc, char *const*argv) {
   CompilerOptions opts = options(argc, argv);
   if (opts.task == TASK_HELP) {
-    printf("TODO: helpful text :)\n");
+    printf("%s\n\n", frog);
+    printf("Ribbit.\n");
     return 0;
   }
 

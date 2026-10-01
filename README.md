@@ -1,10 +1,11 @@
 [![✗](https://github.com/teofum/tpe-tla/actions/workflows/ci.yaml/badge.svg?branch=development)](https://github.com/teofum/tpe-tla/actions/workflows/ci.yaml)
 
-# Flex-Bison-Compiler
+# frog 🐸
 
-A base compiler example, developed with Flex and Bison.
+A programming language dedicated to static website generation.
 
 - [Requirements](#requirements)
+- [Usage](#usage)
 - [Configuration](#configuration)
 - [Commands](#commands)
 
@@ -12,50 +13,80 @@ A base compiler example, developed with Flex and Bison.
 
 - [Docker v29.7.2](https://www.docker.com/)
 
+## Usage
+
+```bash
+frog <options> <file>
+```
+
+where `<options>` is a list of command line options described in [Configuration](#configuration) and `<file>` is the path to an input file.
+
 ## Configuration
 
-Set the following environment variables to control and configure the behaviour of the application:
+The compiler takes options from environment variables or command line arguments, with the latter having priority if both are defined.
 
-| Name                  | Default | Description                                                                                                                                                           |
-| :-------------------- | :-----: | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ENVIRONMENT`         | `Local` | The active environment name. The available environments are: `Local`, `Development` and `Production`.                                                                 |
-| `LOG_IGNORED_LEXEMES` | `true`  | When `true`, logs all of the ignored lexemes found with Flex at `DEBUGGING` level. To remove those logs from the console output set it to `false`.                    |
-| `LOGGING_LEVEL`       |  `ALL`  | The minimum level to log in the console output. From lower to higher, the available levels are: `ALL`, `DEBUGGING`, `INFORMATION`, `WARNING`, `ERROR` and `CRITICAL`. |
+### Command line options
+
+| Command line              | Default       | Description                                                                                                |
+| :------------------------ | :------------ | :--------------------------------------------------------------------------------------------------------- |
+| `-h`, `--help`            | unset         | Print a help message and exit.                                                                             |
+| `-v`, `--verbose`         | unset         | Equivalent to `--log=verbose`.                                                                             |
+| `-q`, `--quiet`           | unset         | Equivalent to `--log=none`.                                                                                |
+| `--log=<level>`           | `info`        | Set the compiler logging level. See [Logging](#logging) for valid options.                                 |
+| `--emit-ast[=<filename>]` | off, `ast.gv` | If set, the compiler will emit a GraphViz DOT file for the full AST after parsing with the given filename. |
+
+### Environment variables
+
+| Name               | Default  | Description                                                                           |
+| :----------------- | :------- | :------------------------------------------------------------------------------------ |
+| `LOG_LEVEL`        | `info`   | Set the compiler logging level. See [Logging](#logging) for valid options.            |
+| `EMIT_AST_DOT`     | `false`  | If `true`, the compiler will emit a GraphViz DOT file for the full AST after parsing. |
+| `AST_DOT_FILENAME` | `ast.gv` | Filename for the GraphViz AST debug output.                                           |
 
 _Docker Compose_ can read the variables from an `.env` file too (see `compose.yaml` file).
 
+### Logging
+
+The compiler logging level can be set to one of `fatal`, `error`, `warning`, `info`, `verbose`, `debug`, `none` or `all` (equivalent to `debug`).
+
 ## Commands
-
-### Start
-
-Rises an ephemeral container, ready to start development:
-
-```bash
-docker compose run --rm compiler
-```
 
 ### Build
 
-Builds or rebuilds the entire compiler:
+To perform an initial build, simply use `make`.
+
+To incrementally rebuild the changed parts:
 
 ```bash
-.script/build.sh
+make rebuild
+```
+
+To do a clean build from scratch (necessary when making changes to Flex or Bison files):
+
+```bash
+make clean-build
 ```
 
 ### Run
 
-Compiles a program:
+Compiles a program using an ephemeral container:
 
 ```bash
-.script/run.sh <program>
+docker compose run -q --rm compiler .script/run.sh <options>
 ```
 
-where `<program>` is the path to the file that represents its entry-point.
+where `<options>` are the command line arguments as described in [Usage](#usage).
 
 ### Test
 
 Executes every available unit-test under `test` folder:
 
 ```bash
-.script/test.sh
+make test
 ```
+
+## FAQ
+
+### why is it named frog
+
+frogs are cool

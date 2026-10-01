@@ -29,7 +29,7 @@ echo ""
 for path in test/accept/**/*; do
 	if [ -f "$path" ]; then
 		TEST="${path#test/accept/}"
-		".build/Flex-Bison-Compiler" "$path" >/dev/null 2>&1
+		".build/frog" "$path" >/dev/null 2>&1
 		RESULT="$?"
 		if [ "$RESULT" == "0" ]; then
 			echo -e "    \"$TEST\", ${GREEN}and it does${OFF} (status $RESULT)"
@@ -47,7 +47,7 @@ echo ""
 for path in test/reject/**/*; do
 	if [ -f "$path" ]; then
 		TEST="${path#test/reject/}"
-		".build/Flex-Bison-Compiler" "$path" >/dev/null 2>&1
+		".build/frog" "$path" >/dev/null 2>&1
 		RESULT="$?"
 		if [ "$RESULT" != "0" ]; then
 			echo -e "    \"$TEST\", ${GREEN}and it does${OFF} (status $RESULT)"

@@ -3,7 +3,7 @@
 cmake_minimum_required(VERSION 3.31.6)
 
 # Name of the project and language to use (C, in this case).
-project(Flex-Bison-Compiler C)
+project(frog C)
 
 set(CMAKE_C_STANDARD 23)
 
@@ -38,7 +38,7 @@ if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
       ../src/frontend/bison/bison_parser.h
   )
 
-  add_executable(Flex-Bison-Compiler
+  add_executable(frog
     src/main.c
     src/ast/ast.c
     src/ast/dot.c
@@ -54,10 +54,10 @@ if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
     src/support/options.c
     src/support/str.c
   )
-  target_include_directories(Flex-Bison-Compiler PRIVATE src)
+  target_include_directories(frog PRIVATE src)
 
   # Link final project and libraries.
-  target_link_libraries(Flex-Bison-Compiler)
+  target_link_libraries(frog)
 else ()
   message(NOTICE "The C compiler is unknown.")
 endif ()

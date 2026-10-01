@@ -70,6 +70,8 @@ static void _options_cli_args(CompilerOptions *options, i32 argc, char *const*ar
     }
   }
 
+  if (options->task != TASK_COMPILE) return;
+
   if (optind >= argc) {
     fprintf(stderr, "Expected input file after options\n");
   } else {

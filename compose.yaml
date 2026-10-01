@@ -36,5 +36,5 @@ services:
           - "compiler.72-39.itba.edu.ar"
     user: "ubuntu:ubuntu"
     volumes:
-      - ".:/home/ubuntu/Flex-Bison-Compiler"
-    working_dir: "/home/ubuntu/Flex-Bison-Compiler"
+      - ".:/home/ubuntu/frog"
+    working_dir: "/home/ubuntu/frog"
