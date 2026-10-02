@@ -1,13 +1,13 @@
-#include <stdio.h>
-
 #include <ast/ast.h>
 #include <ast/dot.h>
 #include <error/error.h>
 #include <frontend/frontend.h>
+#include <support/fs.h>
 #include <support/logger.h>
 #include <support/options.h>
 #include <support/state.h>
 #include <support/types.h>
+#include <support/util.h>
 
 static const char *frog =
   "       _     _\n"
@@ -28,9 +28,9 @@ i32 main(i32 argc, char *const*argv) {
   CompilerState cs = {
     .options = opts,
     .status = STATUS_NOT_STARTED,
-    .ast = NULL,
+    .asts = new_array(Program *, opts.input_file_count),
     .logger = logger_create("Main", stdout, opts.log_level),
-    .current_filepath = NULL,
+    .current_file = -1,
   };
   logger_set_flags(cs.logger, LOGGER_LOG_NAME, false);
 
@@ -39,13 +39,12 @@ i32 main(i32 argc, char *const*argv) {
   fe_init(&cs);
 
   // Run parser
-  cs.status = fe_parse(cs.options.input_filename);
+  for (u32 i = 0; i < cs.options.input_file_count; i++) {
+    cs.status = fe_parse(i);
+    if (cs.status != STATUS_SUCCEEDED) break;
 
-  // AST graphviz output for debugging
-  if (cs.options.emit_ast_dot && cs.status == STATUS_SUCCEEDED) {
-    FILE *dot_output = fopen(cs.options.ast_dot_filename, "w");
-    ast_generate_dot(cs.ast, dot_output);
-    fclose(dot_output);
+    // AST graphviz output for debugging
+    if (cs.options.emit_ast_dot) ast_generate_dot(&cs, i);
   }
 
   // First error gate: post-parse
@@ -54,8 +53,12 @@ i32 main(i32 argc, char *const*argv) {
   // TODO: backend
 
   // Shutdown compiler
-  ast_free_program(cs.ast);
+  for (u32 i = 0; i < cs.options.input_file_count; i++) {
+    ast_free_program(cs.asts[i]);
+  }
+  free(cs.asts);
   logger_free(cs.logger);
+  options_free(&cs.options);
 
   fe_shutdown();
   err_shutdown();

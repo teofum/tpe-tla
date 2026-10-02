@@ -4,6 +4,7 @@
 #include <stdio.h>
 
 #include "frontend.h"
+#include "support/state.h"
 
 #include <ast/ast.h>
 #include <error/error.h>
@@ -21,23 +22,13 @@ void fe_init(CompilerState *compiler_state) {
   cs = compiler_state;
 
   f = new(Frontend);
-  yylex_init(&f->scanner);
-  f->parser = yypstate_new();
   f->scan_logger = logger_create("Scanner", stderr, cs->options.scanner_log_level);
   f->parse_logger = logger_create("Parser", stderr, cs->options.parser_log_level);
-
-  f->location = new(Location);
-  *f->location = (Location){1, 1, 1, 1};
-
-  flex_enter_context(f, 0);
 }
 
 void fe_shutdown() {
   if (!f) return;
 
-  if (f->scanner) yylex_destroy(f->scanner);
-  if (f->parser) yypstate_delete(f->parser);
-  if (f->location) free(f->location);
   if (f->scan_logger) logger_free(f->scan_logger);
   if (f->parse_logger) logger_free(f->parse_logger);
   free(f);
@@ -201,7 +192,7 @@ void fe_leave_context() {
 }
 
 void fe_set_ast(Program *ast) {
-  cs->ast = ast;
+  cs->asts[cs->current_file] = ast;
 }
 
 static FlexContext _ctx() {
@@ -213,7 +204,9 @@ static CompilationStatus _next() {
 }
 
 // TODO move error handling to the error module
-CompilationStatus fe_parse(const char *filepath) {
+CompilationStatus fe_parse(i32 file_idx) {
+  const char *filepath = cs->options.input_filenames[file_idx];
+
   if (!filepath) {
     logger_log(cs->logger, LOG_FATAL, "No input file");
     return STATUS_FAILED;
@@ -236,13 +229,23 @@ CompilationStatus fe_parse(const char *filepath) {
     return STATUS_FAILED;
   }
 
-  cs->current_filepath = filepath;
+  yylex_init(&f->scanner);
+  flex_enter_context(f, 0);
+  f->parser = yypstate_new();
+  f->location = new(Location);
+  *f->location = (Location){1, 1, 1, 1};
+
+  cs->current_file = file_idx;
   yyset_in(file, f->scanner);
 
   CompilationStatus status = STATUS_IN_PROGRESS;
   while (status == STATUS_IN_PROGRESS) status = _next();
 
-  cs->current_filepath = NULL;
+  if (f->scanner) yylex_destroy(f->scanner);
+  if (f->parser) yypstate_delete(f->parser);
+  if (f->location) free(f->location);
+
+  cs->current_file = -1;
   return status;
 }
 

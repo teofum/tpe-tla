@@ -9,9 +9,11 @@
 typedef struct {
   CompilerOptions options;
   CompilationStatus status;
-  Program *ast;
+  Program **asts;
   Logger *logger;
-  const char *current_filepath;
+  i32 current_file;
 } CompilerState;
+
+const char *state_current_filepath(CompilerState *cs);
 
 #endif

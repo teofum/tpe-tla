@@ -13,10 +13,12 @@ static CompilerOptions _options_default() {
   return (CompilerOptions){
     .task = TASK_COMPILE,
     .log_level = LOG_INFO,
-    .input_filename = NULL,
+
+    .input_file_count = 0,
+    .input_filenames = NULL,
 
     .emit_ast_dot = false,
-    .ast_dot_filename = "ast.gv",
+    .ast_dot_base_path = NULL,
 
     .parser_log_level = LOG_NONE,
     .scanner_log_level = LOG_NONE,
@@ -26,7 +28,7 @@ static CompilerOptions _options_default() {
 static void _options_env(CompilerOptions *options) {
   env_set_log_level("LOG_LEVEL", &options->log_level);
   env_set_bool("EMIT_AST_DOT", &options->emit_ast_dot);
-  env_set_str("AST_DOT_FILENAME", &options->ast_dot_filename);
+  env_set_str("AST_DOT_BASE_PATH", &options->ast_dot_base_path);
 
   env_set_log_level("__DEBUG_SCANNER_LOG_LEVEL", &options->scanner_log_level);
   env_set_log_level("__DEBUG_PARSER_LOG_LEVEL", &options->parser_log_level);
@@ -65,7 +67,7 @@ static void _options_cli_args(CompilerOptions *options, i32 argc, char *const*ar
         break;
       case OPT_AST_DOT:
         options->emit_ast_dot = true;
-        if (optarg) options->ast_dot_filename = strdup(optarg);
+        if (optarg) options->ast_dot_base_path = strdup(optarg);
         break;
     }
   }
@@ -75,7 +77,10 @@ static void _options_cli_args(CompilerOptions *options, i32 argc, char *const*ar
   if (optind >= argc) {
     fprintf(stderr, "Expected input file after options\n");
   } else {
-    options->input_filename = argv[optind];
+    options->input_file_count = argc - optind;
+    options->input_filenames = new_array(char *, options->input_file_count);
+    for (u32 i = 0; i < options->input_file_count; i++)
+    options->input_filenames[i] = argv[i + optind];
   }
 }
 
@@ -85,4 +90,9 @@ CompilerOptions options(i32 argc, char *const*argv) {
   _options_cli_args(&options, argc, argv);
 
   return options;
+}
+
+void options_free(CompilerOptions *opts) {
+  free(opts->input_filenames);
+  if (opts->ast_dot_base_path) free(opts->ast_dot_base_path);
 }

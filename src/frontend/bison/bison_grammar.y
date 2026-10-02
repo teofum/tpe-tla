@@ -125,7 +125,6 @@ static void yyerror(YYLTYPE *location, const char *message) {
 %destructor { ast_free_type_list($$, true); } <type_list>
 %destructor { ast_free_identifier_list($$, true); } <identifier_list>
 %destructor { ast_free_expr_list($$, true); } <expression_list>
-%destructor { ast_free_program($$); } <program>
 
 /*== Symbols: terminals ==============================================================================================*/
 

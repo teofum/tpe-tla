@@ -12,15 +12,18 @@ typedef enum {
 typedef struct {
   CompilerTask task;
   LogLevel log_level;
-  const char *input_filename;
+
+  u32 input_file_count;
+  char **input_filenames;
 
   bool emit_ast_dot;
-  const char *ast_dot_filename;
+  char *ast_dot_base_path;
 
   LogLevel scanner_log_level;
   LogLevel parser_log_level;
 } CompilerOptions;
 
 CompilerOptions options(i32 argc, char *const*argv);
+void options_free(CompilerOptions *opts);
 
 #endif

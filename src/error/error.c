@@ -53,7 +53,7 @@ void err_report_syntax(SyntaxError *s, Location *location, ErrorLevel level) {
     .level = level,
     .syntax = s,
     .loc = *location,
-    .filepath = cs->current_filepath,
+    .filepath = state_current_filepath(cs),
   };
   dyn_array_push(e->errors, &error);
 }
@@ -65,7 +65,7 @@ void err_report_import_type(ImportTypeError *i, Location *location, ErrorLevel l
     .level = level,
     .import_type = i,
     .loc = *location,
-    .filepath = cs->current_filepath,
+    .filepath = state_current_filepath(cs),
   };
   dyn_array_push(e->errors, &error);
 }

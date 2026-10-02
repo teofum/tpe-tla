@@ -3,7 +3,7 @@
 
 #include <support/logger.h>
 
-bool env_set_str(const char *name, const char **out);
+bool env_set_str(const char *name, char **out);
 bool env_set_bool(const char *name, bool *out);
 bool env_set_log_level(const char *name, LogLevel *out);
 

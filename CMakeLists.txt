@@ -50,8 +50,10 @@ if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
     src/frontend/frontend.c
     src/support/dyn_array.c
     src/support/env.c
+    src/support/fs.c
     src/support/logger.c
     src/support/options.c
+    src/support/state.c
     src/support/str.c
   )
   target_include_directories(frog PRIVATE src)

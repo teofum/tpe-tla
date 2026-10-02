@@ -1,10 +1,15 @@
+#include <libgen.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 
 #include <ast/ast.h>
 #include <frontend/frontend.h>
+#include <support/fs.h>
+#include <support/options.h>
+#include <support/state.h>
 #include <support/str.h>
 #include <support/types.h>
 #include <support/util.h>
@@ -481,11 +486,24 @@ static void dot_program(Program *program) {
   }
 }
 
-void ast_generate_dot(Program *ast, FILE *out_file) {
-  _of = out_file;
+void ast_generate_dot(CompilerState *cs, u32 ast_idx) {
+  char *dot_path = ast_dot_filepath(cs, cs->options.input_filenames[ast_idx]);
+  fs_mkpath(dot_path, S_IRWXU | S_IRWXG | S_IROTH);
+  _of = fopen(dot_path, "w");
+  free(dot_path);
+
   _id = 0;
   _printfln("digraph AST {");
-  dot_program(ast);
+  dot_program(cs->asts[ast_idx]);
   _printfln("}");
+  fclose(_of);
   _of = NULL;
+}
+
+char *ast_dot_filepath(CompilerState *cs, const char *input_filepath) {
+  const char *prefix = or_default(cs->options.ast_dot_base_path, "ast");
+
+  char *path = NULL;
+  asprintf(&path, "%s/%s", prefix, input_filepath);
+  return path;
 }

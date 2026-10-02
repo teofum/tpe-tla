@@ -5,8 +5,8 @@
 
 #include "env.h"
 
-bool env_set_str(const char *name, const char **out) {
-  const char *val = getenv(name);
+bool env_set_str(const char *name, char **out) {
+  char *val = getenv(name);
   if (!val) return false;
 
   *out = val;

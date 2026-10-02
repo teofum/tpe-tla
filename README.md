@@ -27,21 +27,21 @@ The compiler takes options from environment variables or command line arguments,
 
 ### Command line options
 
-| Command line              | Default       | Description                                                                                                |
-| :------------------------ | :------------ | :--------------------------------------------------------------------------------------------------------- |
-| `-h`, `--help`            | unset         | Print a help message and exit.                                                                             |
-| `-v`, `--verbose`         | unset         | Equivalent to `--log=verbose`.                                                                             |
-| `-q`, `--quiet`           | unset         | Equivalent to `--log=none`.                                                                                |
-| `--log=<level>`           | `info`        | Set the compiler logging level. See [Logging](#logging) for valid options.                                 |
-| `--emit-ast[=<filename>]` | off, `ast.gv` | If set, the compiler will emit a GraphViz DOT file for the full AST after parsing with the given filename. |
+| Command line              | Default     | Description                                                                                              |
+| :------------------------ | :---------- | :------------------------------------------------------------------------------------------------------- |
+| `-h`, `--help`            | unset       | Print a help message and exit.                                                                           |
+| `-v`, `--verbose`         | unset       | Equivalent to `--log=verbose`.                                                                           |
+| `-q`, `--quiet`           | unset       | Equivalent to `--log=none`.                                                                              |
+| `--log=<level>`           | `info`      | Set the compiler logging level. See [Logging](#logging) for valid options.                               |
+| `--emit-ast[=<filename>]` | off, `ast/` | If set, the compiler will emit GraphViz DOT file for the full ASTs after parsing in the given directory. |
 
 ### Environment variables
 
-| Name               | Default  | Description                                                                           |
-| :----------------- | :------- | :------------------------------------------------------------------------------------ |
-| `LOG_LEVEL`        | `info`   | Set the compiler logging level. See [Logging](#logging) for valid options.            |
-| `EMIT_AST_DOT`     | `false`  | If `true`, the compiler will emit a GraphViz DOT file for the full AST after parsing. |
-| `AST_DOT_FILENAME` | `ast.gv` | Filename for the GraphViz AST debug output.                                           |
+| Name                | Default | Description                                                                           |
+| :------------------ | :------ | :------------------------------------------------------------------------------------ |
+| `LOG_LEVEL`         | `info`  | Set the compiler logging level. See [Logging](#logging) for valid options.            |
+| `EMIT_AST_DOT`      | `false` | If `true`, the compiler will emit a GraphViz DOT file for the full AST after parsing. |
+| `AST_DOT_BASE_PATH` | `ast/`  | Base filepath for the GraphViz AST debug output.                                      |
 
 _Docker Compose_ can read the variables from an `.env` file too (see `compose.yaml` file).
 
