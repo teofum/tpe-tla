@@ -10,50 +10,28 @@ reported, but allow the compiler to continue.
   Each input file is parsed into an AST using Flex+Bison. This step may produce
   syntax errors.
 
-The following steps are executed in order for a given scope. After parsing,
-these steps are run on the main (file) scope of each file.
+The following steps are executed in order, each for every file.
 
-2. Symbol pass [TODO]:
-  The AST representing the scope is scanned (shallow) for type and function
-  definitions and constants, and a symbol table is built. At the file scope,
-  both per-file and global (export) symbol tables are built.
+2. Static symbol pass [TODO]:
+  The AST for the file is scanned for type and function definitions, and the
+  type and function symbol tables are built, including scope information.
 
 3. Type checking [TODO]:
-  Once the local symbol table is built, all statements and expressions in the
-  scope (shallow) are type checked. Note that this includes types and
-  definitions already in the symbol table; we eagerly add them so they can be
-  used in type checking regardless of where they were declared.
+  Once the static symbol table is built, all statements and expressions in the
+  file are type checked. Function definitions are type checked at the end of
+  their respective scope. The variable symbol table is also built during this
+  step, as it's needed for type checking, and symbol reference integrity is
+  also checked at this point.
 
-These two stages may produce type errors and symbol table errors (e.g.,
-redefinition of an already defined variable, function or type). Once all files
-have been checked, the next steps are run on each one:
+These two stages may produce type errors and symbol errors (e.g., redefinition
+of an already defined function or type, use of an undefined variable).
 
 4. Evaluation [TODO]:
   The goal of this step is to reduce an AST (i.e., a program) to a single value
   or a list of values. Expressions are evaluated in order from top to bottom,
-  and reduced to the value they return. When a nested scope (block) is
-  encountered as part of an expression, before it is evaluated, steps 2. and 3.
-  are run on this nested scope. This is done even if the scope will not be
-  evaluated, to report any errors in it.
-
-Note that nested scopes are symbol-passed and typechecked lazily. This is done
-for two reasons:
-  - Symbols can't outlive their scope, so we can save resources by dropping the
-    symbol table of a nested scope as soon as we're done evaluating it. If we
-    eagerly built symbol tables for every scope, we'd have to store all of them
-    for the entire duration of the evaluation phase.
-  - Nested scopes can use symbols from their ancestor scopes, even ones defined
-    later in the file (avoids the need for forward declarations), which requires
-    we only look at a scope *after* building and typechecking the entire symbol
-    table for all of its ancestors. The evaluation phase is a neat way to do so.
-Any symbol table or type errors in a nested scope immediately halt evaluation of
-its ancestor scopes, up to the file level, as their value cannot be obtained.
-The compiler still attempts to evaluate any remaining files, for the purpose of
-error checking and reporting.
-
-Also note that the symbol table for a scope can be modified during evaluation:
-variables are not added during the symbol pass, as they cannot be referenced
-before they are defined, and their value may be altered by assignments.
+  and reduced to the value they return. Because symbol integrity has been
+  validated during type checking, it can be assumed any symbols referenced at
+  this stage are well defined.
 
 The evaluation stage may produce evaluation errors. These are what most
 languages would call runtime errors, e.g., a division by zero, an out of bounds
@@ -61,8 +39,7 @@ list index, or an import error.
 
 MAYBE: cache the values produced by eval, to allow faster recompilation if some
 files have errors? We can easily invalidate by source file modified timestamp.
-NOTE: if we do this, need to also list any dependencies such as imports or
-files we use exported symbols from.
+NOTE: if we do this, need to also list any dependencies such as imports.
 
 5. Code generation [TODO]:
   This step is run immediately after evaluation. The value or values produced
