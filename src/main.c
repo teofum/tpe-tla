@@ -1,7 +1,9 @@
 #include <ast/ast.h>
+#include <ast/symbols.h>
 #include <ast/dot.h>
 #include <error/error.h>
 #include <frontend/frontend.h>
+#include <stdlib.h>
 #include <support/fs.h>
 #include <support/logger.h>
 #include <support/options.h>
@@ -17,6 +19,9 @@ static const char *frog =
   "___\\\\ \\\\     // //___\n"
   ">____)/_\\---/_\\(____<";
 
+CompilerState *init(CompilerOptions *opts);
+void shutdown(CompilerState *cs);
+
 i32 main(i32 argc, char *const*argv) {
   CompilerOptions opts = options(argc, argv);
   if (opts.task == TASK_HELP) {
@@ -25,43 +30,60 @@ i32 main(i32 argc, char *const*argv) {
     return 0;
   }
 
-  CompilerState cs = {
-    .options = opts,
-    .status = STATUS_NOT_STARTED,
-    .asts = new_array(Program *, opts.input_file_count),
-    .logger = logger_create("Main", stdout, opts.log_level),
-    .current_file = -1,
-  };
-  logger_set_flags(cs.logger, LOGGER_LOG_NAME, false);
-
-  // Initialize compiler
-  err_init(&cs);
-  fe_init(&cs);
+  CompilerState *cs = init(&opts);
 
   // Run parser
-  for (u32 i = 0; i < cs.options.input_file_count; i++) {
-    cs.status = fe_parse(i);
-    if (cs.status != STATUS_SUCCEEDED) break;
+  for (u32 i = 0; i < cs->options.input_file_count; i++) {
+    cs->status = fe_parse(i);
+    if (cs->status != STATUS_SUCCEEDED) break;
 
     // AST graphviz output for debugging
-    if (cs.options.emit_ast_dot) ast_generate_dot(&cs, i);
+    if (cs->options.emit_ast_dot) ast_generate_dot(cs, i);
   }
 
   // First error gate: post-parse
-  err_gate();
+  if (!err_gate()) {
+    shutdown(cs);
+    return cs->status;
+  }
 
   // TODO: backend
 
-  // Shutdown compiler
-  for (u32 i = 0; i < cs.options.input_file_count; i++) {
-    ast_free_program(cs.asts[i]);
+  CompilationStatus status = cs->status;
+  shutdown(cs);
+  return status;
+}
+
+CompilerState *init(CompilerOptions *opts) {
+  CompilerState *cs = new(CompilerState);
+  *cs = (CompilerState){
+    .options = *opts,
+    .status = STATUS_NOT_STARTED,
+    .asts = new_array(Program *, opts->input_file_count),
+    .symbol_data = new_array(Symbols *, opts->input_file_count),
+    .logger = logger_create("Main", stdout, opts->log_level),
+    .current_file = -1,
+  };
+  logger_set_flags(cs->logger, LOGGER_LOG_NAME, false);
+
+  // Initialize compiler
+  err_init(cs);
+  fe_init(cs);
+
+  return cs;
+}
+
+void shutdown(CompilerState *cs) {
+  for (u32 i = 0; i < cs->options.input_file_count; i++) {
+    ast_free_program(cs->asts[i]);
   }
-  free(cs.asts);
-  logger_free(cs.logger);
-  options_free(&cs.options);
+  free(cs->asts);
+  free(cs->symbol_data);
+  logger_free(cs->logger);
+  options_free(&cs->options);
 
   fe_shutdown();
   err_shutdown();
 
-  return cs.status;
+  free(cs);
 }

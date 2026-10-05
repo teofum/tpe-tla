@@ -163,7 +163,7 @@ LiteralExpr *parse_struct_literal(StructLiteralFieldList *fields) {
 
 LiteralExpr *parse_enum_literal(Identifier *id, Identifier *typename) {
   fe_parser_log(LOG_DEBUG, "Enum Literal .%s", id->lexeme);
-  return ast_enum_literal(map(typename, ast_named_type), id);
+  return ast_enum_literal(map_or_null(typename, ast_named_type), id);
 }
 
 LiteralExpr *parse_range_literal(Expr *start, Expr *end, bool inclusive) {
