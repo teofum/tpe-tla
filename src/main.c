@@ -1,6 +1,7 @@
 #include <ast/ast.h>
 #include <ast/symbols.h>
 #include <ast/dot.h>
+#include <backend/static_analysis.h>
 #include <error/error.h>
 #include <frontend/frontend.h>
 #include <stdlib.h>
@@ -40,14 +41,16 @@ i32 main(i32 argc, char *const*argv) {
     // AST graphviz output for debugging
     if (cs->options.emit_ast_dot) ast_generate_dot(cs, i);
   }
+  if (!err_gate()) { shutdown(cs); return cs->status; }
 
-  // First error gate: post-parse
-  if (!err_gate()) {
-    shutdown(cs);
-    return cs->status;
+  // Build static (type/function) symbol tables
+  for (u32 i = 0; i < cs->options.input_file_count; i++) {
+    cs->status = sa_build_static_tables(i);
+    if (cs->status != STATUS_SUCCEEDED) break;
   }
+  if (!err_gate()) { shutdown(cs); return cs->status; }
 
-  // TODO: backend
+  // TODO: typecheck, eval, codegen
 
   CompilationStatus status = cs->status;
   shutdown(cs);
@@ -69,19 +72,28 @@ CompilerState *init(CompilerOptions *opts) {
   // Initialize compiler
   err_init(cs);
   fe_init(cs);
+  sa_init(cs);
 
   return cs;
 }
 
 void shutdown(CompilerState *cs) {
-  for (u32 i = 0; i < cs->options.input_file_count; i++) {
-    ast_free_program(cs->asts[i]);
+  if (cs->asts) {
+    for (u32 i = 0; i < cs->options.input_file_count; i++) {
+      ast_free_program(cs->asts[i]);
+    }
+    free(cs->asts);
   }
-  free(cs->asts);
-  free(cs->symbol_data);
+  if (cs->symbol_data) {
+    for (u32 i = 0; i < cs->options.input_file_count; i++) {
+      sa_free_symbols(cs->symbol_data[i]);
+    }
+    free(cs->symbol_data);
+  }
   logger_free(cs->logger);
   options_free(&cs->options);
 
+  sa_shutdown();
   fe_shutdown();
   err_shutdown();
 

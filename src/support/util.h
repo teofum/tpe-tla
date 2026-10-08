@@ -3,8 +3,8 @@
 
 #include <stdlib.h>
 
-#define new(T) calloc(1, sizeof(T))
-#define new_array(T, n) calloc(n, sizeof(T))
+#define new(T) (T *)(calloc(1, sizeof(T)))
+#define new_array(T, n) (T *)(calloc(n, sizeof(T)))
 
 #define map_or_null(x, f) ((x) ? f((x)) : NULL)
 #define or_default(x, d) ((x) ? (x) : (d))

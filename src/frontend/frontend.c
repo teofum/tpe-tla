@@ -270,7 +270,7 @@ void fe_report_syntax_error(SyntaxErrorContext *ctx) {
   *error = (SyntaxError){
     .found = strdup(ctx->found_token),
     .expected_len = ctx->expected_token_count,
-    .expected = new_array(const char *, ctx->expected_token_count),
+    .expected = new_array(char *, ctx->expected_token_count),
   };
   for (u32 i = 0; i < ctx->expected_token_count; i++) {
     error->expected[i] = strdup(ctx->expected_tokens[i]);

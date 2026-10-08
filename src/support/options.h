@@ -21,6 +21,8 @@ typedef struct {
 
   LogLevel scanner_log_level;
   LogLevel parser_log_level;
+  LogLevel symbols_log_level;
+  LogLevel typecheck_log_level;
 } CompilerOptions;
 
 CompilerOptions options(i32 argc, char *const*argv);

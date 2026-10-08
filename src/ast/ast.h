@@ -306,6 +306,7 @@ struct ForExpr {
 
 struct BlockExpr {
   ASTNodeMetadata meta;
+  u32 scope;
   u32 len;
   Stmt **statements;
 };
@@ -507,6 +508,7 @@ struct StructField {
 struct FunctionDef {
   ASTNodeMetadata meta;
   Identifier *name;
+  u32 scope;
   u32 params_len;
   Parameter **params;
   Type *return_type;
@@ -524,6 +526,7 @@ struct Parameter {
 
 struct Program {
   ASTNodeMetadata meta;
+  u32 scope;
   u32 len;
   Stmt **statements;
 };

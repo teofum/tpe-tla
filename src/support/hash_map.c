@@ -247,3 +247,9 @@ bool _map_base_delete(_map_base *mb, const void *key) {
   if (mb->value_destructor) mb->value_destructor(value);
   return true;
 }
+
+usize hash_djb2(const void *bytes, usize len) {
+  u32 hash = 5381;
+  for (u32 i = 0; i < len; i++) hash = hash * 33 + ((const char *)bytes)[i];
+  return hash;
+}

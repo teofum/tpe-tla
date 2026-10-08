@@ -42,6 +42,8 @@ if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
     src/main.c
     src/ast/ast.c
     src/ast/dot.c
+    src/ast/symbols.c
+    src/backend/static_analysis.c
     src/error/error.c
     src/frontend/bison/bison_actions.c
     src/frontend/bison/bison_parser.c
@@ -51,6 +53,7 @@ if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
     src/support/dyn_array.c
     src/support/env.c
     src/support/fs.c
+    src/support/hash_map.c
     src/support/logger.c
     src/support/options.c
     src/support/state.c
