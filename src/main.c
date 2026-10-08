@@ -21,7 +21,7 @@ static const char *frog =
   ">____)/_\\---/_\\(____<";
 
 CompilerState *init(CompilerOptions *opts);
-void shutdown(CompilerState *cs);
+CompilationStatus shutdown(CompilerState *cs);
 
 i32 main(i32 argc, char *const*argv) {
   CompilerOptions opts = options(argc, argv);
@@ -41,20 +41,18 @@ i32 main(i32 argc, char *const*argv) {
     // AST graphviz output for debugging
     if (cs->options.emit_ast_dot) ast_generate_dot(cs, i);
   }
-  if (!err_gate()) { shutdown(cs); return cs->status; }
+  if (!err_gate()) return shutdown(cs);
 
   // Build static (type/function) symbol tables
   for (u32 i = 0; i < cs->options.input_file_count; i++) {
     cs->status = sa_build_static_tables(i);
     if (cs->status != STATUS_SUCCEEDED) break;
   }
-  if (!err_gate()) { shutdown(cs); return cs->status; }
+  if (!err_gate()) return shutdown(cs);
 
   // TODO: typecheck, eval, codegen
 
-  CompilationStatus status = cs->status;
-  shutdown(cs);
-  return status;
+  return shutdown(cs);
 }
 
 CompilerState *init(CompilerOptions *opts) {
@@ -77,7 +75,7 @@ CompilerState *init(CompilerOptions *opts) {
   return cs;
 }
 
-void shutdown(CompilerState *cs) {
+CompilationStatus shutdown(CompilerState *cs) {
   if (cs->asts) {
     for (u32 i = 0; i < cs->options.input_file_count; i++) {
       ast_free_program(cs->asts[i]);
@@ -97,5 +95,7 @@ void shutdown(CompilerState *cs) {
   fe_shutdown();
   err_shutdown();
 
+  CompilationStatus status = cs->status;
   free(cs);
+  return status;
 }

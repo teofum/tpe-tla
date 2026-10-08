@@ -73,7 +73,7 @@ typedef struct {
   ({                                                                                \
     typeof((m)->map_types->key_t) _key = (key);                                     \
     typeof((m)->map_types->value_t) _value = (value);                               \
-    (typeof((m)->map_types->value_t) *)_map_base_upsert(&(m)->_map, _key, _value);  \
+    (typeof((m)->map_types->value_t))_map_base_upsert(&(m)->_map, _key, _value);  \
   })
 
 #define map_put(m, key, value)                                                      \
@@ -92,13 +92,13 @@ typedef struct {
 #define map_get(m, key)                                                             \
   ({                                                                                \
     typeof((m)->map_types->key_t) _key = (key);                                     \
-    (typeof((m)->map_types->value_t) *)_map_base_get(&(m)->_map, _key);             \
+    (typeof((m)->map_types->value_t))_map_base_get(&(m)->_map, _key);             \
   })
 
 #define map_remove(m, key)                                                          \
   ({                                                                                \
     typeof((m)->map_types->key_t) _key = (key);                                     \
-    (typeof((m)->map_types->value_t) *)_map_base_remove(&(m)->_map, _key);          \
+    (typeof((m)->map_types->value_t))_map_base_remove(&(m)->_map, _key);          \
   })
 
 #define map_delete(m, key)                                                          \

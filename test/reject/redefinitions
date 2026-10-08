@@ -1,0 +1,12 @@
+// First definition
+hello is function() -> string { "Hellow" }
+
+// Define it again...
+hello is function -> string {
+  // Inside this function we have a type redefinition!
+  MaybeString is union {string, nil}
+
+  MaybeString is string?
+
+  "Hellow"
+}

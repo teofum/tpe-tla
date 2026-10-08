@@ -1,7 +1,9 @@
 #include <assert.h>
+#include <string.h>
 
 #include <ast/ast.h>
 #include <ast/symbols.h>
+#include <error/error.h>
 #include <support/dyn_array.h>
 #include <support/hash_map.h>
 #include <support/logger.h>
@@ -66,8 +68,15 @@ static void _static_tables_add_type(Symbols *s, TypeAliasStmt *type_alias) {
   logger_log(sa->sym_logger, LOG_DEBUG, "Scope %u: Type %s", key.scope, key.name);
   if (!map_insert(s->types, &key, type_alias)) {
     logger_log(sa->sym_logger, LOG_ERROR, "Scope %u: Redefinition of type %s", key.scope, key.name);
-    // TODO report error: type redefinition
-    assert(false);
+
+    TypeAliasStmt *prev = map_get(s->types, &key);
+    RedefinitionError *error = new(RedefinitionError);
+    *error = (RedefinitionError){
+      .object_type = "type",
+      .object_name = strdup(key.name),
+      .previous_definition = prev->meta.loc
+    };
+    err_report_redefinition(error, &type_alias->meta.loc, ERR_ERROR);
   }
 }
 
@@ -78,8 +87,15 @@ static void _static_tables_add_function(Symbols *s, FunctionDef *function) {
   logger_log(sa->sym_logger, LOG_DEBUG, "Scope %u: Function %s", key.scope, key.name);
   if (!map_insert(s->functions, &key, function)) {
     logger_log(sa->sym_logger, LOG_ERROR, "Scope %u: Redefinition of function %s", key.scope, key.name);
-    // TODO report error: function redefinition
-    assert(false);
+
+    FunctionDef *prev = map_get(s->functions, &key);
+    RedefinitionError *error = new(RedefinitionError);
+    *error = (RedefinitionError){
+      .object_type = "function",
+      .object_name = strdup(key.name),
+      .previous_definition = prev->meta.loc
+    };
+    err_report_redefinition(error, &function->meta.loc, ERR_ERROR);
   }
 }
 

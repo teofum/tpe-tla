@@ -70,11 +70,67 @@ void err_report_import_type(ImportTypeError *i, Location *location, ErrorLevel l
   dyn_array_push(e->errors, &error);
 }
 
-void _log(Error *error, const char *const format, ...) {
+void err_report_redefinition(RedefinitionError *r, Location *location, ErrorLevel level) {
+  Error error = {
+    .type = ERR_REDEFINITION,
+    .stage = CS_PARSE,
+    .level = level,
+    .redefinition = r,
+    .loc = *location,
+    .filepath = state_current_filepath(cs),
+  };
+  dyn_array_push(e->errors, &error);
+}
+
+static void _log(Error *error, const char *const format, ...) {
   va_list args;
   va_start(args, format);
   logger_logv(e->logger, _error_to_log_level[error->level], format, args);
   va_end(args);
+}
+
+static str _error_loc(str error_str, const char *fp, Location *loc, const char *color) {
+  str with_loc = str_format(
+    FMT_LOCATION "%.*s",
+    fp, loc->first_line, loc->first_column,
+    error_str.len, error_str.ptr
+  );
+  str_free(error_str);
+
+  FILE *file = fopen(fp, "r");
+  if (file) {
+    u32 fl = loc->first_line - 1, fc_fl = loc->first_column - 1;
+    u32 ll = loc->last_line - 1, lc_ll = loc->last_column - 1;
+    u32 n_lines = ll - fl + 1;
+    char buf[256];
+    for (u32 line = 0; line < fl; line++) {
+      fgets(buf, 256, file);
+    }
+    for (u32 line = fl; line <= ll; line++) {
+      fgets(buf, 256, file);
+      u32 fc = (line == fl) ? fc_fl : 0;
+      u32 lc = (line == ll) ? lc_ll : strlen(buf);
+      if (lc == 0) continue;
+      if (n_lines > 5 && line > fl + 1 && line < ll - 1) {
+        if (line == fl + 2) str_append_temp(&with_loc, str_format(INDENTED_NL " ...| (%u more lines)", n_lines - 4));
+        continue;
+      }
+
+      str_append_temp(&with_loc,
+        str_format(INDENTED_NL "%4u| %.*s" "%s" "%.*s" RESET "%s",
+          line + 1, fc, buf, color, lc - fc, buf + fc, buf + lc
+        )
+      );
+      for (u32 i = 0; i < lc; i++) {
+        buf[i] = i < fc ? ' ' : i == fc ? '^' : '~';
+      }
+      buf[lc] = 0;
+      str_append_temp(&with_loc, str_format(INDENT "    | %s" "%s" RESET, color, buf));
+    }
+    fclose(file);
+  }
+
+  return with_loc;
 }
 
 static void _log_syntax_error(Error *error) {
@@ -92,43 +148,10 @@ static void _log_syntax_error(Error *error) {
     }
     str_append_temp(&error_str, expected);
   }
-  str with_loc = str_format(
-    FMT_LOCATION "%.*s",
-    error->filepath, error->loc.first_line, error->loc.first_column,
-    error_str.len, error_str.ptr
-  );
-
-  FILE *file = fopen(error->filepath, "r");
-  if (file) {
-    u32 fl = error->loc.first_line - 1, fc_fl = error->loc.first_column - 1;
-    u32 ll = error->loc.last_line - 1, lc_ll = error->loc.last_column - 1;
-    char buf[256];
-    for (u32 line = 0; line < fl; line++) {
-      fgets(buf, 256, file);
-    }
-    for (u32 line = fl; line <= ll; line++) {
-      fgets(buf, 256, file);
-      u32 fc = (line == fl) ? fc_fl : 0;
-      u32 lc = (line == ll) ? lc_ll : strlen(buf);
-      if (lc == 0) continue;
-
-      str_append_temp(&with_loc,
-        str_format(INDENTED_NL "%4u| %.*s" R "%.*s" RESET "%s",
-          line + 1, fc, buf, lc - fc, buf + fc, buf + lc
-        )
-      );
-      for (u32 i = 0; i < lc; i++) {
-        buf[i] = i < fc ? ' ' : i == fc ? '^' : '~';
-      }
-      buf[lc] = 0;
-      str_append_temp(&with_loc, str_format(INDENT R "      %s" RESET, buf));
-    }
-    fclose(file);
-  }
+  str with_loc = _error_loc(error_str, error->filepath, &error->loc, R);
 
   _log(error, "%.*s", with_loc.len, with_loc.ptr);
   str_free(with_loc);
-  str_free(error_str);
 }
 
 static void _log_import_type_error(Error *error) {
@@ -148,10 +171,26 @@ static void _log_import_type_error(Error *error) {
   str_free(accepted);
 }
 
+static void _log_redefinition_error(Error *error) {
+  RedefinitionError *r = error->redefinition;
+
+  str error_str = str_format("redefinition of %s '%s':", r->object_type, r->object_name);
+  str with_loc = _error_loc(error_str, error->filepath, &error->loc, R);
+
+  str prev_str = str_format("'%s' previously defined here:", r->object_name);
+  str prev_with_loc = _error_loc(prev_str, error->filepath, &r->previous_definition, B);
+
+  _log(error, "%.*s", with_loc.len, with_loc.ptr);
+  logger_log(e->logger, LOG_INFO, "%.*s", prev_with_loc.len, prev_with_loc.ptr);
+  str_free(with_loc);
+  str_free(prev_with_loc);
+}
+
 static void _log_error(Error *error) {
   switch (error->type) {
     case ERR_SYNTAX: _log_syntax_error(error); break;
     case ERR_IMPORT_TYPE: _log_import_type_error(error); break;
+    case ERR_REDEFINITION: _log_redefinition_error(error); break;
   }
 }
 
@@ -179,6 +218,7 @@ void err_free_error(Error *e) {
   switch (e->type) {
     case ERR_SYNTAX: err_free_syntax_error(e->syntax); break;
     case ERR_IMPORT_TYPE: err_free_import_type_error(e->import_type); break;
+    case ERR_REDEFINITION: err_free_redefinition_error(e->redefinition); break;
   }
 }
 
@@ -193,5 +233,10 @@ void err_free_syntax_error(SyntaxError *e) {
 
 void err_free_import_type_error(ImportTypeError *e) {
   free(e->type);
+  free(e);
+}
+
+void err_free_redefinition_error(RedefinitionError *e) {
+  free(e->object_name);
   free(e);
 }
