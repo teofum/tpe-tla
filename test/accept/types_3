@@ -2,7 +2,7 @@ KeyType is union { int, string, float, bool }
 
 MaybeInt is union { int, nil }
 
-MaybeInt is int?
+MaybeInt2 is int?
 
 foo: int? = 5
 bar: int[]? = nil

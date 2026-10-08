@@ -10,7 +10,7 @@ Book is struct {
 }
 
 // Nested structs
-Book is struct {
+Book2 is struct {
   isbn: string,
   title: string,
   authors: struct {

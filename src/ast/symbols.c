@@ -1,12 +1,17 @@
 #include <string.h>
 
 #include <support/hash_map.h>
+#include <support/str.h>
+#include <support/types.h>
 #include <support/util.h>
 
 #include "symbols.h"
 
 usize sk_hash(const SymbolKey *key) {
-  return hash_djb2(key, sizeof(SymbolKey));
+  str key_str = str_format("%s__%u", key->name, key->scope);
+  usize hash = hash_djb2(key_str.ptr, key_str.len);
+  str_free(key_str);
+  return hash;
 }
 
 bool sk_compare(const SymbolKey *a, const SymbolKey *b) {
