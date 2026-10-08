@@ -25,7 +25,7 @@ flex_scanner.c
 flex_scanner.h
 
 # Debug output
-ast/
+/ast/
 *.dot
 *.gv
 ast.png
