@@ -30,6 +30,72 @@
 [x] Improve and update README.md
   [x] Give the dang thing a name
 
+#=== Backend ==================================================================#
+
+[x] Hash map implementation
+[x] Symbol table definitions
+[x] Add scopes to AST
+[ ] Modify dyn_array to have a type safe API more similar to the hash map
+
+/--- Static Analyzer ----------------------------------------------------------/
+[x] Base module
+[x] Scope building/stack
+[x] Static symbols
+  [x] Type aliases
+  [x] Function definitions
+  [x] Expressions
+    [x] Blocks
+    [x] Other expressions
+  [x] Error handling (redefinition)
+[ ] Variables
+  [ ] Declarations
+    [ ] Function parameter
+    [ ] For loop iteration variables
+  [ ] References
+    [ ] Blocks (scoping)
+    [ ] Function definitions (scoping)
+    [ ] For loops (scoping)
+    [ ] Other expressions
+[ ] Type checking
+  [ ] Define builtin types
+  [ ] Type comparisons
+    [ ] Builtin
+    [ ] Structs
+    [ ] Lists/tuples
+    [ ] Maps
+    [ ] Ranges
+    [ ] Unions
+  [ ] Expression types
+    [ ] Literals
+      [ ] Simple literals
+      [ ] Lists
+        [ ] Short lists
+      [ ] Maps
+      [ ] Structs
+      [ ] Ranges
+    [ ] Variables
+      [ ] Named
+      [ ] Struct members
+      [ ] Indexed
+    [ ] Groups
+    [ ] Unary operators
+    [ ] Binary operators
+    [ ] Assignments
+    [ ] If expressions
+    [ ] For expressions
+    [ ] Function calls
+    [ ] Import expressions
+    [ ] Env expressions
+    [ ] Blocks
+  [ ] Error reporting
+
+/--- Evaluator ----------------------------------------------------------------/
+[ ] Value definitions
+[ ] Expression evaluators
+
+/--- Code Generation ----------------------------------------------------------/
+[ ] Values to code
+
 #=== Frontend =================================================================#
 
 [x] Project structure and build
@@ -108,7 +174,3 @@
 [x] Expression lists
 [x] Statement lists
 [x] Program
-
-#=== Backend ==================================================================#
-
-not yet

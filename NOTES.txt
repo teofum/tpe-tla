@@ -12,7 +12,7 @@ reported, but allow the compiler to continue.
 
 The following steps are executed in order, each for every file.
 
-2. Static symbol pass [TODO]:
+2. Static symbol pass [DONE]:
   The AST for the file is scanned for type and function definitions, and the
   type and function symbol tables are built, including scope information.
 
