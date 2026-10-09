@@ -10,6 +10,16 @@ const char *import_type_str[] = {
   [IMPORT_CSV] = "csv",
 };
 
+const char *builtin_type_str[] = {
+  [T_VOID] = NULL,
+  [T_NIL] = "nil",
+  [T_INT] = "int",
+  [T_FLOAT] = "float",
+  [T_STRING] = "string",
+  [T_BOOL] = "bool",
+  [T_ELEMENT] = "element",
+};
+
 // -----------------------------------------------------------------------------
 
 static Location *_next_loc = NULL;
@@ -597,11 +607,12 @@ Type *ast_enum_type(IdentifierList *values) {
   return type;
 }
 
-Type *ast_nil_type() {
+Type *ast_builtin_type(BuiltinType builtin_type) {
   Type *type = new(Type);
   *type = (Type){
     .meta = _ast_get_metadata(),
-    .type = T_NIL
+    .type = T_BUILTIN,
+    .builtin = builtin_type,
   };
 
   return type;
@@ -1018,7 +1029,7 @@ void ast_free_type(Type *t) {
     case T_TUPLE: ast_free_tuple_type(t->tuple); break;
     case T_TUPLE_SHORT: ast_free_short_tuple_type(t->short_tuple); break;
     case T_ENUM: ast_free_enum_type(t->enum_type); break;
-    case T_NIL: break;
+    case T_BUILTIN: break;
   }
   free(t);
 }

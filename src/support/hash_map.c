@@ -253,3 +253,11 @@ usize hash_djb2(const void *bytes, usize len) {
   for (u32 i = 0; i < len; i++) hash = hash * 33 + ((const char *)bytes)[i];
   return hash;
 }
+
+usize hash_cstring(const char *s) {
+  return hash_djb2(s, strlen(s));
+}
+
+bool compare_cstring(const char *a, const char *b) {
+  return strcmp(a, b) == 0;
+}

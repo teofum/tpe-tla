@@ -2,9 +2,10 @@
 #define FRONTEND_HEADER
 
 #include <ast/ast.h>
+#include <support/hash_map.h>
+#include <support/logger.h>
 #include <support/state.h>
 #include <support/types.h>
-#include <support/logger.h>
 
 typedef struct {
   Location *location;
@@ -30,6 +31,7 @@ typedef struct {
   void *scanner;
   Logger *scan_logger;
   Logger *parse_logger;
+  map(char, BuiltinType) builtin_types;
 } Frontend;
 
 void fe_init(CompilerState *compiler_state);
@@ -50,5 +52,7 @@ void fe_scanner_log(LogLevel level, const char *const format, ...);
 void fe_parser_log(LogLevel level, const char *const format, ...);
 
 void fe_report_syntax_error(SyntaxErrorContext *ctx);
+
+BuiltinType fe_get_builtin_type(Identifier *id);
 
 #endif

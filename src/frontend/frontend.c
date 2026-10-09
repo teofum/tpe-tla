@@ -4,16 +4,17 @@
 #include <stdio.h>
 
 #include "frontend.h"
-#include "support/state.h"
 
 #include <ast/ast.h>
 #include <error/error.h>
 #include <frontend/bison/bison_parser.h>
 #include <frontend/flex/flex_scanner.h>
 #include <support/env.h>
+#include <support/hash_map.h>
+#include <support/logger.h>
+#include <support/state.h>
 #include <support/types.h>
 #include <support/util.h>
-#include <support/logger.h>
 
 static Frontend *f = NULL;
 static CompilerState *cs = NULL;
@@ -24,6 +25,16 @@ void fe_init(CompilerState *compiler_state) {
   f = new(Frontend);
   f->scan_logger = logger_create("Scanner", stderr, cs->options.scanner_log_level);
   f->parse_logger = logger_create("Parser", stderr, cs->options.parser_log_level);
+  map_init(&f->builtin_types, hash_cstring, compare_cstring);
+  map_manage_values(&f->builtin_types, (void(*)(BuiltinType *))free);
+  for (BuiltinType b = 0; b < BUILTIN_TYPE_COUNT; b++) {
+    const char *name = builtin_type_str[b];
+    if (name) {
+      BuiltinType *value = new(BuiltinType);
+      *value = b;
+      map_insert(&f->builtin_types, (char *)name, value);
+    }
+  }
 }
 
 void fe_shutdown() {
@@ -31,6 +42,7 @@ void fe_shutdown() {
 
   if (f->scan_logger) logger_free(f->scan_logger);
   if (f->parse_logger) logger_free(f->parse_logger);
+  map_free(&f->builtin_types);
   free(f);
 
   f = NULL;
@@ -279,4 +291,9 @@ void fe_report_syntax_error(SyntaxErrorContext *ctx) {
   // Syntax errors are always unrecoverable
   err_report_syntax(error, ctx->location, ERR_ERROR);
   free(ctx);
+}
+
+BuiltinType fe_get_builtin_type(Identifier *id) {
+  BuiltinType *builtin = map_get(&f->builtin_types, id->lexeme);
+  return builtin != NULL ? *builtin : -1;
 }

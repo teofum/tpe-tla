@@ -108,6 +108,9 @@ static void dot_type(Type *type, u64 pid) {
   char label[256];
 
   switch (type->type) {
+    case T_BUILTIN:
+      snprintf(label, 256, "Builtin %s", builtin_type_str[type->builtin]);
+      break;
     case T_NAMED:
       snprintf(label, 256, "%s", type->named->name->lexeme);
       break;
@@ -148,9 +151,6 @@ static void dot_type(Type *type, u64 pid) {
       for (u32 i = 0; i < type->enum_type->len; i++) {
         dot_enum_value(type->enum_type->values[i], id);
       }
-      break;
-    case T_NIL:
-      snprintf(label, 4, "Nil");
       break;
   }
 

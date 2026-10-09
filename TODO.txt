@@ -57,7 +57,8 @@
     [ ] For loops (scoping)
     [ ] Other expressions
 [ ] Type checking
-  [ ] Define builtin types
+  [x] Define builtin types
+    [x] Parse builtin types in frontend
   [ ] Type comparisons
     [ ] Builtin
     [ ] Structs

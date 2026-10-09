@@ -279,8 +279,15 @@ EnvExpr *parse_env(StringLiteral *env_name, Expr *default_value) {
 // -----------------------------------------------------------------------------
 
 Type *parse_named_type(Identifier *id) {
-  fe_parser_log(LOG_DEBUG, "Named Type %s", id->lexeme);
-  return ast_named_type(id);
+  BuiltinType builtin = fe_get_builtin_type(id);
+  if (builtin == -1) {
+    fe_parser_log(LOG_DEBUG, "Named Type %s", id->lexeme);
+    return ast_named_type(id);
+  } else {
+    fe_parser_log(LOG_DEBUG, "Builtin Type %s", id->lexeme);
+    ast_free_identifier(id);
+    return ast_builtin_type(builtin);
+  }
 }
 
 Type *parse_list_type(Type *item) {
@@ -307,7 +314,7 @@ Type *parse_optional_type(Type *type) {
   fe_parser_log(LOG_DEBUG, "Optional");
 
   // Optional types don't exist in the AST or backend; it's simply syntax sugar for a {T, nil} union
-  TypeList *types = ast_type_list(type, ast_type_list(ast_nil_type(), NULL));
+  TypeList *types = ast_type_list(type, ast_type_list(ast_builtin_type(T_NIL), NULL));
   return ast_union_type(types);
 }
 
@@ -328,7 +335,7 @@ Type *parse_enum_type(IdentifierList *values) {
 
 Type *parse_nil_type() {
   fe_parser_log(LOG_DEBUG, "Nil Type");
-  return ast_nil_type();
+  return ast_builtin_type(T_NIL);
 }
 
 // -----------------------------------------------------------------------------

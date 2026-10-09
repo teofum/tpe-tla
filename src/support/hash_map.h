@@ -125,5 +125,8 @@ void *_map_base_remove(_map_base *mb, const void *key);
 bool _map_base_delete(_map_base *mb, const void *key);
 
 usize hash_djb2(const void *bytes, usize len);
+usize hash_cstring(const char *s);
+
+bool compare_cstring(const char *a, const char *b);
 
 #endif

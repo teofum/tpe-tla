@@ -71,6 +71,7 @@ typedef enum {
 extern const char *import_type_str[];
 
 typedef enum {
+  T_BUILTIN,
   T_NAMED,
   T_STRUCT,
   T_UNION,
@@ -79,8 +80,19 @@ typedef enum {
   T_TUPLE,
   T_TUPLE_SHORT,
   T_ENUM,
-  T_NIL,
 } TypeType;
+
+typedef enum {
+  T_VOID,
+  T_NIL,
+  T_INT,
+  T_FLOAT,
+  T_STRING,
+  T_BOOL,
+  T_ELEMENT,
+  BUILTIN_TYPE_COUNT,
+} BuiltinType;
+extern const char *builtin_type_str[];
 
 typedef struct {
   i32 first_line;
@@ -439,6 +451,7 @@ struct Type {
   ASTNodeMetadata meta;
   TypeType type;
   union {
+    BuiltinType builtin;
     NamedType *named;
     ListType *list;
     MapType *map;
@@ -601,7 +614,7 @@ Type *ast_union_type(TypeList *types);
 Type *ast_tuple_type(TypeList *types);
 Type *ast_short_tuple_type(Type *type, Expr *count);
 Type *ast_enum_type(IdentifierList *values);
-Type *ast_nil_type();
+Type *ast_builtin_type(BuiltinType builtin_type);
 
 FunctionDef *ast_function_def(Identifier *id, ParameterList *params, Type *return_type, BlockExpr *body);
 
