@@ -143,8 +143,8 @@ LiteralExpr *parse_list_literal(ExprList *exprs) {
   return literal;
 }
 
-LiteralExpr *parse_short_list_literal(Expr *value, Expr *count) {
-  LiteralExpr *literal = ast_short_list_literal(value, count);
+LiteralExpr *parse_short_list_literal(Expr *value, IntegerLiteral *count) {
+  LiteralExpr *literal = ast_short_list_literal(value, (u32)count->value);
   fe_parser_log(LOG_DEBUG, "Shorthand List Literal", literal->list->len);
   return literal;
 }
@@ -261,9 +261,9 @@ ImportExpr *parse_import(Identifier *import_type, Type *data_type, StringLiteral
     if (strcmp(import_type->lexeme, import_type_str[i]) == 0) type = (ImportType)i;
   }
   if (type == IMPORT_UNKNOWN) {
-    ImportTypeError *error = new(ImportTypeError);
+    ImportError *error = new(ImportError);
     error->type = strdup(import_type->lexeme);
-    err_report_import_type(error, &import_type->loc, ERR_ERROR);
+    err_report_import(error, &import_type->loc, ERR_ERROR);
     fe_parser_log(LOG_ERROR, "Unknown import type '%s'", import_type->lexeme);
   }
 
@@ -323,9 +323,9 @@ Type *parse_tuple_type(TypeList *types) {
   return ast_tuple_type(types);
 }
 
-Type *parse_short_tuple_type(Type *type, Expr *count) {
+Type *parse_short_tuple_type(Type *type, IntegerLiteral *count) {
   fe_parser_log(LOG_DEBUG, "Tuple Shorthand");
-  return ast_short_tuple_type(type, count);
+  return ast_short_tuple_type(type, (u32)count->value);
 }
 
 Type *parse_enum_type(IdentifierList *values) {

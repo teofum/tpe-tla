@@ -80,6 +80,7 @@ typedef enum {
   T_TUPLE,
   T_TUPLE_SHORT,
   T_ENUM,
+  T_RANGE,
 } TypeType;
 
 typedef enum {
@@ -385,7 +386,7 @@ struct ListLiteral {
 struct ShortListLiteral {
   ASTNodeMetadata meta;
   Expr *value;
-  Expr *count;
+  u32 count;
 };
 
 struct MapLiteral {
@@ -500,7 +501,7 @@ struct TupleType {
 struct ShortTupleType {
   ASTNodeMetadata meta;
   Type *type;
-  Expr *count;
+  u32 count;
 };
 
 struct EnumType {
@@ -584,7 +585,7 @@ LiteralExpr *ast_float_literal(FloatLiteral *f);
 LiteralExpr *ast_string_literal(StringLiteral *s);
 LiteralExpr *ast_boolean_literal(BooleanLiteral *b);
 LiteralExpr *ast_list_literal(ExprList *exprs);
-LiteralExpr *ast_short_list_literal(Expr *value, Expr *count);
+LiteralExpr *ast_short_list_literal(Expr *value, u32 count);
 LiteralExpr *ast_map_literal(MapEntryList *entries);
 LiteralExpr *ast_struct_literal(StructLiteralFieldList *fields);
 LiteralExpr *ast_enum_literal(Type *type, Identifier *id);
@@ -612,7 +613,7 @@ Type *ast_map_type(Type *key_type, Type *value_type);
 Type *ast_struct_type(StructFieldList *fields);
 Type *ast_union_type(TypeList *types);
 Type *ast_tuple_type(TypeList *types);
-Type *ast_short_tuple_type(Type *type, Expr *count);
+Type *ast_short_tuple_type(Type *type, u32 count);
 Type *ast_enum_type(IdentifierList *values);
 Type *ast_builtin_type(BuiltinType builtin_type);
 
@@ -625,6 +626,11 @@ Parameter *ast_parameter(Identifier *id, Type *type, Expr *default_value);
 Argument *ast_argument(Identifier *id, Expr *value);
 
 Program *ast_program(StmtList *statements);
+
+// -----------------------------------------------------------------------------
+
+bool ast_compare_identifiers(const Identifier *a, const Identifier *b);
+Identifier *ast_clone_identifier(const Identifier *id);
 
 // -----------------------------------------------------------------------------
 

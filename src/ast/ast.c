@@ -1,4 +1,6 @@
 #include <stdlib.h>
+#include <string.h>
+
 #include <support/types.h>
 #include <support/util.h>
 #include <support/str.h>
@@ -230,7 +232,7 @@ LiteralExpr *ast_list_literal(ExprList *exprs) {
   return literal;
 }
 
-LiteralExpr *ast_short_list_literal(Expr *value, Expr *count) {
+LiteralExpr *ast_short_list_literal(Expr *value, u32 count) {
   ShortListLiteral *list = new(ShortListLiteral);
   *list = (ShortListLiteral){
     .meta = _ast_get_metadata(),
@@ -574,7 +576,7 @@ Type *ast_tuple_type(TypeList *types) {
   return type;
 }
 
-Type *ast_short_tuple_type(Type *inner_type, Expr *count) {
+Type *ast_short_tuple_type(Type *inner_type, u32 count) {
   ShortTupleType *tuple = new(ShortTupleType);
   *tuple = (ShortTupleType){
     .meta = _ast_get_metadata(),
@@ -701,6 +703,26 @@ Program *ast_program(StmtList *statements) {
   prog->meta = _ast_get_metadata();
   ast_consume_stmt_list(statements, &prog->statements, &prog->len);
   return prog;
+}
+
+// -----------------------------------------------------------------------------
+
+bool ast_compare_identifiers(const Identifier *a, const Identifier *b) {
+  return a->len == b->len && strncmp(a->lexeme, b->lexeme, a->len) == 0;
+}
+
+Identifier *ast_clone_identifier(const Identifier *id) {
+  if (!id) return NULL;
+
+  Identifier *clone = new(Identifier);
+  *clone = (Identifier){
+    .label = id->label,
+    .len = id->len,
+    .lexeme = strdup(id->lexeme),
+    .loc = id->loc,
+  };
+
+  return clone;
 }
 
 // -----------------------------------------------------------------------------
@@ -951,7 +973,6 @@ void ast_free_short_list_literal(ShortListLiteral *l) {
   if (!l) return;
 
   ast_free_expr(l->value);
-  ast_free_expr(l->count);
   free(l);
 }
 
@@ -1030,6 +1051,7 @@ void ast_free_type(Type *t) {
     case T_TUPLE_SHORT: ast_free_short_tuple_type(t->short_tuple); break;
     case T_ENUM: ast_free_enum_type(t->enum_type); break;
     case T_BUILTIN: break;
+    case T_RANGE: break;
   }
   free(t);
 }
@@ -1090,7 +1112,6 @@ void ast_free_short_tuple_type(ShortTupleType *t) {
   if (!t) return;
 
   ast_free_type(t->type);
-  ast_free_expr(t->count);
   free(t);
 }
 

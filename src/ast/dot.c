@@ -152,6 +152,9 @@ static void dot_type(Type *type, u64 pid) {
         dot_enum_value(type->enum_type->values[i], id);
       }
       break;
+    case T_RANGE:
+      snprintf(label, 8, "Range");
+      break;
   }
 
   _node(id, label, NODE_TYPE);

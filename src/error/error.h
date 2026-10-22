@@ -5,9 +5,14 @@
 #include <support/state.h>
 
 typedef enum {
-  ERR_SYNTAX,
-  ERR_IMPORT_TYPE,
-  ERR_REDEFINITION,
+  // Parser errors
+  ERR_SYNTAX,           // Syntax error
+  ERR_IMPORT,           // Invalid import type
+  // Static analysis errors
+  ERR_REDEF,            // Symbol redefinition
+  ERR_UNDEF,            // Undefined symbol reference
+  // Type errors
+  ERR_TYPE,             // Type error
 } ErrorType;
 
 typedef enum {
@@ -17,11 +22,17 @@ typedef enum {
 
 typedef enum {
   CS_PARSE,
+  CS_STATIC_ANALYSIS,
+  CS_TYPECHECK,
+  CS_EVAL,
+  CS_CODEGEN,
 } CompilationStage;
 
 typedef struct SyntaxError SyntaxError;
-typedef struct ImportTypeError ImportTypeError;
-typedef struct RedefinitionError RedefinitionError;
+typedef struct ImportError ImportError;
+typedef struct RedefError RedefError;
+typedef struct UndefError UndefError;
+typedef struct TypeError TypeError;
 
 typedef struct {
   ErrorType type;
@@ -32,8 +43,10 @@ typedef struct {
 
   union {
     SyntaxError *syntax;
-    ImportTypeError *import_type;
-    RedefinitionError *redefinition;
+    ImportError *import_type;
+    RedefError *redefinition;
+    UndefError *undef_symbol;
+    TypeError *type_error;
   };
 } Error;
 
@@ -43,27 +56,40 @@ struct SyntaxError {
   char *found;
 };
 
-struct ImportTypeError {
+struct ImportError {
   char *type;
 };
 
-struct RedefinitionError {
+struct RedefError {
   const char *object_type;
   char *object_name;
   Location previous_definition;
+};
+
+struct UndefError {
+  const char *object_type;
+  char *object_name;
+};
+
+struct TypeError {
+  const char *message;
 };
 
 void err_init(CompilerState *compiler_state);
 void err_shutdown();
 
 void err_report_syntax(SyntaxError *error, Location *location, ErrorLevel level);
-void err_report_import_type(ImportTypeError *error, Location *location, ErrorLevel level);
-void err_report_redefinition(RedefinitionError *error, Location *location, ErrorLevel level);
+void err_report_import(ImportError *error, Location *location, ErrorLevel level);
+void err_report_redef(RedefError *error, Location *location, ErrorLevel level);
+void err_report_undef(UndefError *error, Location *location, ErrorLevel level);
+void err_report_type(TypeError *error, Location *location, ErrorLevel level);
 bool err_gate();
 
 void err_free_error(Error *e);
 void err_free_syntax_error(SyntaxError *e);
-void err_free_import_type_error(ImportTypeError *e);
-void err_free_redefinition_error(RedefinitionError *e);
+void err_free_import_error(ImportError *e);
+void err_free_redef_error(RedefError *e);
+void err_free_undef_error(UndefError *e);
+void err_free_type_error(TypeError *e);
 
 #endif

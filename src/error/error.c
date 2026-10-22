@@ -58,9 +58,9 @@ void err_report_syntax(SyntaxError *s, Location *location, ErrorLevel level) {
   dyn_array_push(e->errors, &error);
 }
 
-void err_report_import_type(ImportTypeError *i, Location *location, ErrorLevel level) {
+void err_report_import(ImportError *i, Location *location, ErrorLevel level) {
   Error error = {
-    .type = ERR_IMPORT_TYPE,
+    .type = ERR_IMPORT,
     .stage = CS_PARSE,
     .level = level,
     .import_type = i,
@@ -70,12 +70,36 @@ void err_report_import_type(ImportTypeError *i, Location *location, ErrorLevel l
   dyn_array_push(e->errors, &error);
 }
 
-void err_report_redefinition(RedefinitionError *r, Location *location, ErrorLevel level) {
+void err_report_redef(RedefError *r, Location *location, ErrorLevel level) {
   Error error = {
-    .type = ERR_REDEFINITION,
-    .stage = CS_PARSE,
+    .type = ERR_REDEF,
+    .stage = CS_STATIC_ANALYSIS,
     .level = level,
     .redefinition = r,
+    .loc = *location,
+    .filepath = state_current_filepath(cs),
+  };
+  dyn_array_push(e->errors, &error);
+}
+
+void err_report_undef(UndefError *u, Location *location, ErrorLevel level) {
+  Error error = {
+    .type = ERR_UNDEF,
+    .stage = CS_STATIC_ANALYSIS,
+    .level = level,
+    .undef_symbol = u,
+    .loc = *location,
+    .filepath = state_current_filepath(cs),
+  };
+  dyn_array_push(e->errors, &error);
+}
+
+void err_report_type(TypeError *t, Location *location, ErrorLevel level) {
+  Error error = {
+    .type = ERR_TYPE,
+    .stage = CS_TYPECHECK,
+    .level = level,
+    .type_error = t,
     .loc = *location,
     .filepath = state_current_filepath(cs),
   };
@@ -112,7 +136,11 @@ static str _error_loc(str error_str, const char *fp, Location *loc, const char *
       u32 lc = (line == ll) ? lc_ll : strlen(buf);
       if (lc == 0) continue;
       if (n_lines > 5 && line > fl + 1 && line < ll - 1) {
-        if (line == fl + 2) str_append_temp(&with_loc, str_format(INDENTED_NL " ...| (%u more lines)", n_lines - 4));
+        if (line == fl + 2) {
+          str_append_temp(&with_loc,
+            str_format(INDENTED_NL " ...| (%u more lines)", n_lines - 4)
+          );
+        }
         continue;
       }
 
@@ -125,7 +153,9 @@ static str _error_loc(str error_str, const char *fp, Location *loc, const char *
         buf[i] = i < fc ? ' ' : i == fc ? '^' : '~';
       }
       buf[lc] = 0;
-      str_append_temp(&with_loc, str_format(INDENT "    | %s" "%s" RESET, color, buf));
+      str_append_temp(&with_loc,
+        str_format(INDENT "    | %s" "%s" RESET, color, buf)
+      );
     }
     fclose(file);
   }
@@ -155,15 +185,15 @@ static void _log_syntax_error(Error *error) {
 }
 
 static void _log_import_type_error(Error *error) {
-  ImportTypeError *it = error->import_type;
+  ImportError *it = error->import_type;
 
-  str accepted = str_format("\"%s\"", import_type_str[0]);
+  str accepted = str_format("'%s'", import_type_str[0]);
   for (u32 i = 1; i < IMPORT_TYPE_COUNT; i++) {
-    str_append_temp(&accepted, str_format(", \"%s\"", import_type_str[i]));
+    str_append_temp(&accepted, str_format(", '%s'", import_type_str[i]));
   }
 
   _log(error,
-    FMT_LOCATION "unrecognized import type \"%s\""
+    FMT_LOCATION "unrecognized import type '%s'"
       INDENTED_NL "Accepted import types are: %.*s",
     error->filepath, error->loc.first_line, error->loc.first_column,
     it->type, accepted.len, accepted.ptr
@@ -172,7 +202,7 @@ static void _log_import_type_error(Error *error) {
 }
 
 static void _log_redefinition_error(Error *error) {
-  RedefinitionError *r = error->redefinition;
+  RedefError *r = error->redefinition;
 
   str error_str = str_format("redefinition of %s '%s':", r->object_type, r->object_name);
   str with_loc = _error_loc(error_str, error->filepath, &error->loc, R);
@@ -186,11 +216,33 @@ static void _log_redefinition_error(Error *error) {
   str_free(prev_with_loc);
 }
 
+static void _log_undef_symbol_error(Error *error) {
+  UndefError *u = error->undef_symbol;
+
+  str error_str = str_format("%s '%s' is undefined", u->object_type, u->object_name);
+  str with_loc = _error_loc(error_str, error->filepath, &error->loc, R);
+
+  _log(error, "%.*s", with_loc.len, with_loc.ptr);
+  str_free(with_loc);
+}
+
+static void _log_type_error(Error *error) {
+  TypeError *t = error->type_error;
+
+  str error_str = str_format("type error: %s", t->message);
+  str with_loc = _error_loc(error_str, error->filepath, &error->loc, R);
+
+  _log(error, "%.*s", with_loc.len, with_loc.ptr);
+  str_free(with_loc);
+}
+
 static void _log_error(Error *error) {
   switch (error->type) {
     case ERR_SYNTAX: _log_syntax_error(error); break;
-    case ERR_IMPORT_TYPE: _log_import_type_error(error); break;
-    case ERR_REDEFINITION: _log_redefinition_error(error); break;
+    case ERR_IMPORT: _log_import_type_error(error); break;
+    case ERR_REDEF: _log_redefinition_error(error); break;
+    case ERR_UNDEF: _log_undef_symbol_error(error); break;
+    case ERR_TYPE: _log_type_error(error); break;
   }
 }
 
@@ -217,8 +269,10 @@ bool err_gate() {
 void err_free_error(Error *e) {
   switch (e->type) {
     case ERR_SYNTAX: err_free_syntax_error(e->syntax); break;
-    case ERR_IMPORT_TYPE: err_free_import_type_error(e->import_type); break;
-    case ERR_REDEFINITION: err_free_redefinition_error(e->redefinition); break;
+    case ERR_IMPORT: err_free_import_error(e->import_type); break;
+    case ERR_REDEF: err_free_redef_error(e->redefinition); break;
+    case ERR_UNDEF: err_free_undef_error(e->undef_symbol); break;
+    case ERR_TYPE: err_free_type_error(e->type_error); break;
   }
 }
 
@@ -231,12 +285,21 @@ void err_free_syntax_error(SyntaxError *e) {
   free(e);
 }
 
-void err_free_import_type_error(ImportTypeError *e) {
+void err_free_import_error(ImportError *e) {
   free(e->type);
   free(e);
 }
 
-void err_free_redefinition_error(RedefinitionError *e) {
+void err_free_redef_error(RedefError *e) {
   free(e->object_name);
+  free(e);
+}
+
+void err_free_undef_error(UndefError *e) {
+  free(e->object_name);
+  free(e);
+}
+
+void err_free_type_error(TypeError *e) {
   free(e);
 }

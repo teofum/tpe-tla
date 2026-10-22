@@ -67,28 +67,34 @@
     [ ] Ranges
     [ ] Unions
   [ ] Expression types
-    [ ] Literals
-      [ ] Simple literals
-      [ ] Lists
-        [ ] Short lists
-      [ ] Maps
-      [ ] Structs
-      [ ] Ranges
-    [ ] Variables
-      [ ] Named
-      [ ] Struct members
-      [ ] Indexed
-    [ ] Groups
-    [ ] Unary operators
-    [ ] Binary operators
-    [ ] Assignments
-    [ ] If expressions
-    [ ] For expressions
+    [x] Literals
+      [x] Simple literals
+      [x] Lists
+        [x] Short lists
+      [x] Maps
+      [x] Structs
+      [x] Ranges
+    [x] Variables
+      [x] Named
+      [x] Struct members
+      [x] Indexed
+    [x] Groups
+    [x] Unary operators
+    [x] Binary operators
+      [x] Arithmetic operators
+      [x] String +, *
+      [x] Comparison operators
+      [x] Equality operators
+      [x] Logical operators
+    [x] Assignments
+    [x] If expressions
+    [x] For expressions
     [ ] Function calls
     [ ] Import expressions
     [ ] Env expressions
     [ ] Blocks
   [ ] Error reporting
+  [ ] Memory management (custom allocator)
 
 /--- Evaluator ----------------------------------------------------------------/
 [ ] Value definitions
