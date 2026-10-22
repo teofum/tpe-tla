@@ -333,6 +333,9 @@ static Type *_map_of(Type *key_type, Type *value_type) {
 
 /* -- Type checking: compare ------------------------------------------------ */
 
+static bool tc_compare_types(Symbols *s, const Type *a, const Type *b);
+static bool tc_accepts_type(Symbols *s, const Type *a, const Type *b);
+
 static bool _is_builtin_type(Type *type, BuiltinType builtin) {
   return type->type == T_BUILTIN && type->builtin == builtin;
 }
@@ -352,7 +355,7 @@ static Type *_upgrade_numeric_type(BuiltinType l, BuiltinType r) {
   return _builtin_type(T_FLOAT);
 }
 
-static Type *_resolve_named_type(Symbols *s, NamedType *named) {
+static Type *_resolve_named_type(Symbols *s, const NamedType *named) {
   SymbolKey key = { .name = named->name->lexeme, .scope = _peek_scope() };
   TypeAliasStmt *alias = map_get(s->types, &key);
   if (!alias) {
@@ -368,22 +371,201 @@ static Type *_resolve_named_type(Symbols *s, NamedType *named) {
   return alias->type;
 }
 
-static bool tc_compare_types(const Type *a, const Type *b) {
+static bool _compare_list_types(Symbols *s, const ListType *a, const ListType *b) {
+  return tc_compare_types(s, a->item_type, b->item_type);
+}
+
+static bool _compare_short_tuple_types(Symbols *s, const ShortTupleType *a, const ShortTupleType *b) {
+  return a->count == b->count && tc_compare_types(s, a->type, b->type);
+}
+
+static bool _compare_tuple_types(Symbols *s, const TupleType *a, const TupleType *b) {
+  if (a->len != b->len) return false;
+  for (u32 i = 0; i < a->len; i++) {
+    if (!tc_compare_types(s, a->types[i], b->types[i])) return false;
+  }
+  return true;
+}
+
+static bool _compare_map_types(Symbols *s, const MapType *a, const MapType *b) {
+  return tc_compare_types(s, a->key_type, b->key_type)
+    && tc_compare_types(s, a->value_type, b->value_type);
+}
+
+static bool _compare_struct_types(Symbols *s, const StructType *a, const StructType *b) {
+  if (a->len != b->len) return false;
+  for (u32 i = 0; i < a->len; i++) {
+    StructField *fa = a->fields[i];
+    StructField *fb = b->fields[i];
+    if (!ast_compare_identifiers(fa->name, fb->name)) return false;
+    if (!tc_compare_types(s, fa->type, fb->type)) return false;
+  }
+  return true;
+}
+
+static bool _compare_union_types(Symbols *s, const UnionType *a, const UnionType *b) {
+  if (a->len != b->len) return false;
+  for (u32 i = 0; i < a->len; i++) {
+    if (!tc_compare_types(s, a->types[i], b->types[i])) return false;
+  }
+  return true;
+}
+
+static bool _compare_enum_types(const EnumType *a, const EnumType *b) {
+  if (a->len != b->len) return false;
+  for (u32 i = 0; i < a->len; i++) {
+    if (!ast_compare_identifiers(a->values[i], b->values[i])) return false;
+  }
+  return true;
+}
+
+static bool _compare_named_types(Symbols *s, const NamedType *a, const NamedType *b) {
+  if (ast_compare_identifiers(a->name, b->name)) return true;
+  return tc_compare_types(
+    s,
+    _resolve_named_type(s, a),
+    _resolve_named_type(s, b)
+  );
+}
+
+static bool tc_compare_types(Symbols *s, const Type *a, const Type *b) {
   // If the types are literally the same object they are obviously equal
   if (a == b) return true;
 
-  // TODO
+  if (a->type == T_NAMED) {
+    return tc_compare_types(s, _resolve_named_type(s, a->named), b);
+  }
+  if (b->type == T_NAMED) {
+    return tc_compare_types(s, a, _resolve_named_type(s, b->named));
+  }
+
+  if (a->type != b->type) return false;
+  switch (a->type) {
+    case T_BUILTIN: return a->builtin == b->builtin;
+    case T_LIST: return _compare_list_types(s, a->list, b->list);
+    case T_TUPLE_SHORT: return _compare_short_tuple_types(s, a->short_tuple, b->short_tuple);
+    case T_TUPLE: return _compare_tuple_types(s, a->tuple, b->tuple);
+    case T_MAP: return _compare_map_types(s, a->map, b->map);
+    case T_STRUCT: return _compare_struct_types(s, a->struct_type, b->struct_type);
+    case T_UNION: return _compare_union_types(s, a->union_type, b->union_type);
+    case T_ENUM: return _compare_enum_types(a->enum_type, b->enum_type);
+    case T_RANGE: return true; // Ranges are only one type
+    case T_NAMED: assert(false);
+  }
 }
 
-static bool tc_accepts_type(const Type *expected, const Type *actual) {
+static bool _accepts_builtin_type(BuiltinType a, const Type *b) {
+  return b->type == T_BUILTIN
+    && (b->builtin == a || (a == T_FLOAT && b->builtin == T_INT));
+}
+
+static bool _accepts_list_type(Symbols *s, const ListType *a, const Type *b) {
+  switch (b->type) {
+    case T_LIST: {
+      return tc_accepts_type(s, a->item_type, b->list->item_type);
+    }
+    case T_TUPLE_SHORT: {
+      return tc_accepts_type(s, a->item_type, b->short_tuple->type);
+    }
+    case T_TUPLE: {
+      for (u32 i = 0; i < b->tuple->len; i++) {
+        if (!tc_accepts_type(s, a->item_type, b->tuple->types[i])) return false;
+      }
+      return true;
+    }
+    default: return false;
+  }
+}
+
+static bool _accepts_short_tuple_type(Symbols *s, const ShortTupleType *a, const Type *b) {
+  switch (b->type) {
+    case T_TUPLE_SHORT: {
+      return a->count == b->short_tuple->count
+        && tc_accepts_type(s, a->type, b->short_tuple->type);
+    }
+    case T_TUPLE: {
+      if (a->count != b->tuple->len) return false;
+      for (u32 i = 0; i < b->tuple->len; i++) {
+        if (!tc_accepts_type(s, a->type, b->tuple->types[i])) return false;
+      }
+      return true;
+    }
+    default: return false;
+  }
+}
+
+static bool _accepts_tuple_type(Symbols *s, const TupleType *a, const Type *b) {
+  switch (b->type) {
+    case T_TUPLE_SHORT: {
+      if (a->len != b->short_tuple->count) return false;
+      for (u32 i = 0; i < a->len; i++) {
+        if (!tc_accepts_type(s, a->types[i], b->short_tuple->type)) return false;
+      }
+      return true;
+    }
+    case T_TUPLE: {
+      if (a->len != b->tuple->len) return false;
+      for (u32 i = 0; i < b->tuple->len; i++) {
+        if (!tc_accepts_type(s, a->types[i], b->tuple->types[i])) return false;
+      }
+      return true;
+    }
+    default: return false;
+  }
+}
+
+static bool _accepts_map_type(Symbols *s, const MapType *a, const Type *b) {
+  if (b->type != T_MAP) return false;
+  return tc_compare_types(s, a->key_type, b->map->key_type)
+    && tc_accepts_type(s, a->value_type, b->map->value_type);
+}
+
+static bool _accepts_struct_type(Symbols *s, const StructType *a, const Type *b) {
+  if (b->type != T_STRUCT) return false;
+  return _compare_struct_types(s, a, b->struct_type); // TODO
+}
+
+static bool _accepts_union_type(Symbols *s, const UnionType *a, const Type *b) {
+  if (b->type == T_UNION) {
+    for (u32 i = 0; i < b->union_type->len; i++) {
+      if (!_accepts_union_type(s, a, b->union_type->types[i])) return false;
+    }
+    return true;
+  } else {
+    for (u32 i = 0; i < a->len; i++) {
+      if (tc_accepts_type(s, a->types[i], b)) return true;
+    }
+    return false;
+  }
+}
+
+static bool tc_accepts_type(Symbols *s, const Type *a, const Type *b) {
   // If the types are literally the same object they are obviously equal
-  if (actual == expected) return true;
+  if (b == a) return true;
 
-  // TODO
+  if (a->type == T_NAMED) {
+    return tc_accepts_type(s, _resolve_named_type(s, a->named), b);
+  }
+  if (b->type == T_NAMED) {
+    return tc_accepts_type(s, a, _resolve_named_type(s, b->named));
+  }
+
+  switch (a->type) {
+    case T_BUILTIN: return _accepts_builtin_type(a->builtin, b);
+    case T_LIST: return _accepts_list_type(s, a->list, b);
+    case T_TUPLE_SHORT: return _accepts_short_tuple_type(s, a->short_tuple, b);
+    case T_TUPLE: return _accepts_tuple_type(s, a->tuple, b);
+    case T_MAP: return _accepts_map_type(s, a->map, b);
+    case T_STRUCT: return _accepts_struct_type(s, a->struct_type, b);
+    case T_UNION: return _accepts_union_type(s, a->union_type, b);
+    case T_ENUM: return tc_compare_types(s, a, b);
+    case T_RANGE: return b->type == T_RANGE;
+    case T_NAMED: assert(false);
+  }
 }
 
-static bool tc_compatible_types(const Type *a, const Type *b) {
-  return tc_accepts_type(a, b) || tc_accepts_type(b, a);
+static bool tc_compatible_types(Symbols *s, const Type *a, const Type *b) {
+  return tc_accepts_type(s, a, b) || tc_accepts_type(s, b, a);
 }
 
 /* -- Type checking: check -------------------------------------------------- */
@@ -443,19 +625,11 @@ static bool _is_valid_map_key_type(const Type *type) {
   }
 }
 
-static bool _union_contains_type(const Type *u, const Type *type) {
-  assert(u->type == T_UNION);
-  for (u32 i = 0; i < u->union_type->len; i++) {
-    if (tc_accepts_type(u->union_type->types[i], type)) return true;
-  }
-  return false;
-}
-
-static Type *_add_to_union_type(Type *value_type, Type *new_type) {
+static Type *_add_to_union_type(Symbols *s, Type *value_type, Type *new_type) {
   if (!value_type || !new_type) return NULL;
 
   if (value_type->type == T_UNION) {
-    if (_union_contains_type(value_type, new_type)) {
+    if (_accepts_union_type(s, value_type->union_type, new_type)) {
       return value_type;
     }
 
@@ -464,7 +638,7 @@ static Type *_add_to_union_type(Type *value_type, Type *new_type) {
     u->types = realloc(u->types, u->len * sizeof(Type *)); // FIXME leaks and stinks!!
     return value_type;
   } else {
-    if (tc_accepts_type(value_type, new_type)) {
+    if (tc_accepts_type(s, value_type, new_type)) {
       return value_type;
     }
 
@@ -497,14 +671,14 @@ static Type *_map_type(Symbols *s, MapLiteral *map) {
     Type *k = tc_check_expr(s, map->entries[i]->key);
     Type *v = tc_check_expr(s, map->entries[i]->value);
 
-    if (!tc_compare_types(key_type, k)) {
+    if (!tc_compare_types(s, key_type, k)) {
       TypeError *error = new(TypeError);
       *error = (TypeError){ .message = "inconsistent key type" };
       err_report_type(error, &map->entries[i]->key->meta.loc, ERR_ERROR);
       valid = false;
     }
 
-    value_type = _add_to_union_type(value_type, v);
+    value_type = _add_to_union_type(s, value_type, v);
   }
   if (!valid) return NULL;
 
@@ -642,7 +816,7 @@ static Type *_indexed_tuple_item_type(Symbols *s, TupleType *tuple, Expr *index)
   // it references, so we just return a union of all types in the tuple
   Type *value_type = tuple->types[0];
   for (u32 i = 1; i < tuple->len; i++) {
-    value_type = _add_to_union_type(value_type, tuple->types[i]);
+    value_type = _add_to_union_type(s, value_type, tuple->types[i]);
   }
   return value_type;
 }
@@ -686,7 +860,7 @@ static Type *_indexed_short_tuple_type(Symbols *s, ShortTupleType *short_tuple, 
 
 static Type *_indexed_map_type(Symbols *s, MapType *map, IndexedVariable *var) {
   if (var->index_count == 1) {
-    if (!tc_accepts_type(map->key_type, tc_check_expr(s, var->indices[0]))) {
+    if (!tc_accepts_type(s, map->key_type, tc_check_expr(s, var->indices[0]))) {
       // TODO bad index type error
       return NULL;
     }
@@ -694,7 +868,7 @@ static Type *_indexed_map_type(Symbols *s, MapType *map, IndexedVariable *var) {
   } else {
     bool valid = true;
     for (u32 i = 0; i < var->index_count; i++) {
-      if (!tc_accepts_type(map->key_type, tc_check_expr(s, var->indices[i]))) {
+      if (!tc_accepts_type(s, map->key_type, tc_check_expr(s, var->indices[i]))) {
         // TODO bad index type error
         valid = false;
       }
@@ -861,7 +1035,7 @@ static Type *_binary_type(Symbols *s, BinaryExpr *expr) {
     }
     case EQUAL_EQUAL:
     case BANG_EQUAL: {
-      if (!tc_compatible_types(l_type, r_type)) {
+      if (!tc_compatible_types(s, l_type, r_type)) {
         // TODO comparison of incompatible types
         return NULL;
       }
@@ -888,7 +1062,7 @@ static Type *_assignment_type(Symbols *s, const AssignmentExpr *expr) {
   Type *lhs_type = _variable_type(s, expr->left);
   Type *rhs_type = tc_check_expr(s, expr->right);
 
-  if (tc_accepts_type(lhs_type, rhs_type)) return lhs_type;
+  if (tc_accepts_type(s, lhs_type, rhs_type)) return lhs_type;
   // TODO type error: incompatible types
   return NULL;
 }
@@ -901,7 +1075,7 @@ static Type *_if_expr_type(Symbols *s, const IfExpr *expr) {
   if (expr->false_branch) {
     Type *false_type = tc_check_expr(s, expr->false_branch);
     // TODO compare types in a somewhat more forgiving way
-    if (!tc_compare_types(true_type, false_type)) {
+    if (!tc_compare_types(s, true_type, false_type)) {
       // TODO incompatible else type error
       valid = false;
     }
@@ -969,7 +1143,7 @@ static bool _check_function_args(Symbols *s, const FunctionCallExpr *expr, const
     }
 
     Parameter *param = def->params[param_idx];
-    if (!tc_accepts_type(param->type, tc_check_expr(s, arg->value))) {
+    if (!tc_accepts_type(s, param->type, tc_check_expr(s, arg->value))) {
       // TODO parameter type error
       valid = false;
     } else {
@@ -1034,9 +1208,32 @@ static Type *_env_type(Symbols *s, const EnvExpr *expr) {
 static Type *_block_type(Symbols *s, const BlockExpr *expr) {
   _push_scope(expr->scope);
 
+  Type **block_types = tc_new_array(Type *, expr->len);
+  u32 type_count = 0;
+  bool homogenous = true;
+
+  for (u32 i = 0; i < expr->len; i++) {
+    Type *stmt_type = tc_check_stmt(s, expr->statements[i]);
+    if (stmt_type) {
+      if (type_count > 0 && !tc_compare_types(s, block_types[0], stmt_type)) {
+        homogenous = false;
+      }
+      block_types[type_count++] = stmt_type;
+    }
+  }
+
   _pop_scope();
 
-  return NULL; // TODO
+  if (type_count == 0) {
+    // TODO error: empty block
+    return NULL;
+  } else if (type_count == 1) {
+    return block_types[0];
+  }
+
+  return homogenous
+    ? _short_tuple_of(block_types[0], type_count)
+    : _tuple_of(block_types, type_count);
 }
 
 static Type *tc_check_expr(Symbols *s, const Expr *expr) {
@@ -1061,7 +1258,7 @@ static void _check_decl(Symbols *s, const DeclarationStmt *decl) {
 
   if (decl->left_count == 1) {
     Type *decl_type = or_default(decl->type, value_type);
-    if (!tc_accepts_type(decl_type, value_type)) {
+    if (!tc_accepts_type(s, decl_type, value_type)) {
       // TODO error: type mismatch for declaration
       return;
     }
@@ -1072,7 +1269,7 @@ static void _check_decl(Symbols *s, const DeclarationStmt *decl) {
     switch (value_type->type) {
       case T_LIST: {
         Type *decl_type = or_default(decl->type, value_type->list->item_type);
-        if (!tc_accepts_type(decl_type, value_type->list->item_type)) {
+        if (!tc_accepts_type(s, decl_type, value_type->list->item_type)) {
           // TODO error: type mismatch for declaration
           return;
         }
@@ -1084,7 +1281,7 @@ static void _check_decl(Symbols *s, const DeclarationStmt *decl) {
       }
       case T_TUPLE_SHORT: {
         Type *decl_type = or_default(decl->type, value_type->short_tuple->type);
-        if (!tc_accepts_type(decl_type, value_type->short_tuple->type)) {
+        if (!tc_accepts_type(s, decl_type, value_type->short_tuple->type)) {
           // TODO error: type mismatch for declaration
           return;
         }
@@ -1107,7 +1304,7 @@ static void _check_decl(Symbols *s, const DeclarationStmt *decl) {
           }
 
           Type *decl_type = or_default(decl->type, value_type->tuple->types[i]);
-          if (!tc_accepts_type(decl_type, value_type->tuple->types[i])) {
+          if (!tc_accepts_type(s, decl_type, value_type->tuple->types[i])) {
             // TODO error: type mismatch for declaration
             return;
           }
@@ -1130,7 +1327,7 @@ static void _check_constant(Symbols *s, const ConstantStmt *constant) {
   Type *value_type = tc_check_expr(s, constant->right);
 
   Type *decl_type = or_default(constant->type, value_type);
-  if (!tc_accepts_type(decl_type, value_type)) {
+  if (!tc_accepts_type(s, decl_type, value_type)) {
     // TODO error: type mismatch for declaration
     return;
   }
@@ -1146,7 +1343,7 @@ static void _check_function_def(Symbols *s, const FunctionDef *def) {
   // TODO define params
 
   Type *body_type = _block_type(s, def->body);
-  if (!tc_accepts_type(def->return_type, body_type)) {
+  if (!tc_accepts_type(s, def->return_type, body_type)) {
     // TODO function return type mismatch error
   }
 

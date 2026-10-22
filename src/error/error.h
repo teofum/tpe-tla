@@ -78,11 +78,11 @@ struct TypeError {
 void err_init(CompilerState *compiler_state);
 void err_shutdown();
 
-void err_report_syntax(SyntaxError *error, Location *location, ErrorLevel level);
-void err_report_import(ImportError *error, Location *location, ErrorLevel level);
-void err_report_redef(RedefError *error, Location *location, ErrorLevel level);
-void err_report_undef(UndefError *error, Location *location, ErrorLevel level);
-void err_report_type(TypeError *error, Location *location, ErrorLevel level);
+void err_report_syntax(SyntaxError *error, const Location *location, ErrorLevel level);
+void err_report_import(ImportError *error, const Location *location, ErrorLevel level);
+void err_report_redef(RedefError *error, const Location *location, ErrorLevel level);
+void err_report_undef(UndefError *error, const Location *location, ErrorLevel level);
+void err_report_type(TypeError *error, const Location *location, ErrorLevel level);
 bool err_gate();
 
 void err_free_error(Error *e);
