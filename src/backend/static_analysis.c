@@ -368,9 +368,19 @@ static Type *_resolve_named_type(Symbols *s, NamedType *named) {
   return alias->type;
 }
 
-static bool tc_compare_types(const Type *a, const Type *b);
+static bool tc_compare_types(const Type *a, const Type *b) {
+  // If the types are literally the same object they are obviously equal
+  if (a == b) return true;
 
-static bool tc_accepts_type(const Type *expected, const Type *actual);
+  // TODO
+}
+
+static bool tc_accepts_type(const Type *expected, const Type *actual) {
+  // If the types are literally the same object they are obviously equal
+  if (actual == expected) return true;
+
+  // TODO
+}
 
 static bool tc_compatible_types(const Type *a, const Type *b) {
   return tc_accepts_type(a, b) || tc_accepts_type(b, a);
@@ -1043,6 +1053,119 @@ static Type *tc_check_expr(Symbols *s, const Expr *expr) {
     case EXPR_IMPORT: return _import_type(s, expr->import);
     case EXPR_ENV: return _env_type(s, expr->env);
     case EXPR_GROUP: return tc_check_expr(s, expr->group->inner_expr);
+  }
+}
+
+static void _check_decl(Symbols *s, const DeclarationStmt *decl) {
+  Type *value_type = tc_check_expr(s, decl->right);
+
+  if (decl->left_count == 1) {
+    Type *decl_type = or_default(decl->type, value_type);
+    if (!tc_accepts_type(decl_type, value_type)) {
+      // TODO error: type mismatch for declaration
+      return;
+    }
+
+    SymbolKey key = { .name = decl->left[0]->lexeme, .scope = _peek_scope() };
+    map_insert(s->symbols, &key, NULL); // TODO
+  } else {
+    switch (value_type->type) {
+      case T_LIST: {
+        Type *decl_type = or_default(decl->type, value_type->list->item_type);
+        if (!tc_accepts_type(decl_type, value_type->list->item_type)) {
+          // TODO error: type mismatch for declaration
+          return;
+        }
+
+        for (u32 i = 0; i < decl->left_count; i++) {
+          SymbolKey key = { .name = decl->left[i]->lexeme, .scope = _peek_scope() };
+          map_insert(s->symbols, &key, NULL); // TODO
+        }
+      }
+      case T_TUPLE_SHORT: {
+        Type *decl_type = or_default(decl->type, value_type->short_tuple->type);
+        if (!tc_accepts_type(decl_type, value_type->short_tuple->type)) {
+          // TODO error: type mismatch for declaration
+          return;
+        }
+        if (decl->left_count > value_type->short_tuple->count) {
+          // TODO error: component count mismatch
+          return;
+        }
+
+        for (u32 i = 0; i < decl->left_count; i++) {
+          SymbolKey key = { .name = decl->left[i]->lexeme, .scope = _peek_scope() };
+          map_insert(s->symbols, &key, NULL); // TODO
+        }
+      }
+      case T_TUPLE: {
+        bool valid = true;
+        for (u32 i = 0; i < decl->left_count; i++) {
+          if (i >= value_type->tuple->len) {
+            // TODO error: component count mismatch
+            return;
+          }
+
+          Type *decl_type = or_default(decl->type, value_type->tuple->types[i]);
+          if (!tc_accepts_type(decl_type, value_type->tuple->types[i])) {
+            // TODO error: type mismatch for declaration
+            return;
+          }
+        }
+        if (!valid) return;
+
+        for (u32 i = 0; i < decl->left_count; i++) {
+          SymbolKey key = { .name = decl->left[i]->lexeme, .scope = _peek_scope() };
+          map_insert(s->symbols, &key, NULL); // TODO
+        }
+      }
+      default: {
+        // TODO error decomposition not allowed for this type
+      }
+    }
+  }
+}
+
+static void _check_constant(Symbols *s, const ConstantStmt *constant) {
+  Type *value_type = tc_check_expr(s, constant->right);
+
+  Type *decl_type = or_default(constant->type, value_type);
+  if (!tc_accepts_type(decl_type, value_type)) {
+    // TODO error: type mismatch for declaration
+    return;
+  }
+
+  SymbolKey key = { .name = constant->left->lexeme, .scope = _peek_scope() };
+  map_insert(s->symbols, &key, NULL); // TODO
+}
+
+static void _check_function_def(Symbols *s, const FunctionDef *def) {
+  _push_scope(def->scope);
+
+  // TODO check param default values
+  // TODO define params
+
+  Type *body_type = _block_type(s, def->body);
+  if (!tc_accepts_type(def->return_type, body_type)) {
+    // TODO function return type mismatch error
+  }
+
+  _pop_scope();
+}
+
+static void _check_export(Symbols *s, const ExportStmt *export) {
+  // TODO
+}
+
+static Type *tc_check_stmt(Symbols *s, const Stmt *stmt) {
+  switch (stmt->type) {
+    case STMT_EXPR: return tc_check_expr(s, stmt->expr);
+    case STMT_DECLARATION: _check_decl(s, stmt->decl); return NULL;
+    case STMT_CONSTANT: _check_constant(s, stmt->constant); return NULL;
+    case STMT_FUNCTION_DEF: _check_function_def(s, stmt->function_def); return NULL;
+    case STMT_EXPORT: _check_export(s, stmt->export); return NULL;
+    case STMT_TYPE_ALIAS: return NULL;
+    case STMT_PARSE_ERROR: assert(false); // Unreachable
   }
 }
 

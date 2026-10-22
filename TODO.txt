@@ -89,10 +89,13 @@
     [x] Assignments
     [x] If expressions
     [x] For expressions
-    [ ] Function calls
-    [ ] Import expressions
-    [ ] Env expressions
+    [x] Function calls
+    [x] Import expressions
+    [x] Env expressions
     [ ] Blocks
+  [ ] Statements
+    [x] Declarations/constants
+    [ ] Function definitions
   [ ] Error reporting
   [ ] Memory management (custom allocator)
 
