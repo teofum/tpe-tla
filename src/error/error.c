@@ -46,7 +46,7 @@ void err_shutdown() {
   cs = NULL;
 }
 
-void err_report_syntax(SyntaxError *s, Location *location, ErrorLevel level) {
+void err_report_syntax(SyntaxError *s, const Location *location, ErrorLevel level) {
   Error error = {
     .type = ERR_SYNTAX,
     .stage = CS_PARSE,
@@ -58,7 +58,7 @@ void err_report_syntax(SyntaxError *s, Location *location, ErrorLevel level) {
   dyn_array_push(e->errors, &error);
 }
 
-void err_report_import(ImportError *i, Location *location, ErrorLevel level) {
+void err_report_import(ImportError *i, const Location *location, ErrorLevel level) {
   Error error = {
     .type = ERR_IMPORT,
     .stage = CS_PARSE,
@@ -70,7 +70,7 @@ void err_report_import(ImportError *i, Location *location, ErrorLevel level) {
   dyn_array_push(e->errors, &error);
 }
 
-void err_report_redef(RedefError *r, Location *location, ErrorLevel level) {
+void err_report_redef(RedefError *r, const Location *location, ErrorLevel level) {
   Error error = {
     .type = ERR_REDEF,
     .stage = CS_STATIC_ANALYSIS,
@@ -82,7 +82,7 @@ void err_report_redef(RedefError *r, Location *location, ErrorLevel level) {
   dyn_array_push(e->errors, &error);
 }
 
-void err_report_undef(UndefError *u, Location *location, ErrorLevel level) {
+void err_report_undef(UndefError *u, const Location *location, ErrorLevel level) {
   Error error = {
     .type = ERR_UNDEF,
     .stage = CS_STATIC_ANALYSIS,
@@ -94,7 +94,7 @@ void err_report_undef(UndefError *u, Location *location, ErrorLevel level) {
   dyn_array_push(e->errors, &error);
 }
 
-void err_report_type(TypeError *t, Location *location, ErrorLevel level) {
+void err_report_type(TypeError *t, const Location *location, ErrorLevel level) {
   Error error = {
     .type = ERR_TYPE,
     .stage = CS_TYPECHECK,

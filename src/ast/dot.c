@@ -142,9 +142,8 @@ static void dot_type(Type *type, u64 pid) {
       }
       break;
     case T_TUPLE_SHORT:
-      snprintf(label, 18, "Tuple Shorthand");
+      snprintf(label, 256, "Tuple Shorthand [%u]", type->short_tuple->count);
       dot_type(type->short_tuple->type, id);
-      dot_expr(type->short_tuple->count, id);
       break;
     case T_ENUM:
       snprintf(label, 8, "Enum");
@@ -196,10 +195,9 @@ static void dot_literal(LiteralExpr *literal, u64 pid) {
       }
       break;
     case L_LIST_SHORT:
-      label = new_array(char, 15);
-      snprintf(label, 15, "Shorthand List");
+      label = new_array(char, 256);
+      snprintf(label, 256, "Shorthand List [%u]", literal->short_list->count);
       dot_expr(literal->short_list->value, id);
-      dot_expr(literal->short_list->count, id);
       break;
     case L_MAP:
       label = new_array(char, 6);
