@@ -9,6 +9,7 @@
 #include <support/dyn_array.h>
 #include <support/hash_map.h>
 #include <support/logger.h>
+#include <support/mem.h>
 #include <support/state.h>
 #include <support/types.h>
 #include <support/util.h>
@@ -18,8 +19,11 @@
 typedef struct {
   Logger *sym_logger;
   Logger *tc_logger;
+
   dyn_array *stack;
   u32 next_scope_id;
+
+  dyn_arena *tc_arena;
 } StaticAnalyzer;
 
 static CompilerState *cs = NULL;
@@ -59,6 +63,7 @@ void sa_init(CompilerState *compiler_state) {
   sa->tc_logger = logger_create("Typecheck", stderr,
     cs->options.typecheck_log_level
   );
+  sa->tc_arena = mem_dyn_arena_create(0);
 }
 
 void sa_shutdown() {
@@ -67,6 +72,7 @@ void sa_shutdown() {
   if (sa->stack) dyn_array_free(sa->stack);
   if (sa->sym_logger) logger_free(sa->sym_logger);
   if (sa->tc_logger) logger_free(sa->tc_logger);
+  if (sa->tc_arena) mem_dyn_arena_destroy(sa->tc_arena);
   free(sa);
 
   sa = NULL;
@@ -293,8 +299,8 @@ CompilationStatus sa_build_static_tables(i32 file_idx) {
 
 /* -- Type checking: utils -------------------------------------------------- */
 
-#define tc_new(T) new(T)
-#define tc_new_array(T, n) new_array(T, n)
+#define tc_new(T) (((T*)mem_dyn_arena_calloc(sa->tc_arena, 1, sizeof(T))))
+#define tc_new_array(T, n) ((T*)(mem_dyn_arena_calloc(sa->tc_arena, n, sizeof(T))))
 
 // C is for Cursed macro dark arts
 #define tc_make(T, name, ...)               \
