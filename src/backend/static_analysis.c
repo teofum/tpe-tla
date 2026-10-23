@@ -41,6 +41,10 @@ static u32 _peek_scope() {
   return *(u32 *)dyn_array_get(sa->stack, dyn_array_size(sa->stack) - 1);
 }
 
+static u32 _get_scope(u32 level) {
+  return *(u32 *)dyn_array_get(sa->stack, dyn_array_size(sa->stack) - 1 - level);
+}
+
 /* -- Module init/shutdown -------------------------------------------------- */
 
 void sa_init(CompilerState *compiler_state) {
@@ -67,6 +71,13 @@ void sa_shutdown() {
 
   sa = NULL;
   cs = NULL;
+}
+
+static void tc_debug_log(const char *s, const Location *loc) {
+  logger_log(sa->tc_logger, LOG_DEBUG, "%s @ %u:%u - %u:%u", s,
+    loc->first_line, loc->first_column,
+    loc->last_line, loc->last_column
+  );
 }
 
 /* -- Static symbol pass ---------------------------------------------------- */
@@ -331,6 +342,102 @@ static Type *_map_of(Type *key_type, Type *value_type) {
   return type;
 }
 
+/* -- Type checking: variables ---------------------------------------------- */
+
+static const Type *tc_resolve_named_type(Symbols *s, const NamedType *named) {
+  const TypeAliasStmt *alias = NULL;
+  u32 level = 0, scope = 0;
+
+  do {
+    scope = _get_scope(level++);
+    SymbolKey key = { .name = named->name->lexeme, .scope = scope };
+    alias = map_get(s->types, &key);
+  } while (!alias && scope != 0);
+
+  if (!alias) {
+    UndefError *error = new(UndefError);
+    *error = (UndefError){
+      .object_type = "type",
+      .object_name = strdup(named->name->lexeme),
+    };
+    err_report_undef(error, &named->meta.loc, ERR_ERROR);
+    return NULL;
+  }
+
+  return alias->type;
+}
+
+static const FunctionDef *tc_resolve_function(Symbols *s, const Identifier *name) {
+  const FunctionDef *function = NULL;
+  u32 level = 0, scope = 0;
+
+  do {
+    scope = _get_scope(level++);
+    SymbolKey key = { .name = name->lexeme, .scope = scope };
+    function = map_get(s->functions, &key);
+  } while (!function && scope != 0);
+
+  if (!function) {
+    UndefError *error = new(UndefError);
+    *error = (UndefError){
+      .object_type = "function",
+      .object_name = strdup(name->lexeme),
+    };
+    err_report_undef(error, &name->loc, ERR_ERROR);
+    return NULL;
+  }
+
+  return function;
+}
+
+static const Symbol *tc_resolve_symbol(Symbols *s, const Identifier *name) {
+  Symbol *symbol = NULL;
+  u32 level = 0, scope = 0;
+
+  do {
+    scope = _get_scope(level++);
+    SymbolKey key = { .name = name->lexeme, .scope = scope };
+    symbol = map_get(s->symbols, &key);
+  } while (!symbol && scope != 0);
+
+  if (!symbol) {
+    UndefError *error = new(UndefError);
+    *error = (UndefError){
+      .object_type = "variable",
+      .object_name = strdup(name->lexeme),
+    };
+    err_report_undef(error, &name->loc, ERR_ERROR);
+    return NULL;
+  }
+
+  return symbol;
+}
+
+static bool tc_define_symbol(Symbols *s, const Identifier *name, Symbol *symbol) {
+  SymbolKey key = { .name = name->lexeme, .scope = _peek_scope() };
+  Symbol *existing = map_get(s->symbols, &key);
+
+  if (existing) {
+    RedefError *error = new(RedefError);
+    *error = (RedefError){
+      .object_type = "variable",
+      .object_name = strdup(name->lexeme),
+      .previous_definition = existing->loc
+    };
+    err_report_redef(error, &name->loc, ERR_ERROR);
+    return false;
+  }
+
+  symbol->loc = name->loc;
+  map_insert(s->symbols, &key, symbol);
+  return true;
+}
+
+static Symbol *_symbol_of(Type *type, bool constant) {
+  tc_make(Symbol, symbol, { .type = type, .constant = constant });
+  return symbol;
+}
+
 /* -- Type checking: compare ------------------------------------------------ */
 
 static bool tc_compare_types(Symbols *s, const Type *a, const Type *b);
@@ -353,22 +460,6 @@ static bool _is_vector_type(Type *type) {
 static Type *_upgrade_numeric_type(BuiltinType l, BuiltinType r) {
   if (l == T_INT && r == T_INT) return _builtin_type(T_INT);
   return _builtin_type(T_FLOAT);
-}
-
-static Type *_resolve_named_type(Symbols *s, const NamedType *named) {
-  SymbolKey key = { .name = named->name->lexeme, .scope = _peek_scope() };
-  TypeAliasStmt *alias = map_get(s->types, &key);
-  if (!alias) {
-    UndefError *error = new(UndefError);
-    *error = (UndefError){
-      .object_type = "type",
-      .object_name = strdup(key.name),
-    };
-    err_report_undef(error, &named->meta.loc, ERR_ERROR);
-    return NULL;
-  }
-
-  return alias->type;
 }
 
 static bool _compare_list_types(Symbols *s, const ListType *a, const ListType *b) {
@@ -423,8 +514,8 @@ static bool _compare_named_types(Symbols *s, const NamedType *a, const NamedType
   if (ast_compare_identifiers(a->name, b->name)) return true;
   return tc_compare_types(
     s,
-    _resolve_named_type(s, a),
-    _resolve_named_type(s, b)
+    tc_resolve_named_type(s, a),
+    tc_resolve_named_type(s, b)
   );
 }
 
@@ -433,10 +524,10 @@ static bool tc_compare_types(Symbols *s, const Type *a, const Type *b) {
   if (a == b) return true;
 
   if (a->type == T_NAMED) {
-    return tc_compare_types(s, _resolve_named_type(s, a->named), b);
+    return tc_compare_types(s, tc_resolve_named_type(s, a->named), b);
   }
   if (b->type == T_NAMED) {
-    return tc_compare_types(s, a, _resolve_named_type(s, b->named));
+    return tc_compare_types(s, a, tc_resolve_named_type(s, b->named));
   }
 
   if (a->type != b->type) return false;
@@ -544,10 +635,10 @@ static bool tc_accepts_type(Symbols *s, const Type *a, const Type *b) {
   if (b == a) return true;
 
   if (a->type == T_NAMED) {
-    return tc_accepts_type(s, _resolve_named_type(s, a->named), b);
+    return tc_accepts_type(s, tc_resolve_named_type(s, a->named), b);
   }
   if (b->type == T_NAMED) {
-    return tc_accepts_type(s, a, _resolve_named_type(s, b->named));
+    return tc_accepts_type(s, a, tc_resolve_named_type(s, b->named));
   }
 
   switch (a->type) {
@@ -574,9 +665,27 @@ static Type *tc_check_expr(Symbols *s, const Expr *expr);
 static Type *tc_check_stmt(Symbols *s, const Stmt *stmt);
 
 static Type *_list_type(Symbols *s, ListLiteral *list) {
+  tc_debug_log("List", &list->meta.loc);
+
   Type **types = tc_new_array(Type *, list->len);
+  bool homogenous = true;
   for (u32 i = 0; i < list->len; i++) {
     types[i] = tc_check_expr(s, list->exprs[i]);
+    if (i > 0 && !tc_compare_types(s, types[0], types[i])) homogenous = false;
+  }
+
+  if (homogenous) {
+    tc_make(ShortTupleType, st, {
+      .type = types[0],
+      .count = list->len,
+      .meta = {0}
+    });
+    tc_make(Type, type, {
+      .type = T_TUPLE_SHORT,
+      .short_tuple = st,
+      .meta = {0}
+    });
+    return type;
   }
 
   tc_make(TupleType, tuple, { .types = types, .len = list->len, .meta = {0} });
@@ -733,6 +842,8 @@ static Type *_range_type(Symbols *s, RangeLiteral *range) {
 }
 
 static Type *_literal_type(Symbols *s, LiteralExpr *expr) {
+  tc_debug_log("Literal", &expr->meta.loc);
+
   switch (expr->type) {
     case L_INTEGER:     return _builtin_type(T_INT);
     case L_FLOAT:       return _builtin_type(T_FLOAT);
@@ -879,10 +990,12 @@ static Type *_indexed_map_type(Symbols *s, MapType *map, IndexedVariable *var) {
 }
 
 static Type *_variable_type(Symbols *s, VariableExpr *var) {
+  tc_debug_log("Var", &var->meta.loc);
+
   switch (var->type) {
     case V_NAMED: {
-      SymbolKey key = { .name = var->named->name->lexeme, .scope = _peek_scope() };
-      return map_get(s->symbols, &key)->type;
+      const Symbol *symbol = tc_resolve_symbol(s, var->named->name);
+      return symbol ? symbol->type : NULL;
     }
     case V_INDEX: {
       Type *container = _variable_type(s, var->indexed->container);
@@ -968,6 +1081,8 @@ static Type *_arithmetic_vector_type(Symbols *s, Type *l, Type *r, TokenLabel op
 }
 
 static Type *_binary_type(Symbols *s, BinaryExpr *expr) {
+  tc_debug_log("BinaryExpr", &expr->meta.loc);
+
   Type *l_type = tc_check_expr(s, expr->left);
   Type *r_type = tc_check_expr(s, expr->right);
 
@@ -1016,14 +1131,14 @@ static Type *_binary_type(Symbols *s, BinaryExpr *expr) {
     case LESS: {
       if (_is_numeric_type(l_type)) {
         if (_is_numeric_type(r_type)) {
-          return _upgrade_numeric_type(l_type->builtin, r_type->builtin);
+          return _builtin_type(T_BOOL);
         } else {
           // TODO type mismatch
           return NULL;
         }
       } else if (_is_builtin_type(l_type, T_STRING)) {
         if (_is_builtin_type(r_type, T_STRING)) {
-          return l_type;
+          return _builtin_type(T_BOOL);
         } else {
           // TODO type mismatch
           return NULL;
@@ -1039,6 +1154,7 @@ static Type *_binary_type(Symbols *s, BinaryExpr *expr) {
         // TODO comparison of incompatible types
         return NULL;
       }
+      return _builtin_type(T_BOOL);
     }
     case AND:
     case OR: {
@@ -1163,12 +1279,10 @@ static bool _check_function_args(Symbols *s, const FunctionCallExpr *expr, const
 }
 
 static Type *_function_call_type(Symbols *s, const FunctionCallExpr *expr) {
-  SymbolKey key = { .name = expr->name->lexeme, .scope = _peek_scope() };
-  const FunctionDef *def = map_get(s->functions, &key);
-  if (!def) {
-    // TODO undefined function error
-    return NULL;
-  }
+  tc_debug_log("FunctionCall", &expr->meta.loc);
+
+  const FunctionDef *def = tc_resolve_function(s, expr->name);
+  if (!def) return NULL;
 
   bool valid = _check_function_args(s, expr, def);
   if (expr->composable && !tc_check_expr(s, expr->composable)) {
@@ -1206,6 +1320,8 @@ static Type *_env_type(Symbols *s, const EnvExpr *expr) {
 }
 
 static Type *_block_type(Symbols *s, const BlockExpr *expr) {
+  tc_debug_log("Block", &expr->meta.loc);
+
   _push_scope(expr->scope);
 
   Type **block_types = tc_new_array(Type *, expr->len);
@@ -1237,6 +1353,8 @@ static Type *_block_type(Symbols *s, const BlockExpr *expr) {
 }
 
 static Type *tc_check_expr(Symbols *s, const Expr *expr) {
+  tc_debug_log("Expr", &expr->meta.loc);
+
   switch (expr->type) {
     case EXPR_LITERAL: return _literal_type(s, expr->literal);
     case EXPR_VARIABLE: return _variable_type(s, expr->variable);
@@ -1254,6 +1372,8 @@ static Type *tc_check_expr(Symbols *s, const Expr *expr) {
 }
 
 static void _check_decl(Symbols *s, const DeclarationStmt *decl) {
+  tc_debug_log("Decl", &decl->meta.loc);
+
   Type *value_type = tc_check_expr(s, decl->right);
 
   if (decl->left_count == 1) {
@@ -1263,8 +1383,7 @@ static void _check_decl(Symbols *s, const DeclarationStmt *decl) {
       return;
     }
 
-    SymbolKey key = { .name = decl->left[0]->lexeme, .scope = _peek_scope() };
-    map_insert(s->symbols, &key, NULL); // TODO
+    tc_define_symbol(s, decl->left[0], _symbol_of(decl_type, false));
   } else {
     switch (value_type->type) {
       case T_LIST: {
@@ -1275,8 +1394,7 @@ static void _check_decl(Symbols *s, const DeclarationStmt *decl) {
         }
 
         for (u32 i = 0; i < decl->left_count; i++) {
-          SymbolKey key = { .name = decl->left[i]->lexeme, .scope = _peek_scope() };
-          map_insert(s->symbols, &key, NULL); // TODO
+          tc_define_symbol(s, decl->left[i], _symbol_of(decl_type, false));
         }
       }
       case T_TUPLE_SHORT: {
@@ -1291,8 +1409,7 @@ static void _check_decl(Symbols *s, const DeclarationStmt *decl) {
         }
 
         for (u32 i = 0; i < decl->left_count; i++) {
-          SymbolKey key = { .name = decl->left[i]->lexeme, .scope = _peek_scope() };
-          map_insert(s->symbols, &key, NULL); // TODO
+          tc_define_symbol(s, decl->left[i], _symbol_of(decl_type, false));
         }
       }
       case T_TUPLE: {
@@ -1312,8 +1429,8 @@ static void _check_decl(Symbols *s, const DeclarationStmt *decl) {
         if (!valid) return;
 
         for (u32 i = 0; i < decl->left_count; i++) {
-          SymbolKey key = { .name = decl->left[i]->lexeme, .scope = _peek_scope() };
-          map_insert(s->symbols, &key, NULL); // TODO
+          Type *decl_type = or_default(decl->type, value_type->tuple->types[i]);
+          tc_define_symbol(s, decl->left[i], _symbol_of(decl_type, false));
         }
       }
       default: {
@@ -1332,8 +1449,7 @@ static void _check_constant(Symbols *s, const ConstantStmt *constant) {
     return;
   }
 
-  SymbolKey key = { .name = constant->left->lexeme, .scope = _peek_scope() };
-  map_insert(s->symbols, &key, NULL); // TODO
+  tc_define_symbol(s, constant->left, _symbol_of(decl_type, true));
 }
 
 static void _check_function_def(Symbols *s, const FunctionDef *def) {
@@ -1355,6 +1471,8 @@ static void _check_export(Symbols *s, const ExportStmt *export) {
 }
 
 static Type *tc_check_stmt(Symbols *s, const Stmt *stmt) {
+  tc_debug_log("Stmt", &stmt->meta.loc);
+
   switch (stmt->type) {
     case STMT_EXPR: return tc_check_expr(s, stmt->expr);
     case STMT_DECLARATION: _check_decl(s, stmt->decl); return NULL;
@@ -1366,8 +1484,53 @@ static Type *tc_check_stmt(Symbols *s, const Stmt *stmt) {
   }
 }
 
+static Type *tc_check_ast(Symbols *s, const Program *ast) {
+  _push_scope(ast->scope);
+
+  Type **types = tc_new_array(Type *, ast->len);
+  u32 type_count = 0;
+  bool homogenous = true;
+
+  for (u32 i = 0; i < ast->len; i++) {
+    Type *stmt_type = tc_check_stmt(s, ast->statements[i]);
+    if (stmt_type) {
+      if (type_count > 0 && !tc_compare_types(s, types[0], stmt_type)) {
+        homogenous = false;
+      }
+      types[type_count++] = stmt_type;
+    }
+  }
+
+  _pop_scope();
+
+  if (type_count == 0) {
+    return _builtin_type(T_VOID);
+  } else if (type_count == 1) {
+    return types[0];
+  }
+
+  return homogenous
+    ? _short_tuple_of(types[0], type_count)
+    : _tuple_of(types, type_count);
+}
+
 CompilationStatus sa_build_tables_and_typecheck(i32 file_idx) {
-  // TODO
+  cs->current_file = file_idx;
+
+  Program *ast = cs->asts[file_idx];
+  assert(ast != NULL); // If we got to this point without an AST we have a bug
+
+  Symbols *sym = cs->symbol_data[file_idx];
+  assert(sym != NULL); // If we got to this point without a symbol table we have a bug
+  sym->symbols = new(SymbolTable);
+  map_init(sym->symbols, sk_hash, sk_compare);
+  map_manage_keys(sym->symbols, sk_clone, sk_free);
+
+  dyn_array_clear(sa->stack);
+  tc_check_ast(sym, ast);
+  assert(dyn_array_size(sa->stack) == 0); // Unbalanced stack is a bug
+
+  cs->current_file = -1;
   return STATUS_SUCCEEDED;
 }
 
