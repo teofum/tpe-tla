@@ -361,6 +361,11 @@ static const Type *tc_resolve_named_type(Symbols *s, const NamedType *named) {
   } while (!alias && scope != 0);
 
   if (!alias) {
+    logger_log(sa->tc_logger, LOG_ERROR,
+      "Scope %u: Type %s is undefined",
+      _peek_scope(), named->name->lexeme
+    );
+
     UndefError *error = new(UndefError);
     *error = (UndefError){
       .object_type = "type",
@@ -384,6 +389,11 @@ static const FunctionDef *tc_resolve_function(Symbols *s, const Identifier *name
   } while (!function && scope != 0);
 
   if (!function) {
+    logger_log(sa->tc_logger, LOG_ERROR,
+      "Scope %u: Function %s is undefined",
+      _peek_scope(), name->lexeme
+    );
+
     UndefError *error = new(UndefError);
     *error = (UndefError){
       .object_type = "function",
@@ -407,6 +417,11 @@ static const Symbol *tc_resolve_symbol(Symbols *s, const Identifier *name) {
   } while (!symbol && scope != 0);
 
   if (!symbol) {
+    logger_log(sa->tc_logger, LOG_ERROR,
+      "Scope %u: Variable %s is undefined",
+      _peek_scope(), name->lexeme
+    );
+
     UndefError *error = new(UndefError);
     *error = (UndefError){
       .object_type = "variable",
@@ -424,6 +439,11 @@ static bool tc_define_symbol(Symbols *s, const Identifier *name, Symbol *symbol)
   Symbol *existing = map_get(s->symbols, &key);
 
   if (existing) {
+    logger_log(sa->sym_logger, LOG_ERROR,
+      "Scope %u: Redefinition of variable %s",
+      key.scope, key.name
+    );
+
     RedefError *error = new(RedefError);
     *error = (RedefError){
       .object_type = "variable",
