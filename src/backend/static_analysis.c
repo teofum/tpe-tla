@@ -307,6 +307,21 @@ CompilationStatus sa_build_static_tables(i32 file_idx) {
   T *name = tc_new(T);                      \
   *name = (T)__VA_ARGS__
 
+static Identifier *tc_clone_id(const Identifier *id) {
+  if (!id) return NULL;
+
+  Identifier *clone = tc_new(Identifier);
+  *clone = (Identifier){
+    .label = id->label,
+    .len = id->len,
+    .lexeme = tc_new_array(char, id->len + 1),
+    .loc = id->loc,
+  };
+  strncpy(clone->lexeme, id->lexeme, id->len);
+
+  return clone;
+}
+
 static Type *_builtin_type(BuiltinType builtin) {
   tc_make(Type, type, { .type = T_BUILTIN, .builtin = builtin, .meta = {0} });
   return type;
@@ -819,7 +834,7 @@ static Type *_struct_type(Symbols *s, StructLiteral *struct_l) {
     StructLiteralField *lf = struct_l->fields[i];
     fields[i] = tc_new(StructField);
     *fields[i] = (StructField) {
-      .name = ast_clone_identifier(lf->name),
+      .name = tc_clone_id(lf->name),
       .type = tc_check_expr(s, lf->value),
     };
     if (_is_error(fields[i]->type)) valid = false;
