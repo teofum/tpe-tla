@@ -72,7 +72,7 @@ struct UndefError {
 };
 
 struct TypeError {
-  const char *message;
+  char *message;
 };
 
 void err_init(CompilerState *compiler_state);

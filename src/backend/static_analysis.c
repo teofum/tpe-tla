@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -368,6 +369,30 @@ static Type *_map_of(Type *key_type, Type *value_type) {
   return type;
 }
 
+static Type *_union_of(u32 n, ...) {
+  tc_make(UnionType, union_type, {
+    .len = n,
+    .types = tc_new_array(Type *, n),
+    .meta = {0},
+  });
+
+  va_list args;
+  va_start(args, n);
+  for (u32 i = 0; i < n; i++) union_type->types[i] = va_arg(args, Type *);
+  va_end(args);
+
+  tc_make(Type, type, {
+    .type = T_UNION,
+    .union_type = union_type,
+    .meta = {0}
+  });
+  return type;
+}
+
+static const char *tc_print_type(const Type *type) {
+  return "[TODO print type]";
+}
+
 /* -- Type checking: variables ---------------------------------------------- */
 
 static const Type *tc_resolve_named_type(Symbols *s, const NamedType *named) {
@@ -489,7 +514,7 @@ static Symbol *_symbol_of(Type *type, bool constant) {
 static bool tc_compare_types(Symbols *s, const Type *a, const Type *b);
 static bool tc_accepts_type(Symbols *s, const Type *a, const Type *b);
 
-static bool _is_builtin_type(Type *type, BuiltinType builtin) {
+static bool _is_builtin(Type *type, BuiltinType builtin) {
   return type->type == T_BUILTIN && type->builtin == builtin;
 }
 
@@ -715,6 +740,53 @@ static bool tc_compatible_types(Symbols *s, const Type *a, const Type *b) {
   return tc_accepts_type(s, a, b) || tc_accepts_type(s, b, a);
 }
 
+/* -- Type checking: errors ------------------------------------------------- */
+
+static Type *tc_report_error(const Location *loc, const char *message) {
+  logger_log(sa->tc_logger, LOG_ERROR, "Type Error: %s", message);
+
+  TypeError *error = new(TypeError);
+  *error = (TypeError){ .message = strdup(message) };
+  err_report_type(error, loc, ERR_ERROR);
+
+  return tc_error(); // Return the error type for convenience
+}
+
+static Type *tc_report_error_fmt(const Location *loc, const char *fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
+  char *message;
+  vasprintf(&message, fmt, args);
+  va_end(args);
+
+  logger_log(sa->tc_logger, LOG_ERROR, "Type Error: %s", message);
+
+  TypeError *error = new(TypeError);
+  *error = (TypeError){ .message = message };
+  err_report_type(error, loc, ERR_ERROR);
+
+  return tc_error(); // Return the error type for convenience
+}
+
+static Type *tc_report_bad_index_type(const Location *loc, const Type *type) {
+  return tc_report_error_fmt(
+    loc,
+    "expression of type %s is not a valid index type", tc_print_type(type)
+  );
+}
+
+static Type *tc_report_op_type(
+  const Location *loc,
+  const char *expected,
+  const Type *got
+) {
+  return tc_report_error_fmt(
+    loc,
+    "invalid operand type: expected %s, got %s",
+    expected, tc_print_type(got)
+  );
+}
+
 /* -- Type checking: check -------------------------------------------------- */
 
 static Type *tc_check_expr(Symbols *s, const Expr *expr);
@@ -783,16 +855,7 @@ static Type *_add_to_union_type(Symbols *s, Type *value_type, Type *new_type) {
       return value_type;
     }
 
-    tc_make(UnionType, union_type, {
-      .len = 2,
-      .types = tc_new_array(Type *, 2),
-      .meta = {0},
-    });
-    union_type->types[0] = value_type;
-    union_type->types[1] = new_type;
-
-    tc_make(Type, type, { .type = T_UNION, .union_type = union_type, .meta = {0} });
-    return type;
+    return _union_of(2, value_type, new_type);
   }
 }
 
@@ -857,18 +920,15 @@ static Type *_enum_type(EnumLiteral *enum_l) {
 
 static Type *_range_type(Symbols *s, RangeLiteral *range) {
   bool start_valid = !range->start
-    || _is_builtin_type(tc_check_expr(s, range->start), T_INT);
+    || _is_builtin(tc_check_expr(s, range->start), T_INT);
   bool end_valid = !range->end
-    || _is_builtin_type(tc_check_expr(s, range->end), T_INT);
+    || _is_builtin(tc_check_expr(s, range->end), T_INT);
 
   if (!start_valid || !end_valid) {
-    TypeError *error = new(TypeError);
-    *error = (TypeError){
-      .message = "range start/end expressions must have integer type"
-    };
-    err_report_type(error, &range->meta.loc, ERR_ERROR);
-
-    return tc_error();
+    return tc_report_error(
+      &range->meta.loc,
+      "range start/end expressions must have integer type"
+    );
   }
 
   tc_make(Type, type, { .type = T_RANGE, .meta = {0} });
@@ -893,34 +953,26 @@ static Type *_literal_type(Symbols *s, LiteralExpr *expr) {
   }
 }
 
-static Type *_struct_member_type(const StructType *s, const char *field) {
+static Type *_struct_member_type(const StructType *s, const Identifier *field) {
   for (u32 i = 0; i < s->len; i++) {
-    if (strcmp(s->fields[i]->name->lexeme, field) == 0) {
+    if (strcmp(s->fields[i]->name->lexeme, field->lexeme) == 0) {
       return s->fields[i]->type;
     }
   }
 
-  // TODO error: field name not in struct
-  return tc_error();
+  return tc_report_error_fmt(
+    &field->loc,
+    "struct has no member '%s'", field->lexeme
+  );
 }
 
 static Type *_indexed_list_item_type(Symbols *s, Type *item_type, Expr *index) {
   Type *index_type = tc_check_expr(s, index);
-  switch (index_type->type) {
-    case T_RANGE: return _list_of(item_type);
-    case T_BUILTIN: {
-      if (index_type->builtin == T_INT) {
-        return item_type;
-      } else {
-        // TODO bad index type error
-        return tc_error();
-      }
-    }
-    default: {
-      // TODO bad index type error
-      return tc_error();
-    }
-  }
+
+  if (index_type->type == T_RANGE) return _list_of(item_type);
+  if (_is_builtin(index_type, T_INT)) return item_type;
+
+  return tc_report_bad_index_type(&index->meta.loc, index_type);
 }
 
 static Type *_indexed_list_type(Symbols *s, ListType *list, IndexedVariable *var) {
@@ -940,9 +992,8 @@ static Type *_indexed_list_type(Symbols *s, ListType *list, IndexedVariable *var
 
 static Type *_indexed_tuple_item_type(Symbols *s, TupleType *tuple, Expr *index) {
   Type *index_type = tc_check_expr(s, index);
-  if (!_is_builtin_type(index_type, T_INT)) {
-    // TODO bad index type error
-    return tc_error();
+  if (!_is_builtin(index_type, T_INT)) {
+    return tc_report_bad_index_type(&index->meta.loc, index_type);
   }
 
   // If the index is an integer literal, we can infer the actual item type since
@@ -951,8 +1002,10 @@ static Type *_indexed_tuple_item_type(Symbols *s, TupleType *tuple, Expr *index)
     i64 idx = index->literal->integer->value;
     if (idx < 0) idx += tuple->len;
     if (idx < 0 || idx >= tuple->len) {
-      // TODO tuple index out of bounds error
-      return tc_error();
+      return tc_report_error_fmt(
+        &index->meta.loc,
+        "index %ld is out of bounds for tuple of size %u", idx, tuple->len
+      );
     }
     return tuple->types[idx];
   }
@@ -981,41 +1034,47 @@ static Type *_indexed_tuple_type(Symbols *s, TupleType *tuple, IndexedVariable *
   }
 }
 
-static Type *_indexed_short_tuple_type(Symbols *s, ShortTupleType *short_tuple, IndexedVariable *var) {
+static Type *_indexed_short_tuple_type(Symbols *s, ShortTupleType *st, IndexedVariable *var) {
   if (var->index_count == 1) {
     Type *index_type = tc_check_expr(s, var->indices[0]);
-    if (!_is_builtin_type(index_type, T_INT)) {
-      // TODO bad index type error
-      return tc_error();
+    if (!_is_builtin(index_type, T_INT)) {
+      return tc_report_bad_index_type(&var->indices[0]->meta.loc, index_type);
     }
-    return short_tuple->type;
+    return st->type;
   } else {
     bool valid = true;
     for (u32 i = 0; i < var->index_count; i++) {
       Type *index_type = tc_check_expr(s, var->indices[i]);
-      if (!_is_builtin_type(index_type, T_INT)) {
-        // TODO bad index type error
-        valid = false;
+      if (!_is_builtin(index_type, T_INT)) {
+        return tc_report_bad_index_type(&var->indices[i]->meta.loc, index_type);
       }
     }
 
-    return valid ? _short_tuple_of(short_tuple->type, var->index_count) : tc_error();
+    return valid ? _short_tuple_of(st->type, var->index_count) : tc_error();
   }
 }
 
 static Type *_indexed_map_type(Symbols *s, MapType *map, IndexedVariable *var) {
   if (var->index_count == 1) {
-    if (!tc_accepts_type(s, map->key_type, tc_check_expr(s, var->indices[0]))) {
-      // TODO bad index type error
-      return tc_error();
+    Type *index_type = tc_check_expr(s, var->indices[0]);
+    if (!tc_accepts_type(s, map->key_type, index_type)) {
+      return tc_report_error_fmt(
+        &var->indices[0]->meta.loc,
+        "invalid key type: expected %s, got %s",
+        tc_print_type(map->key_type), tc_print_type(index_type)
+      );
     }
     return map->value_type;
   } else {
     bool valid = true;
     for (u32 i = 0; i < var->index_count; i++) {
-      if (!tc_accepts_type(s, map->key_type, tc_check_expr(s, var->indices[i]))) {
-        // TODO bad index type error
-        valid = false;
+      Type *index_type = tc_check_expr(s, var->indices[i]);
+      if (!tc_accepts_type(s, map->key_type, index_type)) {
+        return tc_report_error_fmt(
+          &var->indices[i]->meta.loc,
+          "invalid key type: expected %s, got %s",
+          tc_print_type(map->key_type), tc_print_type(index_type)
+        );
       }
     }
 
@@ -1039,38 +1098,46 @@ static Type *_variable_type(Symbols *s, VariableExpr *var) {
         case T_TUPLE_SHORT: return _indexed_short_tuple_type(s, container->short_tuple, var->indexed);
         case T_MAP: return _indexed_map_type(s, container->map, var->indexed);
         default: {
-          // TODO error: not an indexable type
-          return tc_error();
+          return tc_report_error_fmt(
+            &var->indexed->meta.loc,
+            "type %s is not indexable", tc_print_type(container)
+          );
         }
       }
     }
     case V_STRUCT_MEMBER: {
       Type *container = _variable_type(s, var->struct_member->struct_expr);
       if (container->type != T_STRUCT) {
-        // TODO error: trying to access struct member of non-struct
-        return tc_error();
+        return tc_report_error_fmt(
+          &var->struct_member->meta.loc,
+          "type %s is not a struct", tc_print_type(container)
+        );
       }
-      return _struct_member_type(container->struct_type, var->struct_member->name->lexeme);
+      return _struct_member_type(container->struct_type, var->struct_member->name);
     }
   }
 }
 
 static Type *_unary_type(Symbols *s, UnaryExpr *expr) {
+  Type *expr_type = tc_check_expr(s, expr->expr);
+
   switch (expr->op) {
     case BANG:
     case NOT: {
-      Type *expr_type = tc_check_expr(s, expr->expr);
-      if (!_is_builtin_type(expr_type, T_BOOL)) {
-        // TODO invalid type for operation
-        return tc_error();
+      if (!_is_builtin(expr_type, T_BOOL)) {
+        return tc_report_op_type(
+          &expr->expr->meta.loc,
+          "boolean", expr_type
+        );
       }
       return expr_type;
     }
     case MINUS: {
-      Type *expr_type = tc_check_expr(s, expr->expr);
-      if (!_is_builtin_type(expr_type, T_INT) && !_is_builtin_type(expr_type, T_FLOAT)) {
-        // TODO invalid type for operation
-        return tc_error();
+      if (!_is_builtin(expr_type, T_INT) && !_is_builtin(expr_type, T_FLOAT)) {
+        return tc_report_op_type(
+          &expr->expr->meta.loc,
+          "numeric type", expr_type
+        );
       }
       return expr_type;
     }
@@ -1078,7 +1145,7 @@ static Type *_unary_type(Symbols *s, UnaryExpr *expr) {
   }
 }
 
-static Type *_arithmetic_numeric_type(Symbols *s, Type *l, Type *r, TokenLabel op) {
+static Type *_arithmetic_numeric_type(Symbols *s, Type *l, Type *r, BinaryExpr *expr) {
   if (_is_numeric_type(r)) {
     return _upgrade_numeric_type(l->builtin, r->builtin);
   } else if (_is_vector_type(r)) {
@@ -1087,16 +1154,17 @@ static Type *_arithmetic_numeric_type(Symbols *s, Type *l, Type *r, TokenLabel o
       r->short_tuple->count
     );
   } else {
-    // TODO wrong type for operand
-    return tc_error();
+    return tc_report_op_type(
+      &expr->right->meta.loc,
+      "numeric or vector type", r
+    );
   }
 }
 
-static Type *_arithmetic_vector_type(Symbols *s, Type *l, Type *r, TokenLabel op) {
+static Type *_arithmetic_vector_type(Symbols *s, Type *l, Type *r, BinaryExpr *expr) {
   if (_is_vector_type(r)) {
     if (l->short_tuple->count != r->short_tuple->count) {
-      // TODO length mismatch
-      return tc_error();
+      return tc_report_error(&expr->meta.loc, "vector length mismatch");
     }
     Type *num_t = _upgrade_numeric_type(
       l->short_tuple->type->builtin,
@@ -1109,8 +1177,10 @@ static Type *_arithmetic_vector_type(Symbols *s, Type *l, Type *r, TokenLabel op
       l->short_tuple->count
     );
   } else {
-    // TODO wrong type for operand
-    return tc_error();
+    return tc_report_op_type(
+      &expr->right->meta.loc,
+      "numeric or vector type", r
+    );
   }
 }
 
@@ -1124,39 +1194,41 @@ static Type *_binary_type(Symbols *s, BinaryExpr *expr) {
     case PLUS:
     case STAR: {
       if (_is_numeric_type(l_type)) {
-        return _arithmetic_numeric_type(s, l_type, r_type, expr->op);
+        return _arithmetic_numeric_type(s, l_type, r_type, expr);
       } else if (_is_vector_type(l_type)) {
-        return _arithmetic_vector_type(s, l_type, r_type, expr->op);
-      } else if (_is_builtin_type(l_type, T_STRING)) {
+        return _arithmetic_vector_type(s, l_type, r_type, expr);
+      } else if (_is_builtin(l_type, T_STRING)) {
         if (expr->op == PLUS) {
           if (!_is_error(r_type)) {
             return l_type;
           } else {
-            // TODO invalid rhs
             return tc_error();
           }
         } else if (expr->op == STAR) {
-          if (_is_builtin_type(r_type, T_INT)) {
+          if (_is_builtin(r_type, T_INT)) {
             return l_type;
           } else {
-            // TODO invalid rhs
-            return tc_error();
+            return tc_report_op_type(&expr->right->meta.loc, "integer", r_type);
           }
         }
       } else {
-        // TODO invalid type for operator
-        return tc_error();
+        return tc_report_op_type(
+          &expr->left->meta.loc,
+          "numeric or vector type, string", l_type
+        );
       }
     }
     case MINUS:
     case SLASH: {
       if (_is_numeric_type(l_type)) {
-        return _arithmetic_numeric_type(s, l_type, r_type, expr->op);
+        return _arithmetic_numeric_type(s, l_type, r_type, expr);
       } else if (_is_vector_type(l_type)) {
-        return _arithmetic_vector_type(s, l_type, r_type, expr->op);
+        return _arithmetic_vector_type(s, l_type, r_type, expr);
       } else {
-        // TODO invalid type for operator
-        return tc_error();
+        return tc_report_op_type(
+          &expr->left->meta.loc,
+          "numeric or vector type", l_type
+        );
       }
     }
     case GREATER_EQUAL:
@@ -1167,40 +1239,44 @@ static Type *_binary_type(Symbols *s, BinaryExpr *expr) {
         if (_is_numeric_type(r_type)) {
           return _builtin_type(T_BOOL);
         } else {
-          // TODO type mismatch
-          return tc_error();
+          return tc_report_op_type(
+            &expr->right->meta.loc,
+            "numeric type", r_type
+          );
         }
-      } else if (_is_builtin_type(l_type, T_STRING)) {
-        if (_is_builtin_type(r_type, T_STRING)) {
+      } else if (_is_builtin(l_type, T_STRING)) {
+        if (_is_builtin(r_type, T_STRING)) {
           return _builtin_type(T_BOOL);
         } else {
-          // TODO type mismatch
-          return tc_error();
+          return tc_report_op_type(&expr->right->meta.loc, "string", r_type);
         }
       } else {
-        // TODO non ordered type
-        return tc_error();
+        return tc_report_op_type(
+          &expr->left->meta.loc,
+          "numeric type, string", l_type
+        );
       }
     }
     case EQUAL_EQUAL:
     case BANG_EQUAL: {
       if (!tc_compatible_types(s, l_type, r_type)) {
-        // TODO comparison of incompatible types
-        return tc_error();
+        return tc_report_error_fmt(
+          &expr->meta.loc,
+          "%s and %s are not comparable",
+          tc_print_type(l_type), tc_print_type(r_type)
+        );
       }
       return _builtin_type(T_BOOL);
     }
     case AND:
     case OR: {
-      bool left_valid = _is_builtin_type(l_type, T_BOOL);
-      bool right_valid = _is_builtin_type(r_type, T_BOOL);
+      bool left_valid = _is_builtin(l_type, T_BOOL);
+      bool right_valid = _is_builtin(r_type, T_BOOL);
       if (!left_valid) {
-        // TODO invalid type error
-        return tc_error();
+        return tc_report_op_type(&expr->left->meta.loc, "boolean", l_type);
       }
       if (!right_valid) {
-        // TODO invalid type error
-        return tc_error();
+        return tc_report_op_type(&expr->right->meta.loc, "boolean", r_type);
       }
       return (left_valid && right_valid) ? l_type : tc_error();
     }
@@ -1213,30 +1289,35 @@ static Type *_assignment_type(Symbols *s, const AssignmentExpr *expr) {
   Type *rhs_type = tc_check_expr(s, expr->right);
 
   if (tc_accepts_type(s, lhs_type, rhs_type)) return lhs_type;
-  // TODO type error: incompatible types
-  return tc_error();
+  return tc_report_error_fmt(
+    &expr->meta.loc,
+    "%s is not assignable to %s",
+    tc_print_type(rhs_type), tc_print_type(lhs_type)
+  );
 }
 
 static Type *_if_expr_type(Symbols *s, const IfExpr *expr) {
   Type *condition_type = tc_check_expr(s, expr->condition);
   Type *true_type = tc_check_expr(s, expr->true_branch);
-  bool valid = true;
+  Type *false_type = expr->false_branch
+    ? tc_check_expr(s, expr->false_branch)
+    : _builtin_type(T_VOID);
 
-  if (expr->false_branch) {
-    Type *false_type = tc_check_expr(s, expr->false_branch);
-    // TODO compare types in a somewhat more forgiving way
-    if (!tc_compare_types(s, true_type, false_type)) {
-      // TODO incompatible else type error
-      valid = false;
-    }
+  if (!_is_builtin(condition_type, T_BOOL)) {
+    return tc_report_error_fmt(
+      &expr->condition->meta.loc,
+      "invalid type for if expression condition: expected boolean, got %s",
+      tc_print_type(condition_type)
+    );
   }
 
-  if (!_is_builtin_type(condition_type, T_BOOL)) {
-    // TODO condition must resolve to boolean type
-    valid = false;
+  if (tc_accepts_type(s, true_type, false_type)) {
+    return true_type;
+  } else if (tc_accepts_type(s, false_type, true_type)) {
+    return false_type;
+  } else {
+    return _union_of(2, true_type, false_type);
   }
-
-  return valid ? true_type : tc_error();
 }
 
 static Type *_for_expr_type(Symbols *s, const ForExpr *expr) {
@@ -1251,8 +1332,10 @@ static Type *_for_expr_type(Symbols *s, const ForExpr *expr) {
       return _short_tuple_of(body_type, iterable_type->short_tuple->count);
     }
     default: {
-      // TODO type error non iterable type in for expression
-      return tc_error();
+      return tc_report_error_fmt(
+        &expr->iterable->meta.loc,
+        "%s is not iterable", tc_print_type(iterable_type)
+      );
     }
   }
 }
@@ -1323,7 +1406,7 @@ static Type *_function_call_type(Symbols *s, const FunctionCallExpr *expr) {
     valid = false; // No need to error here; composable typecheck should report
   }
 
-  return valid ? def->return_type : NULL;
+  return valid ? def->return_type : tc_error();
 }
 
 static Type *_import_type(Symbols *s, const ImportExpr *expr) {
@@ -1345,9 +1428,13 @@ static Type *_import_type(Symbols *s, const ImportExpr *expr) {
 
 static Type *_env_type(Symbols *s, const EnvExpr *expr) {
   if (expr->default_value) {
-    if (!_is_builtin_type(tc_check_expr(s, expr->default_value), T_STRING)) {
-      // TODO error: env value expression must be a string
-      return tc_error();
+    Type *default_value_type = tc_check_expr(s, expr->default_value);
+    if (!_is_builtin(default_value_type, T_STRING)) {
+      return tc_report_error_fmt(
+        &expr->default_value->meta.loc,
+        "invalid default value for env: expected string, got %s",
+        tc_print_type(default_value_type)
+      );
     }
   }
   return _builtin_type(T_STRING);

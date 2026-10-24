@@ -301,5 +301,6 @@ void err_free_undef_error(UndefError *e) {
 }
 
 void err_free_type_error(TypeError *e) {
+  free(e->message);
   free(e);
 }
