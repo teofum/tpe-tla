@@ -1580,7 +1580,11 @@ static void _check_decl(Symbols *s, const DeclarationStmt *decl) {
           return;
         }
         if (decl->left_count > value_type->short_tuple->count) {
-          // TODO error: component count mismatch
+          tc_report_error_fmt(
+            &decl->left[value_type->short_tuple->count]->loc,
+            "too many variables for type %s",
+            tc_print_type(value_type)
+          );
           return;
         }
 
@@ -1593,7 +1597,11 @@ static void _check_decl(Symbols *s, const DeclarationStmt *decl) {
         bool valid = true;
         for (u32 i = 0; i < decl->left_count; i++) {
           if (i >= value_type->tuple->len) {
-            // TODO error: component count mismatch
+            tc_report_error_fmt(
+              &decl->left[value_type->short_tuple->count]->loc,
+              "too many variables for type %s",
+              tc_print_type(value_type)
+            );
             return;
           }
 
@@ -1644,8 +1652,22 @@ static void _check_constant(Symbols *s, const ConstantStmt *constant) {
 static void _check_function_def(Symbols *s, const FunctionDef *def) {
   _push_scope(def->scope);
 
-  // TODO check param default values
-  // TODO define params
+  for (u32 i = 0; i < def->params_len; i++) {
+    if (def->params[i]->default_value) {
+      Type *dv_type = tc_check_expr(s, def->params[i]->default_value);
+      if (!tc_accepts_type(s, def->params[i]->type, dv_type)) {
+        tc_report_error_fmt(
+          &def->params[i]->default_value->meta.loc,
+          "%s is not assignable to %s",
+          tc_print_type(dv_type), tc_print_type(def->params[i]->type)
+        );
+        continue;
+      }
+    }
+
+    Symbol *param = _symbol_of(def->params[i]->type, true);
+    tc_define_symbol(s, def->params[i]->name, param);
+  }
 
   Type *body_type = tc_check_block(s, def->body);
   if (!tc_accepts_type(s, def->return_type, body_type)) {
@@ -1660,7 +1682,9 @@ static void _check_function_def(Symbols *s, const FunctionDef *def) {
 }
 
 static void _check_export(Symbols *s, const ExportStmt *export) {
-  // TODO
+  for (u32 i = 0; i < export->len; i++) {
+    // TODO
+  }
 }
 
 static Type *tc_check_stmt(Symbols *s, const Stmt *stmt) {

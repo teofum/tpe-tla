@@ -53,7 +53,7 @@
   [x] Error handling (redefinition)
 [x] Variables
   [x] Declarations
-    [ ] Function parameters
+    [x] Function parameters
     [x] For loop iteration variables
   [x] References
     [x] Blocks (scoping)
