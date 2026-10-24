@@ -11,7 +11,7 @@
 [x] Simplify the project tree
 [x] Fix Bison location tracking
 [x] Fix multiline/block comments
-[ ] Type errors propagate as error types cause more errors which get reported
+[x] Type errors propagate as error types cause more errors which get reported
     downstream, creating an error cascade
   - Don't report errors caused by an error type; assume something was reported
     upstream instead
@@ -53,8 +53,8 @@
   [x] Error handling (redefinition)
 [x] Variables
   [x] Declarations
-    [ ] Function parameter
-    [ ] For loop iteration variables
+    [ ] Function parameters
+    [x] For loop iteration variables
   [x] References
     [x] Blocks (scoping)
     [x] Function definitions (scoping)

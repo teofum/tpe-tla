@@ -514,22 +514,26 @@ static Symbol *_symbol_of(Type *type, bool constant) {
 static bool tc_compare_types(Symbols *s, const Type *a, const Type *b);
 static bool tc_accepts_type(Symbols *s, const Type *a, const Type *b);
 
-static bool _is_builtin(Type *type, BuiltinType builtin) {
+static bool _is_builtin(const Type *type, BuiltinType builtin) {
   return type->type == T_BUILTIN && type->builtin == builtin;
 }
 
-static bool _is_error(Type *type) {
+static bool _is_error(const Type *type) {
   return type->type == T_ERROR;
 }
 
-static bool _is_numeric_type(Type *type) {
+static bool _is_numeric_type(const Type *type) {
   return type->type == T_BUILTIN
     && (type->builtin == T_INT || type->builtin == T_FLOAT);
 }
 
-static bool _is_vector_type(Type *type) {
+static bool _is_vector_type(const Type *type) {
   return type->type == T_TUPLE_SHORT
     && _is_numeric_type(type->short_tuple->type);
+}
+
+static bool _is_iterable(const Type *type) {
+  return type->type == T_TUPLE_SHORT || type->type == T_LIST;
 }
 
 static Type *_upgrade_numeric_type(BuiltinType l, BuiltinType r) {
@@ -769,6 +773,9 @@ static Type *tc_report_error_fmt(const Location *loc, const char *fmt, ...) {
 }
 
 static Type *tc_report_bad_index_type(const Location *loc, const Type *type) {
+  // Fail silently on error type; assume error was already reported upstream
+  if (_is_error(type)) return tc_error();
+
   return tc_report_error_fmt(
     loc,
     "expression of type %s is not a valid index type", tc_print_type(type)
@@ -780,6 +787,9 @@ static Type *tc_report_op_type(
   const char *expected,
   const Type *got
 ) {
+  // Fail silently on error type; assume error was already reported upstream
+  if (_is_error(got)) return tc_error();
+
   return tc_report_error_fmt(
     loc,
     "invalid operand type: expected %s, got %s",
@@ -791,6 +801,7 @@ static Type *tc_report_op_type(
 
 static Type *tc_check_expr(Symbols *s, const Expr *expr);
 static Type *tc_check_stmt(Symbols *s, const Stmt *stmt);
+static Type *tc_check_block(Symbols *s, const BlockExpr *expr);
 
 static Type *_list_type(Symbols *s, ListLiteral *list) {
   tc_debug_log("List", &list->meta.loc);
@@ -1322,7 +1333,27 @@ static Type *_if_expr_type(Symbols *s, const IfExpr *expr) {
 
 static Type *_for_expr_type(Symbols *s, const ForExpr *expr) {
   Type *iterable_type = tc_check_expr(s, expr->iterable);
+
+  if (!_is_iterable(iterable_type)) {
+    return tc_report_error_fmt(
+      &expr->iterable->meta.loc,
+      "%s is not iterable", tc_print_type(iterable_type)
+    );
+  }
+
+  Type *iterator_type = iterable_type->type == T_LIST
+    ? iterable_type->list->item_type
+    : iterable_type->short_tuple->type;
+
+  _push_scope(expr->body->block->scope);
+  Symbol *iterator = _symbol_of(iterator_type, true);
+  tc_define_symbol(s, expr->var_id, iterator);
+  if (expr->idx_id) {
+    Symbol *idx_iterator = _symbol_of(_builtin_type(T_INT), true);
+    tc_define_symbol(s, expr->idx_id, idx_iterator);
+  }
   Type *body_type = tc_check_expr(s, expr->body);
+  _pop_scope();
 
   switch (iterable_type->type) {
     case T_LIST: {
@@ -1331,12 +1362,7 @@ static Type *_for_expr_type(Symbols *s, const ForExpr *expr) {
     case T_TUPLE_SHORT: {
       return _short_tuple_of(body_type, iterable_type->short_tuple->count);
     }
-    default: {
-      return tc_report_error_fmt(
-        &expr->iterable->meta.loc,
-        "%s is not iterable", tc_print_type(iterable_type)
-      );
-    }
+    default: assert(false); // Unreachable
   }
 }
 
@@ -1453,10 +1479,8 @@ static Type *_env_type(Symbols *s, const EnvExpr *expr) {
   return _builtin_type(T_STRING);
 }
 
-static Type *_block_type(Symbols *s, const BlockExpr *expr) {
+static Type *tc_check_block(Symbols *s, const BlockExpr *expr) {
   tc_debug_log("Block", &expr->meta.loc);
-
-  _push_scope(expr->scope);
 
   Type **block_types = tc_new_array(Type *, expr->len);
   u32 type_count = 0;
@@ -1472,8 +1496,6 @@ static Type *_block_type(Symbols *s, const BlockExpr *expr) {
     }
   }
 
-  _pop_scope();
-
   if (type_count == 0) {
     // TODO error: empty block
     return tc_error();
@@ -1484,6 +1506,13 @@ static Type *_block_type(Symbols *s, const BlockExpr *expr) {
   return homogenous
     ? _short_tuple_of(block_types[0], type_count)
     : _tuple_of(block_types, type_count);
+}
+
+static Type *_block_type(Symbols *s, const BlockExpr *expr) {
+  _push_scope(expr->scope);
+  Type *type = tc_check_block(s, expr);
+  _pop_scope();
+  return type;
 }
 
 static Type *tc_check_expr(Symbols *s, const Expr *expr) {
@@ -1618,7 +1647,7 @@ static void _check_function_def(Symbols *s, const FunctionDef *def) {
   // TODO check param default values
   // TODO define params
 
-  Type *body_type = _block_type(s, def->body);
+  Type *body_type = tc_check_block(s, def->body);
   if (!tc_accepts_type(s, def->return_type, body_type)) {
     tc_report_error_fmt(
       &def->return_type->meta.loc,
