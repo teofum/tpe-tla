@@ -11,6 +11,10 @@
 [x] Simplify the project tree
 [x] Fix Bison location tracking
 [x] Fix multiline/block comments
+[ ] Type errors propagate as error types cause more errors which get reported
+    downstream, creating an error cascade
+  - Don't report errors caused by an error type; assume something was reported
+    upstream instead
 
 #=== General ==================================================================#
 
@@ -47,26 +51,26 @@
     [x] Blocks
     [x] Other expressions
   [x] Error handling (redefinition)
-[ ] Variables
-  [ ] Declarations
+[x] Variables
+  [x] Declarations
     [ ] Function parameter
     [ ] For loop iteration variables
-  [ ] References
-    [ ] Blocks (scoping)
-    [ ] Function definitions (scoping)
-    [ ] For loops (scoping)
-    [ ] Other expressions
+  [x] References
+    [x] Blocks (scoping)
+    [x] Function definitions (scoping)
+    [x] For loops (scoping)
+    [x] Other expressions
 [ ] Type checking
   [x] Define builtin types
     [x] Parse builtin types in frontend
-  [ ] Type comparisons
-    [ ] Builtin
-    [ ] Structs
-    [ ] Lists/tuples
-    [ ] Maps
-    [ ] Ranges
-    [ ] Unions
-  [ ] Expression types
+  [x] Type comparisons
+    [x] Builtin
+    [x] Structs
+    [x] Lists/tuples
+    [x] Maps
+    [x] Ranges
+    [x] Unions
+  [x] Expression types
     [x] Literals
       [x] Simple literals
       [x] Lists
@@ -92,12 +96,12 @@
     [x] Function calls
     [x] Import expressions
     [x] Env expressions
-    [ ] Blocks
-  [ ] Statements
+    [x] Blocks
+  [x] Statements
     [x] Declarations/constants
-    [ ] Function definitions
+    [x] Function definitions
   [ ] Error reporting
-  [ ] Memory management (custom allocator)
+  [x] Memory management (custom allocator)
 
 /--- Evaluator ----------------------------------------------------------------/
 [ ] Value definitions
