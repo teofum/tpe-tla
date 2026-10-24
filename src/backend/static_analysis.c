@@ -1347,9 +1347,18 @@ static u32 _find_function_param(const FunctionDef *def, const Identifier *name) 
   return -1;
 }
 
-static bool _check_function_args(Symbols *s, const FunctionCallExpr *expr, const FunctionDef *def) {
+static bool _check_function_args(
+  Symbols *s,
+  const FunctionCallExpr *expr,
+  const FunctionDef *def
+) {
   if (expr->args_len > def->params_len) {
-    // TODO args count error
+    FnArgCountError *error = new(FnArgCountError);
+    *error = (FnArgCountError){
+      .expected = def->params_len,
+      .actual = expr->args_len,
+    };
+    err_report_fn_arg_count(error, &expr->meta.loc, ERR_ERROR);
     return false;
   }
 
@@ -1364,12 +1373,12 @@ static bool _check_function_args(Symbols *s, const FunctionCallExpr *expr, const
       positional_args_allowed = false; // Positional args must go before named
       param_idx = _find_function_param(def, arg->name);
       if (param_idx == -1) {
-        // TODO invalid parameter name error
+        err_report_fn_arg_name(expr, arg, ERR_ERROR);
         valid = false; continue;
       }
     } else {
       if (!positional_args_allowed) {
-        // TODO positional arg after named error
+        err_report_fn_arg_pos(arg, ERR_ERROR);
         valid = false; continue;
       }
       param_idx = i;
@@ -1391,7 +1400,7 @@ static bool _check_function_args(Symbols *s, const FunctionCallExpr *expr, const
   // Ensure all the required parameters are actually being passed
   for (u32 i = 0; i < def->params_len; i++) {
     if (!params_set[i] && !def->params[i]->default_value) {
-      // TODO required parameter not set error
+      err_report_fn_param_req(expr, def->params[i], ERR_ERROR);
       valid = false;
     }
   }

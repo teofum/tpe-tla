@@ -13,6 +13,10 @@ typedef enum {
   ERR_UNDEF,            // Undefined symbol reference
   // Type errors
   ERR_TYPE,             // Type error
+  ERR_FN_ARG_COUNT,    // Function call argument count mismatch
+  ERR_FN_ARG_NAME,     // Function call argument invalid name
+  ERR_FN_ARG_POS,      // Function call positional argument after named
+  ERR_FN_PARAM_REQ,    // Function call required parameter unset
 } ErrorType;
 
 typedef enum {
@@ -33,6 +37,10 @@ typedef struct ImportError ImportError;
 typedef struct RedefError RedefError;
 typedef struct UndefError UndefError;
 typedef struct TypeError TypeError;
+typedef struct FnArgCountError FnArgCountError;
+typedef struct FnArgNameError FnArgNameError;
+typedef struct FnArgPosError FnArgPosError;
+typedef struct FnParamReqError FnParamReqError;
 
 typedef struct {
   ErrorType type;
@@ -47,6 +55,10 @@ typedef struct {
     RedefError *redefinition;
     UndefError *undef_symbol;
     TypeError *type_error;
+    FnArgCountError *fn_arg_count;
+    FnArgNameError *fn_arg_name;
+    FnArgPosError *fn_arg_pos;
+    FnParamReqError *fn_param_req;
   };
 } Error;
 
@@ -75,14 +87,37 @@ struct TypeError {
   char *message;
 };
 
+struct FnArgCountError {
+  u32 expected;
+  u32 actual;
+};
+
+struct FnArgNameError {
+  const FunctionCallExpr *call;
+  const Argument *arg;
+};
+
+struct FnArgPosError {
+  const Argument *arg;
+};
+
+struct FnParamReqError {
+  const FunctionCallExpr *call;
+  const Parameter *param;
+};
+
 void err_init(CompilerState *compiler_state);
 void err_shutdown();
 
-void err_report_syntax(SyntaxError *error, const Location *location, ErrorLevel level);
-void err_report_import(ImportError *error, const Location *location, ErrorLevel level);
-void err_report_redef(RedefError *error, const Location *location, ErrorLevel level);
-void err_report_undef(UndefError *error, const Location *location, ErrorLevel level);
-void err_report_type(TypeError *error, const Location *location, ErrorLevel level);
+void err_report_syntax(SyntaxError *error, const Location *loc, ErrorLevel level);
+void err_report_import(ImportError *error, const Location *loc, ErrorLevel level);
+void err_report_redef(RedefError *error, const Location *loc, ErrorLevel level);
+void err_report_undef(UndefError *error, const Location *loc, ErrorLevel level);
+void err_report_type(TypeError *error, const Location *loc, ErrorLevel level);
+void err_report_fn_arg_count(FnArgCountError *error, const Location *loc, ErrorLevel level);
+void err_report_fn_arg_name(const FunctionCallExpr *call, const Argument *arg, ErrorLevel level);
+void err_report_fn_arg_pos(const Argument *arg, ErrorLevel level);
+void err_report_fn_param_req(const FunctionCallExpr *call, const Parameter *param, ErrorLevel level);
 bool err_gate();
 
 void err_free_error(Error *e);
@@ -91,5 +126,9 @@ void err_free_import_error(ImportError *e);
 void err_free_redef_error(RedefError *e);
 void err_free_undef_error(UndefError *e);
 void err_free_type_error(TypeError *e);
+void err_free_fn_arg_count_error(FnArgCountError *e);
+void err_free_fn_arg_name_error(FnArgNameError *e);
+void err_free_fn_arg_pos_error(FnArgPosError *e);
+void err_free_fn_param_req_error(FnParamReqError *e);
 
 #endif
