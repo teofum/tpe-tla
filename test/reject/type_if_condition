@@ -1,0 +1,7 @@
+foo := 6
+
+// OK: if condition is a boolean
+if foo > 5 { true } else { 7 }
+
+// Type error: condition must have boolean type
+bar := if [foo, 5, "Hello"] { true } else { 7 }

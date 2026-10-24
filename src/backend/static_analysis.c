@@ -1374,13 +1374,17 @@ static bool _check_function_args(Symbols *s, const FunctionCallExpr *expr, const
       }
       param_idx = i;
     }
+    params_set[param_idx] = true;
 
     Parameter *param = def->params[param_idx];
-    if (!tc_accepts_type(s, param->type, tc_check_expr(s, arg->value))) {
-      // TODO parameter type error
+    Type *arg_type = tc_check_expr(s, arg->value);
+    if (!tc_accepts_type(s, param->type, arg_type)) {
+      tc_report_error_fmt(
+        &param->meta.loc,
+        "%s is not assignable to %s",
+        tc_print_type(arg_type), tc_print_type(param->type)
+      );
       valid = false;
-    } else {
-      params_set[param_idx] = true;
     }
   }
 
@@ -1500,7 +1504,11 @@ static void _check_decl(Symbols *s, const DeclarationStmt *decl) {
   if (decl->left_count == 1) {
     Type *decl_type = or_default(decl->type, value_type);
     if (!tc_accepts_type(s, decl_type, value_type)) {
-      // TODO error: type mismatch for declaration
+      tc_report_error_fmt(
+        &decl->right->meta.loc,
+        "%s is not assignable to %s",
+        tc_print_type(value_type), tc_print_type(decl_type)
+      );
       return;
     }
 
@@ -1510,7 +1518,11 @@ static void _check_decl(Symbols *s, const DeclarationStmt *decl) {
       case T_LIST: {
         Type *decl_type = or_default(decl->type, value_type->list->item_type);
         if (!tc_accepts_type(s, decl_type, value_type->list->item_type)) {
-          // TODO error: type mismatch for declaration
+          tc_report_error_fmt(
+            &decl->right->meta.loc,
+            "%s is not assignable to %s",
+            tc_print_type(value_type->list->item_type), tc_print_type(decl_type)
+          );
           return;
         }
 
@@ -1522,7 +1534,11 @@ static void _check_decl(Symbols *s, const DeclarationStmt *decl) {
       case T_TUPLE_SHORT: {
         Type *decl_type = or_default(decl->type, value_type->short_tuple->type);
         if (!tc_accepts_type(s, decl_type, value_type->short_tuple->type)) {
-          // TODO error: type mismatch for declaration
+          tc_report_error_fmt(
+            &decl->right->meta.loc,
+            "%s is not assignable to %s",
+            tc_print_type(value_type->short_tuple->type), tc_print_type(decl_type)
+          );
           return;
         }
         if (decl->left_count > value_type->short_tuple->count) {
@@ -1545,8 +1561,12 @@ static void _check_decl(Symbols *s, const DeclarationStmt *decl) {
 
           Type *decl_type = or_default(decl->type, value_type->tuple->types[i]);
           if (!tc_accepts_type(s, decl_type, value_type->tuple->types[i])) {
-            // TODO error: type mismatch for declaration
-            return;
+            tc_report_error_fmt(
+              &decl->right->meta.loc,
+              "%s is not assignable to %s",
+              tc_print_type(value_type->tuple->types[i]), tc_print_type(decl_type)
+            );
+            valid = false;
           }
         }
         if (!valid) return;
@@ -1558,7 +1578,10 @@ static void _check_decl(Symbols *s, const DeclarationStmt *decl) {
         break;
       }
       default: {
-        // TODO error decomposition not allowed for this type
+        tc_report_error_fmt(
+          &decl->right->meta.loc,
+          "%s does not allow decomposition", tc_print_type(value_type)
+        );
       }
     }
   }
@@ -1569,7 +1592,11 @@ static void _check_constant(Symbols *s, const ConstantStmt *constant) {
 
   Type *decl_type = or_default(constant->type, value_type);
   if (!tc_accepts_type(s, decl_type, value_type)) {
-    // TODO error: type mismatch for declaration
+    tc_report_error_fmt(
+      &constant->right->meta.loc,
+      "%s is not assignable to %s",
+      tc_print_type(value_type), tc_print_type(decl_type)
+    );
     return;
   }
 
@@ -1584,7 +1611,11 @@ static void _check_function_def(Symbols *s, const FunctionDef *def) {
 
   Type *body_type = _block_type(s, def->body);
   if (!tc_accepts_type(s, def->return_type, body_type)) {
-    // TODO function return type mismatch error
+    tc_report_error_fmt(
+      &def->return_type->meta.loc,
+      "invalid function return type: %s is not assignable to %s",
+      tc_print_type(body_type), tc_print_type(def->return_type)
+    );
   }
 
   _pop_scope();

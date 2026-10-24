@@ -1,0 +1,12 @@
+// OK: a homogenous tuple is iterable
+for x in [1, 2, 3] { x * x }
+
+// OK: a list is iterable
+foo: int[] = [1, 2, 3]
+for x in foo { x * x }
+
+// Type error: a heterogenous tuple is not
+for x in [5, true, "hello"] { x + 5 }
+
+// Type error: obviously, neither is a boolean
+for x in true { 7 }
