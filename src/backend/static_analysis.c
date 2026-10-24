@@ -312,6 +312,11 @@ static Type *_builtin_type(BuiltinType builtin) {
   return type;
 }
 
+static Type _error_type = { .type = T_ERROR };
+
+// Returns an error type.
+static Type *tc_error() { return &_error_type; };
+
 static Type *_list_of(Type *item_type) {
   tc_make(ListType, list, { .item_type = item_type, .meta = {0} });
   tc_make(Type, type, { .type = T_LIST, .list = list, .meta = {0} });
@@ -473,6 +478,10 @@ static bool _is_builtin_type(Type *type, BuiltinType builtin) {
   return type->type == T_BUILTIN && type->builtin == builtin;
 }
 
+static bool _is_error(Type *type) {
+  return type->type == T_ERROR;
+}
+
 static bool _is_numeric_type(Type *type) {
   return type->type == T_BUILTIN
     && (type->builtin == T_INT || type->builtin == T_FLOAT);
@@ -546,6 +555,8 @@ static bool _compare_named_types(Symbols *s, const NamedType *a, const NamedType
 }
 
 static bool tc_compare_types(Symbols *s, const Type *a, const Type *b) {
+  if (a->type == T_ERROR || b->type == T_ERROR) return false;
+
   // If the types are literally the same object they are obviously equal
   if (a == b) return true;
 
@@ -568,6 +579,7 @@ static bool tc_compare_types(Symbols *s, const Type *a, const Type *b) {
     case T_ENUM: return _compare_enum_types(a->enum_type, b->enum_type);
     case T_RANGE: return true; // Ranges are only one type
     case T_NAMED: assert(false);
+    case T_ERROR: assert(false);
   }
 }
 
@@ -657,6 +669,8 @@ static bool _accepts_union_type(Symbols *s, const UnionType *a, const Type *b) {
 }
 
 static bool tc_accepts_type(Symbols *s, const Type *a, const Type *b) {
+  if (a->type == T_ERROR || b->type == T_ERROR) return false;
+
   // If the types are literally the same object they are obviously equal
   if (b == a) return true;
 
@@ -678,6 +692,7 @@ static bool tc_accepts_type(Symbols *s, const Type *a, const Type *b) {
     case T_ENUM: return tc_compare_types(s, a, b);
     case T_RANGE: return b->type == T_RANGE;
     case T_NAMED: assert(false);
+    case T_ERROR: assert(false);
   }
 }
 
@@ -700,45 +715,21 @@ static Type *_list_type(Symbols *s, ListLiteral *list) {
     if (i > 0 && !tc_compare_types(s, types[0], types[i])) homogenous = false;
   }
 
-  if (homogenous) {
-    tc_make(ShortTupleType, st, {
-      .type = types[0],
-      .count = list->len,
-      .meta = {0}
-    });
-    tc_make(Type, type, {
-      .type = T_TUPLE_SHORT,
-      .short_tuple = st,
-      .meta = {0}
-    });
-    return type;
-  }
-
-  tc_make(TupleType, tuple, { .types = types, .len = list->len, .meta = {0} });
-  tc_make(Type, type, { .type = T_TUPLE, .tuple = tuple, .meta = {0} });
-  return type;
+  return homogenous
+    ? _short_tuple_of(types[0], list->len)
+    : _tuple_of(types, list->len);
 }
 
 static Type *_short_list_type(Symbols *s, ShortListLiteral *short_list) {
   Type *item_type = tc_check_expr(s, short_list->value);
-
-  tc_make(ShortTupleType, short_tuple, {
-    .type = item_type,
-    .count = short_list->count,
-    .meta = {0}
-  });
-  tc_make(Type, type, {
-    .type = T_TUPLE_SHORT,
-      .short_tuple = short_tuple,
-      .meta = {0}
-  });
-  return type;
+  return _short_tuple_of(item_type, short_list->count);
 }
 
 static bool _is_valid_map_key_type(const Type *type) {
   switch (type->type) {
     case T_BUILTIN:       return type->builtin != T_NIL && type->builtin != T_VOID;
     case T_NAMED:         assert(false); // Named types should not make it this far!
+    case T_ERROR:         return false;
     case T_UNION:         return false;
     case T_MAP:           return false;
     case T_LIST:          return false;
@@ -761,7 +752,7 @@ static bool _is_valid_map_key_type(const Type *type) {
 }
 
 static Type *_add_to_union_type(Symbols *s, Type *value_type, Type *new_type) {
-  if (!value_type || !new_type) return NULL;
+  if (_is_error(value_type) || _is_error(new_type)) return tc_error();
 
   if (value_type->type == T_UNION) {
     if (_accepts_union_type(s, value_type->union_type, new_type)) {
@@ -815,19 +806,15 @@ static Type *_map_type(Symbols *s, MapLiteral *map) {
 
     value_type = _add_to_union_type(s, value_type, v);
   }
-  if (!valid) return NULL;
 
-  tc_make(MapType, map_type, {
-    .key_type = key_type,
-    .value_type = value_type,
-    .meta = {0}
-  });
-  tc_make(Type, type, { .type = T_MAP, .map = map_type, .meta = {0} });
-  return type;
+  if (_is_error(value_type)) return tc_error();
+  return valid ? _map_of(key_type, value_type) : tc_error();
 }
 
 static Type *_struct_type(Symbols *s, StructLiteral *struct_l) {
   StructField **fields = tc_new_array(StructField *, struct_l->len);
+  bool valid = true;
+
   for (u32 i = 0; i < struct_l->len; i++) {
     StructLiteralField *lf = struct_l->fields[i];
     fields[i] = tc_new(StructField);
@@ -835,7 +822,10 @@ static Type *_struct_type(Symbols *s, StructLiteral *struct_l) {
       .name = ast_clone_identifier(lf->name),
       .type = tc_check_expr(s, lf->value),
     };
+    if (_is_error(fields[i]->type)) valid = false;
   }
+
+  if (!valid) return tc_error();
 
   tc_make(StructType, struct_type, {
     .len = struct_l->len,
@@ -851,16 +841,19 @@ static Type *_enum_type(EnumLiteral *enum_l) {
 }
 
 static Type *_range_type(Symbols *s, RangeLiteral *range) {
-  Type *start_type = tc_check_expr(s, range->start);
-  Type *end_type = tc_check_expr(s, range->end);
-  if (!_is_builtin_type(start_type, T_INT) || !_is_builtin_type(end_type, T_INT)) {
+  bool start_valid = !range->start
+    || _is_builtin_type(tc_check_expr(s, range->start), T_INT);
+  bool end_valid = !range->end
+    || _is_builtin_type(tc_check_expr(s, range->end), T_INT);
+
+  if (!start_valid || !end_valid) {
     TypeError *error = new(TypeError);
     *error = (TypeError){
       .message = "range start/end expressions must have integer type"
     };
     err_report_type(error, &range->meta.loc, ERR_ERROR);
 
-    return NULL;
+    return tc_error();
   }
 
   tc_make(Type, type, { .type = T_RANGE, .meta = {0} });
@@ -893,7 +886,7 @@ static Type *_struct_member_type(const StructType *s, const char *field) {
   }
 
   // TODO error: field name not in struct
-  return NULL;
+  return tc_error();
 }
 
 static Type *_indexed_list_item_type(Symbols *s, Type *item_type, Expr *index) {
@@ -905,12 +898,12 @@ static Type *_indexed_list_item_type(Symbols *s, Type *item_type, Expr *index) {
         return item_type;
       } else {
         // TODO bad index type error
-        return NULL;
+        return tc_error();
       }
     }
     default: {
       // TODO bad index type error
-      return NULL;
+      return tc_error();
     }
   }
 }
@@ -926,7 +919,7 @@ static Type *_indexed_list_type(Symbols *s, ListType *list, IndexedVariable *var
       if (!types[i]) valid = false;
     }
 
-    return valid ? _tuple_of(types, var->index_count) : NULL;
+    return valid ? _tuple_of(types, var->index_count) : tc_error();
   }
 }
 
@@ -934,7 +927,7 @@ static Type *_indexed_tuple_item_type(Symbols *s, TupleType *tuple, Expr *index)
   Type *index_type = tc_check_expr(s, index);
   if (!_is_builtin_type(index_type, T_INT)) {
     // TODO bad index type error
-    return NULL;
+    return tc_error();
   }
 
   // If the index is an integer literal, we can infer the actual item type since
@@ -944,7 +937,7 @@ static Type *_indexed_tuple_item_type(Symbols *s, TupleType *tuple, Expr *index)
     if (idx < 0) idx += tuple->len;
     if (idx < 0 || idx >= tuple->len) {
       // TODO tuple index out of bounds error
-      return NULL;
+      return tc_error();
     }
     return tuple->types[idx];
   }
@@ -969,7 +962,7 @@ static Type *_indexed_tuple_type(Symbols *s, TupleType *tuple, IndexedVariable *
       if (!types[i]) valid = false;
     }
 
-    return valid ? _tuple_of(types, var->index_count) : NULL;
+    return valid ? _tuple_of(types, var->index_count) : tc_error();
   }
 }
 
@@ -978,7 +971,7 @@ static Type *_indexed_short_tuple_type(Symbols *s, ShortTupleType *short_tuple, 
     Type *index_type = tc_check_expr(s, var->indices[0]);
     if (!_is_builtin_type(index_type, T_INT)) {
       // TODO bad index type error
-      return NULL;
+      return tc_error();
     }
     return short_tuple->type;
   } else {
@@ -991,7 +984,7 @@ static Type *_indexed_short_tuple_type(Symbols *s, ShortTupleType *short_tuple, 
       }
     }
 
-    return valid ? _short_tuple_of(short_tuple->type, var->index_count) : NULL;
+    return valid ? _short_tuple_of(short_tuple->type, var->index_count) : tc_error();
   }
 }
 
@@ -999,7 +992,7 @@ static Type *_indexed_map_type(Symbols *s, MapType *map, IndexedVariable *var) {
   if (var->index_count == 1) {
     if (!tc_accepts_type(s, map->key_type, tc_check_expr(s, var->indices[0]))) {
       // TODO bad index type error
-      return NULL;
+      return tc_error();
     }
     return map->value_type;
   } else {
@@ -1011,7 +1004,7 @@ static Type *_indexed_map_type(Symbols *s, MapType *map, IndexedVariable *var) {
       }
     }
 
-    return valid ? _short_tuple_of(map->value_type, var->index_count) : NULL;
+    return valid ? _short_tuple_of(map->value_type, var->index_count) : tc_error();
   }
 }
 
@@ -1021,7 +1014,7 @@ static Type *_variable_type(Symbols *s, VariableExpr *var) {
   switch (var->type) {
     case V_NAMED: {
       const Symbol *symbol = tc_resolve_symbol(s, var->named->name);
-      return symbol ? symbol->type : NULL;
+      return symbol ? symbol->type : tc_error();
     }
     case V_INDEX: {
       Type *container = _variable_type(s, var->indexed->container);
@@ -1032,7 +1025,7 @@ static Type *_variable_type(Symbols *s, VariableExpr *var) {
         case T_MAP: return _indexed_map_type(s, container->map, var->indexed);
         default: {
           // TODO error: not an indexable type
-          return NULL;
+          return tc_error();
         }
       }
     }
@@ -1040,7 +1033,7 @@ static Type *_variable_type(Symbols *s, VariableExpr *var) {
       Type *container = _variable_type(s, var->struct_member->struct_expr);
       if (container->type != T_STRUCT) {
         // TODO error: trying to access struct member of non-struct
-        return NULL;
+        return tc_error();
       }
       return _struct_member_type(container->struct_type, var->struct_member->name->lexeme);
     }
@@ -1054,7 +1047,7 @@ static Type *_unary_type(Symbols *s, UnaryExpr *expr) {
       Type *expr_type = tc_check_expr(s, expr->expr);
       if (!_is_builtin_type(expr_type, T_BOOL)) {
         // TODO invalid type for operation
-        return NULL;
+        return tc_error();
       }
       return expr_type;
     }
@@ -1062,7 +1055,7 @@ static Type *_unary_type(Symbols *s, UnaryExpr *expr) {
       Type *expr_type = tc_check_expr(s, expr->expr);
       if (!_is_builtin_type(expr_type, T_INT) && !_is_builtin_type(expr_type, T_FLOAT)) {
         // TODO invalid type for operation
-        return NULL;
+        return tc_error();
       }
       return expr_type;
     }
@@ -1080,7 +1073,7 @@ static Type *_arithmetic_numeric_type(Symbols *s, Type *l, Type *r, TokenLabel o
     );
   } else {
     // TODO wrong type for operand
-    return NULL;
+    return tc_error();
   }
 }
 
@@ -1088,7 +1081,7 @@ static Type *_arithmetic_vector_type(Symbols *s, Type *l, Type *r, TokenLabel op
   if (_is_vector_type(r)) {
     if (l->short_tuple->count != r->short_tuple->count) {
       // TODO length mismatch
-      return NULL;
+      return tc_error();
     }
     Type *num_t = _upgrade_numeric_type(
       l->short_tuple->type->builtin,
@@ -1102,7 +1095,7 @@ static Type *_arithmetic_vector_type(Symbols *s, Type *l, Type *r, TokenLabel op
     );
   } else {
     // TODO wrong type for operand
-    return NULL;
+    return tc_error();
   }
 }
 
@@ -1121,23 +1114,23 @@ static Type *_binary_type(Symbols *s, BinaryExpr *expr) {
         return _arithmetic_vector_type(s, l_type, r_type, expr->op);
       } else if (_is_builtin_type(l_type, T_STRING)) {
         if (expr->op == PLUS) {
-          if (r_type != NULL) {
+          if (!_is_error(r_type)) {
             return l_type;
           } else {
             // TODO invalid rhs
-            return NULL;
+            return tc_error();
           }
         } else if (expr->op == STAR) {
           if (_is_builtin_type(r_type, T_INT)) {
             return l_type;
           } else {
             // TODO invalid rhs
-            return NULL;
+            return tc_error();
           }
         }
       } else {
         // TODO invalid type for operator
-        return NULL;
+        return tc_error();
       }
     }
     case MINUS:
@@ -1148,7 +1141,7 @@ static Type *_binary_type(Symbols *s, BinaryExpr *expr) {
         return _arithmetic_vector_type(s, l_type, r_type, expr->op);
       } else {
         // TODO invalid type for operator
-        return NULL;
+        return tc_error();
       }
     }
     case GREATER_EQUAL:
@@ -1160,25 +1153,25 @@ static Type *_binary_type(Symbols *s, BinaryExpr *expr) {
           return _builtin_type(T_BOOL);
         } else {
           // TODO type mismatch
-          return NULL;
+          return tc_error();
         }
       } else if (_is_builtin_type(l_type, T_STRING)) {
         if (_is_builtin_type(r_type, T_STRING)) {
           return _builtin_type(T_BOOL);
         } else {
           // TODO type mismatch
-          return NULL;
+          return tc_error();
         }
       } else {
         // TODO non ordered type
-        return NULL;
+        return tc_error();
       }
     }
     case EQUAL_EQUAL:
     case BANG_EQUAL: {
       if (!tc_compatible_types(s, l_type, r_type)) {
         // TODO comparison of incompatible types
-        return NULL;
+        return tc_error();
       }
       return _builtin_type(T_BOOL);
     }
@@ -1188,13 +1181,13 @@ static Type *_binary_type(Symbols *s, BinaryExpr *expr) {
       bool right_valid = _is_builtin_type(r_type, T_BOOL);
       if (!left_valid) {
         // TODO invalid type error
-        return NULL;
+        return tc_error();
       }
       if (!right_valid) {
         // TODO invalid type error
-        return NULL;
+        return tc_error();
       }
-      return (left_valid && right_valid) ? l_type : NULL;
+      return (left_valid && right_valid) ? l_type : tc_error();
     }
     default: assert(false); // Unreachable
   }
@@ -1206,7 +1199,7 @@ static Type *_assignment_type(Symbols *s, const AssignmentExpr *expr) {
 
   if (tc_accepts_type(s, lhs_type, rhs_type)) return lhs_type;
   // TODO type error: incompatible types
-  return NULL;
+  return tc_error();
 }
 
 static Type *_if_expr_type(Symbols *s, const IfExpr *expr) {
@@ -1228,7 +1221,7 @@ static Type *_if_expr_type(Symbols *s, const IfExpr *expr) {
     valid = false;
   }
 
-  return valid ? true_type : NULL;
+  return valid ? true_type : tc_error();
 }
 
 static Type *_for_expr_type(Symbols *s, const ForExpr *expr) {
@@ -1244,7 +1237,7 @@ static Type *_for_expr_type(Symbols *s, const ForExpr *expr) {
     }
     default: {
       // TODO type error non iterable type in for expression
-      return NULL;
+      return tc_error();
     }
   }
 }
@@ -1308,7 +1301,7 @@ static Type *_function_call_type(Symbols *s, const FunctionCallExpr *expr) {
   tc_debug_log("FunctionCall", &expr->meta.loc);
 
   const FunctionDef *def = tc_resolve_function(s, expr->name);
-  if (!def) return NULL;
+  if (!def) return tc_error();
 
   bool valid = _check_function_args(s, expr, def);
   if (expr->composable && !tc_check_expr(s, expr->composable)) {
@@ -1339,7 +1332,7 @@ static Type *_env_type(Symbols *s, const EnvExpr *expr) {
   if (expr->default_value) {
     if (!_is_builtin_type(tc_check_expr(s, expr->default_value), T_STRING)) {
       // TODO error: env value expression must be a string
-      return NULL;
+      return tc_error();
     }
   }
   return _builtin_type(T_STRING);
@@ -1368,7 +1361,7 @@ static Type *_block_type(Symbols *s, const BlockExpr *expr) {
 
   if (type_count == 0) {
     // TODO error: empty block
-    return NULL;
+    return tc_error();
   } else if (type_count == 1) {
     return block_types[0];
   }
@@ -1422,6 +1415,7 @@ static void _check_decl(Symbols *s, const DeclarationStmt *decl) {
         for (u32 i = 0; i < decl->left_count; i++) {
           tc_define_symbol(s, decl->left[i], _symbol_of(decl_type, false));
         }
+        break;
       }
       case T_TUPLE_SHORT: {
         Type *decl_type = or_default(decl->type, value_type->short_tuple->type);
@@ -1437,6 +1431,7 @@ static void _check_decl(Symbols *s, const DeclarationStmt *decl) {
         for (u32 i = 0; i < decl->left_count; i++) {
           tc_define_symbol(s, decl->left[i], _symbol_of(decl_type, false));
         }
+        break;
       }
       case T_TUPLE: {
         bool valid = true;
@@ -1458,6 +1453,7 @@ static void _check_decl(Symbols *s, const DeclarationStmt *decl) {
           Type *decl_type = or_default(decl->type, value_type->tuple->types[i]);
           tc_define_symbol(s, decl->left[i], _symbol_of(decl_type, false));
         }
+        break;
       }
       default: {
         // TODO error decomposition not allowed for this type
@@ -1553,6 +1549,7 @@ CompilationStatus sa_build_tables_and_typecheck(i32 file_idx) {
   map_manage_keys(sym->symbols, sk_clone, sk_free);
 
   dyn_array_clear(sa->stack);
+  mem_dyn_arena_free_all(sa->tc_arena);
   tc_check_ast(sym, ast);
   assert(dyn_array_size(sa->stack) == 0); // Unbalanced stack is a bug
 

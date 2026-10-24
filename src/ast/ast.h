@@ -81,6 +81,7 @@ typedef enum {
   T_TUPLE_SHORT,
   T_ENUM,
   T_RANGE,
+  T_ERROR,    // Error type. Accessing any property of this type is undefined!!
 } TypeType;
 
 typedef enum {

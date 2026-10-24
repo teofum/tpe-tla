@@ -108,6 +108,9 @@ static void dot_type(Type *type, u64 pid) {
   char label[256];
 
   switch (type->type) {
+    case T_ERROR:
+      snprintf(label, 256, "Type ERROR");
+      break;
     case T_BUILTIN:
       snprintf(label, 256, "Builtin %s", builtin_type_str[type->builtin]);
       break;

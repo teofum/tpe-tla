@@ -1052,6 +1052,7 @@ void ast_free_type(Type *t) {
     case T_ENUM: ast_free_enum_type(t->enum_type); break;
     case T_BUILTIN: break;
     case T_RANGE: break;
+    case T_ERROR: break;
   }
   free(t);
 }
