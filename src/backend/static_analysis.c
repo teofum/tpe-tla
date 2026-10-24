@@ -1497,8 +1497,7 @@ static Type *tc_check_block(Symbols *s, const BlockExpr *expr) {
   }
 
   if (type_count == 0) {
-    // TODO error: empty block
-    return tc_error();
+    return tc_report_error_fmt(&expr->meta.loc, "empty block expression");
   } else if (type_count == 1) {
     return block_types[0];
   }

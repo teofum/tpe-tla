@@ -60,7 +60,7 @@
     [x] Function definitions (scoping)
     [x] For loops (scoping)
     [x] Other expressions
-[ ] Type checking
+[x] Type checking
   [x] Define builtin types
     [x] Parse builtin types in frontend
   [x] Type comparisons
@@ -100,7 +100,7 @@
   [x] Statements
     [x] Declarations/constants
     [x] Function definitions
-  [ ] Error reporting
+  [x] Error reporting
   [x] Memory management (custom allocator)
 
 /--- Evaluator ----------------------------------------------------------------/
