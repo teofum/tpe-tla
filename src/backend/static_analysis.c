@@ -170,7 +170,7 @@ static void _static_tables_literal(Symbols *s, LiteralExpr *literal) {
       break;
     }
     case L_LIST_SHORT: {
-      _static_tables_expr(s, literal->short_list->value);
+      _static_tables_expr(s, literal->vec->value);
       break;
     }
     case L_MAP: {
@@ -350,12 +350,12 @@ static Type *_tuple_of(Type **types, u32 len) {
 }
 
 static Type *_short_tuple_of(Type *item_type, u32 count) {
-  tc_make(ShortTupleType, st, {
-    .type = item_type,
+  tc_make(VectorType, st, {
+    .item_type = item_type,
     .count = count,
     .meta = {0},
   });
-  tc_make(Type, type, { .type = T_TUPLE_SHORT, .short_tuple = st, .meta = {0} });
+  tc_make(Type, type, { .type = T_VECTOR, .vec = st, .meta = {0} });
   return type;
 }
 
@@ -528,12 +528,12 @@ static bool _is_numeric_type(const Type *type) {
 }
 
 static bool _is_vector_type(const Type *type) {
-  return type->type == T_TUPLE_SHORT
-    && _is_numeric_type(type->short_tuple->type);
+  return type->type == T_VECTOR
+    && _is_numeric_type(type->vec->item_type);
 }
 
 static bool _is_iterable(const Type *type) {
-  return type->type == T_TUPLE_SHORT || type->type == T_LIST;
+  return type->type == T_VECTOR || type->type == T_LIST;
 }
 
 static Type *_upgrade_numeric_type(BuiltinType l, BuiltinType r) {
@@ -545,8 +545,8 @@ static bool _compare_list_types(Symbols *s, const ListType *a, const ListType *b
   return tc_compare_types(s, a->item_type, b->item_type);
 }
 
-static bool _compare_short_tuple_types(Symbols *s, const ShortTupleType *a, const ShortTupleType *b) {
-  return a->count == b->count && tc_compare_types(s, a->type, b->type);
+static bool _compare_short_tuple_types(Symbols *s, const VectorType *a, const VectorType *b) {
+  return a->count == b->count && tc_compare_types(s, a->item_type, b->item_type);
 }
 
 static bool _compare_tuple_types(Symbols *s, const TupleType *a, const TupleType *b) {
@@ -615,7 +615,7 @@ static bool tc_compare_types(Symbols *s, const Type *a, const Type *b) {
   switch (a->type) {
     case T_BUILTIN: return a->builtin == b->builtin;
     case T_LIST: return _compare_list_types(s, a->list, b->list);
-    case T_TUPLE_SHORT: return _compare_short_tuple_types(s, a->short_tuple, b->short_tuple);
+    case T_VECTOR: return _compare_short_tuple_types(s, a->vec, b->vec);
     case T_TUPLE: return _compare_tuple_types(s, a->tuple, b->tuple);
     case T_MAP: return _compare_map_types(s, a->map, b->map);
     case T_STRUCT: return _compare_struct_types(s, a->struct_type, b->struct_type);
@@ -637,8 +637,8 @@ static bool _accepts_list_type(Symbols *s, const ListType *a, const Type *b) {
     case T_LIST: {
       return tc_accepts_type(s, a->item_type, b->list->item_type);
     }
-    case T_TUPLE_SHORT: {
-      return tc_accepts_type(s, a->item_type, b->short_tuple->type);
+    case T_VECTOR: {
+      return tc_accepts_type(s, a->item_type, b->vec->item_type);
     }
     case T_TUPLE: {
       for (u32 i = 0; i < b->tuple->len; i++) {
@@ -650,16 +650,16 @@ static bool _accepts_list_type(Symbols *s, const ListType *a, const Type *b) {
   }
 }
 
-static bool _accepts_short_tuple_type(Symbols *s, const ShortTupleType *a, const Type *b) {
+static bool _accepts_short_tuple_type(Symbols *s, const VectorType *a, const Type *b) {
   switch (b->type) {
-    case T_TUPLE_SHORT: {
-      return a->count == b->short_tuple->count
-        && tc_accepts_type(s, a->type, b->short_tuple->type);
+    case T_VECTOR: {
+      return a->count == b->vec->count
+        && tc_accepts_type(s, a->item_type, b->vec->item_type);
     }
     case T_TUPLE: {
       if (a->count != b->tuple->len) return false;
       for (u32 i = 0; i < b->tuple->len; i++) {
-        if (!tc_accepts_type(s, a->type, b->tuple->types[i])) return false;
+        if (!tc_accepts_type(s, a->item_type, b->tuple->types[i])) return false;
       }
       return true;
     }
@@ -669,10 +669,10 @@ static bool _accepts_short_tuple_type(Symbols *s, const ShortTupleType *a, const
 
 static bool _accepts_tuple_type(Symbols *s, const TupleType *a, const Type *b) {
   switch (b->type) {
-    case T_TUPLE_SHORT: {
-      if (a->len != b->short_tuple->count) return false;
+    case T_VECTOR: {
+      if (a->len != b->vec->count) return false;
       for (u32 i = 0; i < a->len; i++) {
-        if (!tc_accepts_type(s, a->types[i], b->short_tuple->type)) return false;
+        if (!tc_accepts_type(s, a->types[i], b->vec->item_type)) return false;
       }
       return true;
     }
@@ -728,7 +728,7 @@ static bool tc_accepts_type(Symbols *s, const Type *a, const Type *b) {
   switch (a->type) {
     case T_BUILTIN: return _accepts_builtin_type(a->builtin, b);
     case T_LIST: return _accepts_list_type(s, a->list, b);
-    case T_TUPLE_SHORT: return _accepts_short_tuple_type(s, a->short_tuple, b);
+    case T_VECTOR: return _accepts_short_tuple_type(s, a->vec, b);
     case T_TUPLE: return _accepts_tuple_type(s, a->tuple, b);
     case T_MAP: return _accepts_map_type(s, a->map, b);
     case T_STRUCT: return _accepts_struct_type(s, a->struct_type, b);
@@ -818,7 +818,7 @@ static Type *_list_type(Symbols *s, ListLiteral *list) {
     : _tuple_of(types, list->len);
 }
 
-static Type *_short_list_type(Symbols *s, ShortListLiteral *short_list) {
+static Type *_short_list_type(Symbols *s, VectorLiteral *short_list) {
   Type *item_type = tc_check_expr(s, short_list->value);
   return _short_tuple_of(item_type, short_list->count);
 }
@@ -833,7 +833,7 @@ static bool _is_valid_map_key_type(const Type *type) {
     case T_LIST:          return false;
     case T_RANGE:         return false;
     case T_ENUM:          return true;
-    case T_TUPLE_SHORT:   return _is_valid_map_key_type(type->short_tuple->type);
+    case T_VECTOR:   return _is_valid_map_key_type(type->vec->item_type);
     case T_STRUCT: {
       for (u32 i = 0; i < type->struct_type->len; i++) {
         if (!_is_valid_map_key_type(type->struct_type->fields[i]->type)) return false;
@@ -956,7 +956,7 @@ static Type *_literal_type(Symbols *s, LiteralExpr *expr) {
     case L_BOOL:        return _builtin_type(T_BOOL);
     case L_NIL:         return _builtin_type(T_NIL);
     case L_LIST:        return _list_type(s, expr->list);
-    case L_LIST_SHORT:  return _short_list_type(s, expr->short_list);
+    case L_LIST_SHORT:  return _short_list_type(s, expr->vec);
     case L_MAP:         return _map_type(s, expr->map);
     case L_STRUCT:      return _struct_type(s, expr->struct_literal);
     case L_ENUM:        return _enum_type(expr->enum_literal);
@@ -1045,13 +1045,13 @@ static Type *_indexed_tuple_type(Symbols *s, TupleType *tuple, IndexedVariable *
   }
 }
 
-static Type *_indexed_short_tuple_type(Symbols *s, ShortTupleType *st, IndexedVariable *var) {
+static Type *_indexed_short_tuple_type(Symbols *s, VectorType *st, IndexedVariable *var) {
   if (var->index_count == 1) {
     Type *index_type = tc_check_expr(s, var->indices[0]);
     if (!_is_builtin(index_type, T_INT)) {
       return tc_report_bad_index_type(&var->indices[0]->meta.loc, index_type);
     }
-    return st->type;
+    return st->item_type;
   } else {
     bool valid = true;
     for (u32 i = 0; i < var->index_count; i++) {
@@ -1061,7 +1061,7 @@ static Type *_indexed_short_tuple_type(Symbols *s, ShortTupleType *st, IndexedVa
       }
     }
 
-    return valid ? _short_tuple_of(st->type, var->index_count) : tc_error();
+    return valid ? _short_tuple_of(st->item_type, var->index_count) : tc_error();
   }
 }
 
@@ -1106,7 +1106,7 @@ static Type *_variable_type(Symbols *s, VariableExpr *var) {
       switch (container->type) {
         case T_LIST: return _indexed_list_type(s, container->list, var->indexed);
         case T_TUPLE: return _indexed_tuple_type(s, container->tuple, var->indexed);
-        case T_TUPLE_SHORT: return _indexed_short_tuple_type(s, container->short_tuple, var->indexed);
+        case T_VECTOR: return _indexed_short_tuple_type(s, container->vec, var->indexed);
         case T_MAP: return _indexed_map_type(s, container->map, var->indexed);
         default: {
           return tc_report_error_fmt(
@@ -1161,8 +1161,8 @@ static Type *_arithmetic_numeric_type(Symbols *s, Type *l, Type *r, BinaryExpr *
     return _upgrade_numeric_type(l->builtin, r->builtin);
   } else if (_is_vector_type(r)) {
     return _short_tuple_of(
-      _upgrade_numeric_type(l->builtin, r->short_tuple->type->builtin),
-      r->short_tuple->count
+      _upgrade_numeric_type(l->builtin, r->vec->item_type->builtin),
+      r->vec->count
     );
   } else {
     return tc_report_op_type(
@@ -1174,18 +1174,18 @@ static Type *_arithmetic_numeric_type(Symbols *s, Type *l, Type *r, BinaryExpr *
 
 static Type *_arithmetic_vector_type(Symbols *s, Type *l, Type *r, BinaryExpr *expr) {
   if (_is_vector_type(r)) {
-    if (l->short_tuple->count != r->short_tuple->count) {
+    if (l->vec->count != r->vec->count) {
       return tc_report_error(&expr->meta.loc, "vector length mismatch");
     }
     Type *num_t = _upgrade_numeric_type(
-      l->short_tuple->type->builtin,
-      r->short_tuple->type->builtin
+      l->vec->item_type->builtin,
+      r->vec->item_type->builtin
     );
-    return _short_tuple_of(num_t, l->short_tuple->count);
+    return _short_tuple_of(num_t, l->vec->count);
   } else if (_is_numeric_type(r)) {
     return _short_tuple_of(
-      _upgrade_numeric_type(l->short_tuple->type->builtin, r->builtin),
-      l->short_tuple->count
+      _upgrade_numeric_type(l->vec->item_type->builtin, r->builtin),
+      l->vec->count
     );
   } else {
     return tc_report_op_type(
@@ -1346,7 +1346,7 @@ static Type *_for_expr_type(Symbols *s, const ForExpr *expr) {
 
   Type *iterator_type = iterable_type->type == T_LIST
     ? iterable_type->list->item_type
-    : iterable_type->short_tuple->type;
+    : iterable_type->vec->item_type;
 
   _push_scope(expr->body->block->scope);
   Symbol *iterator = _symbol_of(iterator_type, true);
@@ -1362,8 +1362,8 @@ static Type *_for_expr_type(Symbols *s, const ForExpr *expr) {
     case T_LIST: {
       return _list_of(body_type);
     }
-    case T_TUPLE_SHORT: {
-      return _short_tuple_of(body_type, iterable_type->short_tuple->count);
+    case T_VECTOR: {
+      return _short_tuple_of(body_type, iterable_type->vec->count);
     }
     default: assert(false); // Unreachable
   }
@@ -1573,19 +1573,19 @@ static void _check_decl(Symbols *s, const DeclarationStmt *decl) {
         }
         break;
       }
-      case T_TUPLE_SHORT: {
-        Type *decl_type = or_default(decl->type, value_type->short_tuple->type);
-        if (!tc_accepts_type(s, decl_type, value_type->short_tuple->type)) {
+      case T_VECTOR: {
+        Type *decl_type = or_default(decl->type, value_type->vec->item_type);
+        if (!tc_accepts_type(s, decl_type, value_type->vec->item_type)) {
           tc_report_error_fmt(
             &decl->right->meta.loc,
             "%s is not assignable to %s",
-            tc_print_type(value_type->short_tuple->type), tc_print_type(decl_type)
+            tc_print_type(value_type->vec->item_type), tc_print_type(decl_type)
           );
           return;
         }
-        if (decl->left_count > value_type->short_tuple->count) {
+        if (decl->left_count > value_type->vec->count) {
           tc_report_error_fmt(
-            &decl->left[value_type->short_tuple->count]->loc,
+            &decl->left[value_type->vec->count]->loc,
             "too many variables for type %s",
             tc_print_type(value_type)
           );
@@ -1602,7 +1602,7 @@ static void _check_decl(Symbols *s, const DeclarationStmt *decl) {
         for (u32 i = 0; i < decl->left_count; i++) {
           if (i >= value_type->tuple->len) {
             tc_report_error_fmt(
-              &decl->left[value_type->short_tuple->count]->loc,
+              &decl->left[value_type->vec->count]->loc,
               "too many variables for type %s",
               tc_print_type(value_type)
             );

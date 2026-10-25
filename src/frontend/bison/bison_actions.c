@@ -143,8 +143,8 @@ LiteralExpr *parse_list_literal(ExprList *exprs) {
   return literal;
 }
 
-LiteralExpr *parse_short_list_literal(Expr *value, IntegerLiteral *count) {
-  LiteralExpr *literal = ast_short_list_literal(value, (u32)count->value);
+LiteralExpr *parse_vector_literal(Expr *value, IntegerLiteral *count) {
+  LiteralExpr *literal = ast_vector_literal(value, (u32)count->value);
   fe_parser_log(LOG_DEBUG, "Shorthand List Literal", literal->list->len);
   ast_free_int_literal(count);
   return literal;
@@ -324,9 +324,9 @@ Type *parse_tuple_type(TypeList *types) {
   return ast_tuple_type(types);
 }
 
-Type *parse_short_tuple_type(Type *type, IntegerLiteral *count) {
+Type *parse_vector_type(Type *type, IntegerLiteral *count) {
   fe_parser_log(LOG_DEBUG, "Tuple Shorthand");
-  Type *tuple = ast_short_tuple_type(type, (u32)count->value);
+  Type *tuple = ast_vector_type(type, (u32)count->value);
   ast_free_int_literal(count);
   return tuple;
 }

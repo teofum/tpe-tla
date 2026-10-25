@@ -78,7 +78,7 @@ typedef enum {
   T_LIST,
   T_MAP,
   T_TUPLE,
-  T_TUPLE_SHORT,
+  T_VECTOR,
   T_ENUM,
   T_RANGE,
   T_ERROR,    // Error type. Accessing any property of this type is undefined!!
@@ -144,7 +144,7 @@ typedef struct FloatLiteral FloatLiteral;
 typedef struct StringLiteral StringLiteral;
 typedef struct BooleanLiteral BooleanLiteral;
 typedef struct ListLiteral ListLiteral;
-typedef struct ShortListLiteral ShortListLiteral;
+typedef struct VectorLiteral VectorLiteral;
 typedef struct MapLiteral MapLiteral;
 typedef struct MapEntry MapEntry;
 typedef struct StructLiteral StructLiteral;
@@ -164,7 +164,7 @@ typedef struct StructField StructField;
 typedef struct StructType StructType;
 typedef struct UnionType UnionType;
 typedef struct TupleType TupleType;
-typedef struct ShortTupleType ShortTupleType;
+typedef struct VectorType VectorType;
 typedef struct EnumType EnumType;
 
 typedef struct FunctionDef FunctionDef;
@@ -261,7 +261,7 @@ struct LiteralExpr {
     StringLiteral *string;
     BooleanLiteral *boolean;
     ListLiteral *list;
-    ShortListLiteral *short_list;
+    VectorLiteral *vec;
     MapLiteral *map;
     StructLiteral *struct_literal;
     EnumLiteral *enum_literal;
@@ -384,7 +384,7 @@ struct ListLiteral {
   Expr **exprs;
 };
 
-struct ShortListLiteral {
+struct VectorLiteral {
   ASTNodeMetadata meta;
   Expr *value;
   u32 count;
@@ -460,7 +460,7 @@ struct Type {
     StructType *struct_type;
     UnionType *union_type;
     TupleType *tuple;
-    ShortTupleType *short_tuple;
+    VectorType *vec;
     EnumType *enum_type;
   };
 };
@@ -499,9 +499,9 @@ struct TupleType {
   Type **types;
 };
 
-struct ShortTupleType {
+struct VectorType {
   ASTNodeMetadata meta;
-  Type *type;
+  Type *item_type;
   u32 count;
 };
 
@@ -586,7 +586,7 @@ LiteralExpr *ast_float_literal(FloatLiteral *f);
 LiteralExpr *ast_string_literal(StringLiteral *s);
 LiteralExpr *ast_boolean_literal(BooleanLiteral *b);
 LiteralExpr *ast_list_literal(ExprList *exprs);
-LiteralExpr *ast_short_list_literal(Expr *value, u32 count);
+LiteralExpr *ast_vector_literal(Expr *value, u32 count);
 LiteralExpr *ast_map_literal(MapEntryList *entries);
 LiteralExpr *ast_struct_literal(StructLiteralFieldList *fields);
 LiteralExpr *ast_enum_literal(Type *type, Identifier *id);
@@ -614,7 +614,7 @@ Type *ast_map_type(Type *key_type, Type *value_type);
 Type *ast_struct_type(StructFieldList *fields);
 Type *ast_union_type(TypeList *types);
 Type *ast_tuple_type(TypeList *types);
-Type *ast_short_tuple_type(Type *type, u32 count);
+Type *ast_vector_type(Type *type, u32 count);
 Type *ast_enum_type(IdentifierList *values);
 Type *ast_builtin_type(BuiltinType builtin_type);
 
@@ -661,7 +661,7 @@ void ast_free_float_literal(FloatLiteral *l);
 void ast_free_string_literal(StringLiteral *l);
 void ast_free_bool_literal(BooleanLiteral *l);
 void ast_free_list_literal(ListLiteral *l);
-void ast_free_short_list_literal(ShortListLiteral *l);
+void ast_free_vector_literal(VectorLiteral *l);
 void ast_free_map_literal(MapLiteral *l);
 void ast_free_struct_literal(StructLiteral *l);
 void ast_free_enum_literal(EnumLiteral *l);
@@ -678,7 +678,7 @@ void ast_free_map_type(MapType *t);
 void ast_free_struct_type(StructType *t);
 void ast_free_union_type(UnionType *t);
 void ast_free_tuple_type(TupleType *t);
-void ast_free_short_tuple_type(ShortTupleType *t);
+void ast_free_vector_type(VectorType *t);
 void ast_free_enum_type(EnumType *t);
 
 void ast_free_function_def(FunctionDef *f);
