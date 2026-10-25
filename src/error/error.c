@@ -46,39 +46,77 @@ void err_shutdown() {
   cs = NULL;
 }
 
-void err_report_syntax(SyntaxError *s, Location *location, ErrorLevel level) {
-  Error error = {
-    .type = ERR_SYNTAX,
-    .stage = CS_PARSE,
+static Error _make_error(
+  ErrorType type,
+  CompilationStage stage,
+  ErrorLevel level,
+  const Location *loc
+) {
+  return (Error){
+    .type = type,
+    .stage = stage,
     .level = level,
-    .syntax = s,
-    .loc = *location,
+    .loc = *loc,
     .filepath = state_current_filepath(cs),
   };
+}
+
+void err_report_syntax(SyntaxError *s, const Location *loc, ErrorLevel level) {
+  Error error = _make_error(ERR_SYNTAX, CS_PARSE, level, loc);
+  error.syntax = s;
   dyn_array_push(e->errors, &error);
 }
 
-void err_report_import_type(ImportTypeError *i, Location *location, ErrorLevel level) {
-  Error error = {
-    .type = ERR_IMPORT_TYPE,
-    .stage = CS_PARSE,
-    .level = level,
-    .import_type = i,
-    .loc = *location,
-    .filepath = state_current_filepath(cs),
-  };
+void err_report_import(ImportError *i, const Location *loc, ErrorLevel level) {
+  Error error = _make_error(ERR_IMPORT, CS_PARSE, level, loc);
+  error.import_type = i;
   dyn_array_push(e->errors, &error);
 }
 
-void err_report_redefinition(RedefinitionError *r, Location *location, ErrorLevel level) {
-  Error error = {
-    .type = ERR_REDEFINITION,
-    .stage = CS_PARSE,
-    .level = level,
-    .redefinition = r,
-    .loc = *location,
-    .filepath = state_current_filepath(cs),
-  };
+void err_report_redef(RedefError *r, const Location *loc, ErrorLevel level) {
+  Error error = _make_error(ERR_REDEF, CS_STATIC_ANALYSIS, level, loc);
+  error.redefinition = r;
+  dyn_array_push(e->errors, &error);
+}
+
+void err_report_undef(UndefError *u, const Location *loc, ErrorLevel level) {
+  Error error = _make_error(ERR_UNDEF, CS_STATIC_ANALYSIS, level, loc);
+  error.undef_symbol = u;
+  dyn_array_push(e->errors, &error);
+}
+
+void err_report_type(TypeError *t, const Location *loc, ErrorLevel level) {
+  Error error = _make_error(ERR_TYPE, CS_TYPECHECK, level, loc);
+  error.type_error = t;
+  dyn_array_push(e->errors, &error);
+}
+
+void err_report_fn_arg_count(FnArgCountError *f, const Location *loc, ErrorLevel level) {
+  Error error = _make_error(ERR_FN_ARG_COUNT, CS_TYPECHECK, level, loc);
+  error.fn_arg_count = f;
+  dyn_array_push(e->errors, &error);
+}
+
+void err_report_fn_arg_name(const FunctionCallExpr *call, const Argument *arg, ErrorLevel level) {
+  Error error = _make_error(ERR_FN_ARG_NAME, CS_TYPECHECK, level, &arg->meta.loc);
+  error.fn_arg_name = new(FnArgNameError);
+  error.fn_arg_name->arg = arg;
+  error.fn_arg_name->call = call;
+  dyn_array_push(e->errors, &error);
+}
+
+void err_report_fn_arg_pos(const Argument *arg, ErrorLevel level) {
+  Error error = _make_error(ERR_FN_ARG_POS, CS_TYPECHECK, level, &arg->meta.loc);
+  error.fn_arg_pos = new(FnArgPosError);
+  error.fn_arg_pos->arg = arg;
+  dyn_array_push(e->errors, &error);
+}
+
+void err_report_fn_param_req(const FunctionCallExpr *call, const Parameter *p, ErrorLevel level) {
+  Error error = _make_error(ERR_FN_PARAM_REQ, CS_TYPECHECK, level, &p->meta.loc);
+  error.fn_param_req = new(FnParamReqError);
+  error.fn_param_req->param = p;
+  error.fn_param_req->call = call;
   dyn_array_push(e->errors, &error);
 }
 
@@ -112,7 +150,11 @@ static str _error_loc(str error_str, const char *fp, Location *loc, const char *
       u32 lc = (line == ll) ? lc_ll : strlen(buf);
       if (lc == 0) continue;
       if (n_lines > 5 && line > fl + 1 && line < ll - 1) {
-        if (line == fl + 2) str_append_temp(&with_loc, str_format(INDENTED_NL " ...| (%u more lines)", n_lines - 4));
+        if (line == fl + 2) {
+          str_append_temp(&with_loc,
+            str_format(INDENTED_NL " ...| (%u more lines)", n_lines - 4)
+          );
+        }
         continue;
       }
 
@@ -125,12 +167,20 @@ static str _error_loc(str error_str, const char *fp, Location *loc, const char *
         buf[i] = i < fc ? ' ' : i == fc ? '^' : '~';
       }
       buf[lc] = 0;
-      str_append_temp(&with_loc, str_format(INDENT "    | %s" "%s" RESET, color, buf));
+      str_append_temp(&with_loc,
+        str_format(INDENT "    | %s" "%s" RESET, color, buf)
+      );
     }
     fclose(file);
   }
 
   return with_loc;
+}
+
+static void _log_error_with_loc(str error_str, Error *error) {
+  str with_loc = _error_loc(error_str, error->filepath, &error->loc, R);
+  _log(error, "%.*s", with_loc.len, with_loc.ptr);
+  str_free(with_loc);
 }
 
 static void _log_syntax_error(Error *error) {
@@ -148,22 +198,19 @@ static void _log_syntax_error(Error *error) {
     }
     str_append_temp(&error_str, expected);
   }
-  str with_loc = _error_loc(error_str, error->filepath, &error->loc, R);
-
-  _log(error, "%.*s", with_loc.len, with_loc.ptr);
-  str_free(with_loc);
+  _log_error_with_loc(error_str, error);
 }
 
 static void _log_import_type_error(Error *error) {
-  ImportTypeError *it = error->import_type;
+  ImportError *it = error->import_type;
 
-  str accepted = str_format("\"%s\"", import_type_str[0]);
+  str accepted = str_format("'%s'", import_type_str[0]);
   for (u32 i = 1; i < IMPORT_TYPE_COUNT; i++) {
-    str_append_temp(&accepted, str_format(", \"%s\"", import_type_str[i]));
+    str_append_temp(&accepted, str_format(", '%s'", import_type_str[i]));
   }
 
   _log(error,
-    FMT_LOCATION "unrecognized import type \"%s\""
+    FMT_LOCATION "unrecognized import type '%s'"
       INDENTED_NL "Accepted import types are: %.*s",
     error->filepath, error->loc.first_line, error->loc.first_column,
     it->type, accepted.len, accepted.ptr
@@ -172,25 +219,87 @@ static void _log_import_type_error(Error *error) {
 }
 
 static void _log_redefinition_error(Error *error) {
-  RedefinitionError *r = error->redefinition;
+  RedefError *r = error->redefinition;
 
-  str error_str = str_format("redefinition of %s '%s':", r->object_type, r->object_name);
-  str with_loc = _error_loc(error_str, error->filepath, &error->loc, R);
+  str error_str = str_format(
+    "redefinition of %s '%s':",
+    r->object_type, r->object_name
+  );
+  _log_error_with_loc(error_str, error);
 
   str prev_str = str_format("'%s' previously defined here:", r->object_name);
   str prev_with_loc = _error_loc(prev_str, error->filepath, &r->previous_definition, B);
 
-  _log(error, "%.*s", with_loc.len, with_loc.ptr);
   logger_log(e->logger, LOG_INFO, "%.*s", prev_with_loc.len, prev_with_loc.ptr);
-  str_free(with_loc);
   str_free(prev_with_loc);
 }
+
+static void _log_undef_symbol_error(Error *error) {
+  UndefError *u = error->undef_symbol;
+
+  str error_str = str_format(
+    "%s '%s' is undefined",
+    u->object_type, u->object_name
+  );
+  _log_error_with_loc(error_str, error);
+}
+
+static void _log_type_error(Error *error) {
+  TypeError *t = error->type_error;
+
+  str error_str = str_format("type error: %s", t->message);
+  _log_error_with_loc(error_str, error);
+}
+
+static void _log_fn_arg_count_error(Error *error) {
+  FnArgCountError *f = error->fn_arg_count;
+
+  str error_str = str_format(
+    "function argument count mismatch: expected %u, got %u",
+    f->expected, f->actual
+  );
+  _log_error_with_loc(error_str, error);
+}
+
+static void _log_fn_arg_name_error(Error *error) {
+  FnArgNameError *f = error->fn_arg_name;
+
+  str error_str = str_format(
+    "function '%s' has no parameter '%s'",
+    f->call->name->lexeme, f->arg->name->lexeme
+  );
+  _log_error_with_loc(error_str, error);
+}
+
+static void _log_fn_arg_pos_error(Error *error) {
+  FnArgPosError *f = error->fn_arg_pos;
+
+  str error_str = str_format("positional argument used after named arguments");
+  _log_error_with_loc(error_str, error);
+}
+
+static void _log_fn_param_req_error(Error *error) {
+  FnParamReqError *f = error->fn_param_req;
+
+  str error_str = str_format(
+    "required parameter '%s' of function '%s' is not set",
+    f->param->name->lexeme, f->call->name->lexeme
+  );
+  _log_error_with_loc(error_str, error);
+}
+
 
 static void _log_error(Error *error) {
   switch (error->type) {
     case ERR_SYNTAX: _log_syntax_error(error); break;
-    case ERR_IMPORT_TYPE: _log_import_type_error(error); break;
-    case ERR_REDEFINITION: _log_redefinition_error(error); break;
+    case ERR_IMPORT: _log_import_type_error(error); break;
+    case ERR_REDEF: _log_redefinition_error(error); break;
+    case ERR_UNDEF: _log_undef_symbol_error(error); break;
+    case ERR_TYPE: _log_type_error(error); break;
+    case ERR_FN_ARG_COUNT: _log_fn_arg_count_error(error); break;
+    case ERR_FN_ARG_NAME: _log_fn_arg_name_error(error); break;
+    case ERR_FN_ARG_POS: _log_fn_arg_pos_error(error); break;
+    case ERR_FN_PARAM_REQ: _log_fn_param_req_error(error); break;
   }
 }
 
@@ -217,8 +326,14 @@ bool err_gate() {
 void err_free_error(Error *e) {
   switch (e->type) {
     case ERR_SYNTAX: err_free_syntax_error(e->syntax); break;
-    case ERR_IMPORT_TYPE: err_free_import_type_error(e->import_type); break;
-    case ERR_REDEFINITION: err_free_redefinition_error(e->redefinition); break;
+    case ERR_IMPORT: err_free_import_error(e->import_type); break;
+    case ERR_REDEF: err_free_redef_error(e->redefinition); break;
+    case ERR_UNDEF: err_free_undef_error(e->undef_symbol); break;
+    case ERR_TYPE: err_free_type_error(e->type_error); break;
+    case ERR_FN_ARG_COUNT: err_free_fn_arg_count_error(e->fn_arg_count); break;
+    case ERR_FN_ARG_NAME: err_free_fn_arg_name_error(e->fn_arg_name); break;
+    case ERR_FN_ARG_POS: err_free_fn_arg_pos_error(e->fn_arg_pos); break;
+    case ERR_FN_PARAM_REQ: err_free_fn_param_req_error(e->fn_param_req); break;
   }
 }
 
@@ -231,12 +346,38 @@ void err_free_syntax_error(SyntaxError *e) {
   free(e);
 }
 
-void err_free_import_type_error(ImportTypeError *e) {
+void err_free_import_error(ImportError *e) {
   free(e->type);
   free(e);
 }
 
-void err_free_redefinition_error(RedefinitionError *e) {
+void err_free_redef_error(RedefError *e) {
   free(e->object_name);
+  free(e);
+}
+
+void err_free_undef_error(UndefError *e) {
+  free(e->object_name);
+  free(e);
+}
+
+void err_free_type_error(TypeError *e) {
+  free(e->message);
+  free(e);
+}
+
+void err_free_fn_arg_count_error(FnArgCountError *e) {
+  free(e);
+}
+
+void err_free_fn_arg_name_error(FnArgNameError *e) {
+  free(e);
+}
+
+void err_free_fn_arg_pos_error(FnArgPosError *e) {
+  free(e);
+}
+
+void err_free_fn_param_req_error(FnParamReqError *e) {
   free(e);
 }

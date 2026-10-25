@@ -23,7 +23,7 @@ if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
 
   # Options for GCC.
   add_compile_options(-fsanitize=address)
-  add_compile_options(-O3)
+  # add_compile_options(-O3)
   add_compile_options(-g)
   add_compile_options(-static-libgcc)
   add_link_options(-fsanitize=address)
@@ -56,6 +56,7 @@ if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
     src/support/fs.c
     src/support/hash_map.c
     src/support/logger.c
+    src/support/mem.c
     src/support/options.c
     src/support/state.c
     src/support/str.c

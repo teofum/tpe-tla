@@ -100,6 +100,7 @@ void dyn_array_reserve(dyn_array *da, usize cap) {
 
   da->data = realloc(da->data, da->el_size * cap);
   assert(da->data != NULL);
+  da->cap = cap;
 }
 
 usize dyn_array_size(dyn_array *da) {

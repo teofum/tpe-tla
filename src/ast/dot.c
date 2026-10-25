@@ -108,6 +108,9 @@ static void dot_type(Type *type, u64 pid) {
   char label[256];
 
   switch (type->type) {
+    case T_ERROR:
+      snprintf(label, 256, "Type ERROR");
+      break;
     case T_BUILTIN:
       snprintf(label, 256, "Builtin %s", builtin_type_str[type->builtin]);
       break;
@@ -141,16 +144,18 @@ static void dot_type(Type *type, u64 pid) {
         dot_type(type->tuple->types[i], id);
       }
       break;
-    case T_TUPLE_SHORT:
-      snprintf(label, 18, "Tuple Shorthand");
-      dot_type(type->short_tuple->type, id);
-      dot_expr(type->short_tuple->count, id);
+    case T_VECTOR:
+      snprintf(label, 256, "Tuple Shorthand [%u]", type->vec->len);
+      dot_type(type->vec->item_type, id);
       break;
     case T_ENUM:
       snprintf(label, 8, "Enum");
       for (u32 i = 0; i < type->enum_type->len; i++) {
         dot_enum_value(type->enum_type->values[i], id);
       }
+      break;
+    case T_RANGE:
+      snprintf(label, 8, "Range");
       break;
   }
 
@@ -192,11 +197,10 @@ static void dot_literal(LiteralExpr *literal, u64 pid) {
         dot_expr(literal->list->exprs[i], id);
       }
       break;
-    case L_LIST_SHORT:
-      label = new_array(char, 15);
-      snprintf(label, 15, "Shorthand List");
-      dot_expr(literal->short_list->value, id);
-      dot_expr(literal->short_list->count, id);
+    case L_VECTOR:
+      label = new_array(char, 256);
+      snprintf(label, 256, "Shorthand List [%u]", literal->vec->count);
+      dot_expr(literal->vec->value, id);
       break;
     case L_MAP:
       label = new_array(char, 6);

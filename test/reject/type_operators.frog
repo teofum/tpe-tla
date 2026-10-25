@@ -1,0 +1,27 @@
+x := 5 + 3            // OK: type int
+
+y := 5 * 4.6          // OK: type float
+
+z := "hello" + 5      // OK: + operator casts to string
+
+z = 5 + "hello"       // Type error: doesn't work the other way round
+
+u := x * [1, 2, 3]    // OK: int * int vector
+
+v := x * [1, 2.5, 3]  // OK: int * float vector
+
+v = [1, 2] * 0.5      // Type error: dimension mismatch
+
+foo := x < y          // OK: numeric types
+
+foo = "foo" >= "bar"  // OK: strings can be compared
+
+foo = "foo" < 78      // Type error: not comparable
+
+foo = x == y          // OK: numeric types
+
+foo = "foo" == 78     // Type error: not comparable
+
+foo = not !foo        // OK
+
+foo = not 5           // Type error: expected boolean

@@ -1,0 +1,6 @@
+// OK
+{
+  5
+}
+
+{ x := 5 } // Type error: declarations don't return a value

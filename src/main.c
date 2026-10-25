@@ -50,7 +50,14 @@ i32 main(i32 argc, char *const*argv) {
   }
   if (!err_gate()) return shutdown(cs);
 
-  // TODO: typecheck, eval, codegen
+  // Typecheck and check reference integrity
+  for (u32 i = 0; i < cs->options.input_file_count; i++) {
+    cs->status = sa_build_tables_and_typecheck(i);
+    if (cs->status != STATUS_SUCCEEDED) break;
+  }
+  if (!err_gate()) return shutdown(cs);
+
+  // TODO: eval, codegen
 
   return shutdown(cs);
 }

@@ -11,6 +11,16 @@
 [x] Simplify the project tree
 [x] Fix Bison location tracking
 [x] Fix multiline/block comments
+[x] Type errors propagate as error types cause more errors which get reported
+    downstream, creating an error cascade
+  - Don't report errors caused by an error type; assume something was reported
+    upstream instead
+[x] Mixed int/float tuple literals are inferred as heterogenous tuples, which
+    means they can't be used as vectors. Add a special case so they resolve as
+    float vectors.
+  - Better to make them implicitly castable down the line to keep most specific
+    typing
+[x] Short Tuple is kind of a crappy name, rename to vector
 
 #=== General ==================================================================#
 
@@ -30,6 +40,8 @@
 [x] Improve and update README.md
   [x] Give the dang thing a name
 
+[ ] Add string slicing
+
 #=== Backend ==================================================================#
 
 [x] Hash map implementation
@@ -47,52 +59,62 @@
     [x] Blocks
     [x] Other expressions
   [x] Error handling (redefinition)
-[ ] Variables
-  [ ] Declarations
-    [ ] Function parameter
-    [ ] For loop iteration variables
-  [ ] References
-    [ ] Blocks (scoping)
-    [ ] Function definitions (scoping)
-    [ ] For loops (scoping)
-    [ ] Other expressions
-[ ] Type checking
+[x] Variables
+  [x] Declarations
+    [x] Function parameters
+    [x] For loop iteration variables
+  [x] References
+    [x] Blocks (scoping)
+    [x] Function definitions (scoping)
+    [x] For loops (scoping)
+    [x] Other expressions
+[x] Type checking
   [x] Define builtin types
     [x] Parse builtin types in frontend
-  [ ] Type comparisons
-    [ ] Builtin
-    [ ] Structs
-    [ ] Lists/tuples
-    [ ] Maps
-    [ ] Ranges
-    [ ] Unions
-  [ ] Expression types
-    [ ] Literals
-      [ ] Simple literals
-      [ ] Lists
-        [ ] Short lists
-      [ ] Maps
-      [ ] Structs
-      [ ] Ranges
-    [ ] Variables
-      [ ] Named
-      [ ] Struct members
-      [ ] Indexed
-    [ ] Groups
-    [ ] Unary operators
-    [ ] Binary operators
-    [ ] Assignments
-    [ ] If expressions
-    [ ] For expressions
-    [ ] Function calls
-    [ ] Import expressions
-    [ ] Env expressions
-    [ ] Blocks
-  [ ] Error reporting
+  [x] Type comparisons
+    [x] Builtin
+    [x] Structs
+    [x] Lists/tuples
+    [x] Maps
+    [x] Ranges
+    [x] Unions
+  [x] Expression types
+    [x] Literals
+      [x] Simple literals
+      [x] Lists
+        [x] Short lists
+      [x] Maps
+      [x] Structs
+      [x] Ranges
+    [x] Variables
+      [x] Named
+      [x] Struct members
+      [x] Indexed
+    [x] Groups
+    [x] Unary operators
+    [x] Binary operators
+      [x] Arithmetic operators
+      [x] String +, *
+      [x] Comparison operators
+      [x] Equality operators
+      [x] Logical operators
+    [x] Assignments
+    [x] If expressions
+    [x] For expressions
+    [x] Function calls
+    [x] Import expressions
+    [x] Env expressions
+    [x] Blocks
+  [x] Statements
+    [x] Declarations/constants
+    [x] Function definitions
+  [x] Error reporting
+  [x] Memory management (custom allocator)
 
 /--- Evaluator ----------------------------------------------------------------/
 [ ] Value definitions
 [ ] Expression evaluators
+[ ] Builtin functions
 
 /--- Code Generation ----------------------------------------------------------/
 [ ] Values to code

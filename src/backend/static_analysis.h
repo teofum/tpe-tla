@@ -1,5 +1,5 @@
-#ifndef BACKEND_SYMBOLS_HEADER
-#define BACKEND_SYMBOLS_HEADER
+#ifndef STATIC_ANALYSIS_HEADER
+#define STATIC_ANALYSIS_HEADER
 
 #include <ast/ast.h>
 #include <ast/symbols.h>

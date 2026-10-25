@@ -12,6 +12,8 @@ typedef struct {
 
 typedef struct {
   Type *type;
+  Location loc;
+  bool constant;
   // TODO value
 } Symbol;
 

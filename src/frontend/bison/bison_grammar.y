@@ -373,7 +373,7 @@ struct_literal_field: DOT IDENTIFIER EQUAL expression               { $$ = parse
 
 list_literal: SQUARE_L nl expression_list nl SQUARE_R               { $$ = parse_list_literal($3); }
   | SQUARE_L SQUARE_R                                               { $$ = parse_list_literal(NULL); }
-  | SQUARE_L nl expression SEMICOLON expression nl SQUARE_R         { $$ = parse_short_list_literal($3, $5); }
+  | SQUARE_L nl expression SEMICOLON INTEGER nl SQUARE_R            { $$ = parse_vector_literal($3, $5); }
   ;
 
 expression_list: expression                                         { $$ = parse_expr_list($1, NULL); }
@@ -506,7 +506,7 @@ type: IDENTIFIER                                                    { $$ = parse
   | type SQUARE_L SQUARE_R                                          { $$ = parse_list_type($1); }
   | type SQUARE_L type SQUARE_R                                     { $$ = parse_map_type($3, $1); }
   | SQUARE_L nl type_list nl SQUARE_R                               { $$ = parse_tuple_type($3); }
-  | SQUARE_L nl type SEMICOLON expression nl SQUARE_R               { $$ = parse_short_tuple_type($3, $5); }
+  | SQUARE_L nl type SEMICOLON INTEGER nl SQUARE_R                  { $$ = parse_vector_type($3, $5); }
   | STRUCT CURLY_L nl struct_field_list nl CURLY_R                  { $$ = parse_struct_type($4); }
   | UNION CURLY_L nl type_list nl CURLY_R                           { $$ = parse_union_type($4); }
   | ENUM CURLY_L nl identifier_list nl CURLY_R                      { $$ = parse_enum_type($4); }

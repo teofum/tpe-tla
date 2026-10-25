@@ -1,4 +1,6 @@
 #include <stdlib.h>
+#include <string.h>
+
 #include <support/types.h>
 #include <support/util.h>
 #include <support/str.h>
@@ -100,7 +102,11 @@ AST_STMT_FUNC(ast_stmt_export, ExportStmt, STMT_EXPORT, export)
 
 Stmt *ast_stmt_decl(PartialDeclarationStmt *pdecl) {
   DeclarationStmt *decl = new(DeclarationStmt);
-  *decl = (DeclarationStmt){ .type = pdecl->type, .right = pdecl->right };
+  *decl = (DeclarationStmt){
+    .type = pdecl->type,
+    .right = pdecl->right,
+    .meta = _ast_get_metadata()
+  };
   ast_consume_identifier_list(pdecl->left, &decl->left, &decl->left_count);
   free(pdecl);
 
@@ -230,9 +236,9 @@ LiteralExpr *ast_list_literal(ExprList *exprs) {
   return literal;
 }
 
-LiteralExpr *ast_short_list_literal(Expr *value, Expr *count) {
-  ShortListLiteral *list = new(ShortListLiteral);
-  *list = (ShortListLiteral){
+LiteralExpr *ast_vector_literal(Expr *value, u32 count) {
+  VectorLiteral *list = new(VectorLiteral);
+  *list = (VectorLiteral){
     .meta = _ast_get_metadata(),
     .value = value,
     .count = count
@@ -241,8 +247,8 @@ LiteralExpr *ast_short_list_literal(Expr *value, Expr *count) {
   LiteralExpr *literal = new(LiteralExpr);
   *literal = (LiteralExpr){
     .meta = _ast_get_metadata(),
-    .type = L_LIST_SHORT,
-    .short_list = list
+    .type = L_VECTOR,
+    .vec = list
   };
   return literal;
 }
@@ -574,19 +580,19 @@ Type *ast_tuple_type(TypeList *types) {
   return type;
 }
 
-Type *ast_short_tuple_type(Type *inner_type, Expr *count) {
-  ShortTupleType *tuple = new(ShortTupleType);
-  *tuple = (ShortTupleType){
+Type *ast_vector_type(Type *inner_type, u32 count) {
+  VectorType *tuple = new(VectorType);
+  *tuple = (VectorType){
     .meta = _ast_get_metadata(),
-    .type = inner_type,
-    .count = count
+    .item_type = inner_type,
+    .len = count
   };
 
   Type *type = new(Type);
   *type = (Type){
     .meta = _ast_get_metadata(),
-    .type = T_TUPLE_SHORT,
-    .short_tuple = tuple
+    .type = T_VECTOR,
+    .vec = tuple
   };
 
   return type;
@@ -705,6 +711,26 @@ Program *ast_program(StmtList *statements) {
 
 // -----------------------------------------------------------------------------
 
+bool ast_compare_identifiers(const Identifier *a, const Identifier *b) {
+  return a->len == b->len && strncmp(a->lexeme, b->lexeme, a->len) == 0;
+}
+
+Identifier *ast_clone_identifier(const Identifier *id) {
+  if (!id) return NULL;
+
+  Identifier *clone = new(Identifier);
+  *clone = (Identifier){
+    .label = id->label,
+    .len = id->len,
+    .lexeme = strdup(id->lexeme),
+    .loc = id->loc,
+  };
+
+  return clone;
+}
+
+// -----------------------------------------------------------------------------
+
 void ast_free_stmt(Stmt *stmt) {
   if (!stmt) return;
 
@@ -800,7 +826,7 @@ void ast_free_literal(LiteralExpr *literal) {
     case L_STRING: ast_free_string_literal(literal->string); break;
     case L_BOOL: ast_free_bool_literal(literal->boolean); break;
     case L_LIST: ast_free_list_literal(literal->list); break;
-    case L_LIST_SHORT: ast_free_short_list_literal(literal->short_list); break;
+    case L_VECTOR: ast_free_vector_literal(literal->vec); break;
     case L_MAP: ast_free_map_literal(literal->map); break;
     case L_STRUCT: ast_free_struct_literal(literal->struct_literal); break;
     case L_ENUM: ast_free_enum_literal(literal->enum_literal); break;
@@ -947,11 +973,10 @@ void ast_free_list_literal(ListLiteral *l) {
   free(l);
 }
 
-void ast_free_short_list_literal(ShortListLiteral *l) {
+void ast_free_vector_literal(VectorLiteral *l) {
   if (!l) return;
 
   ast_free_expr(l->value);
-  ast_free_expr(l->count);
   free(l);
 }
 
@@ -1027,9 +1052,11 @@ void ast_free_type(Type *t) {
     case T_STRUCT: ast_free_struct_type(t->struct_type); break;
     case T_UNION: ast_free_union_type(t->union_type); break;
     case T_TUPLE: ast_free_tuple_type(t->tuple); break;
-    case T_TUPLE_SHORT: ast_free_short_tuple_type(t->short_tuple); break;
+    case T_VECTOR: ast_free_vector_type(t->vec); break;
     case T_ENUM: ast_free_enum_type(t->enum_type); break;
     case T_BUILTIN: break;
+    case T_RANGE: break;
+    case T_ERROR: break;
   }
   free(t);
 }
@@ -1086,11 +1113,10 @@ void ast_free_tuple_type(TupleType *t) {
   free(t);
 }
 
-void ast_free_short_tuple_type(ShortTupleType *t) {
+void ast_free_vector_type(VectorType *t) {
   if (!t) return;
 
-  ast_free_type(t->type);
-  ast_free_expr(t->count);
+  ast_free_type(t->item_type);
   free(t);
 }
 
