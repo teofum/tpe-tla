@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <stdarg.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -389,8 +390,97 @@ static Type *_union_of(u32 n, ...) {
   return type;
 }
 
+static const char *_builtin_type_names[] = {
+  [T_VOID]    = "void",
+  [T_NIL]     = "nil",
+  [T_INT]     = "int",
+  [T_FLOAT]   = "float",
+  [T_STRING]  = "string",
+  [T_BOOL]    = "bool",
+  [T_ELEMENT] = "element",
+};
+
+static const char *tc_print_type(const Type *type);
+
+static const char *_tc_asprintf(const char *fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
+  usize len = vsnprintf(NULL, 0, fmt, args);
+  va_end(args);
+
+  va_start(args, fmt);
+  char *string = mem_dyn_arena_malloc(sa->tc_arena, len + 1);
+  vsnprintf(string, len + 1, fmt, args);
+  va_end(args);
+
+  return string;
+}
+
+static const char *_print_type_list(
+  Type **types,
+  u32 len,
+  const char *start,
+  const char *end
+) {
+  const char *string = _tc_asprintf("%s%s", start, tc_print_type(types[0]));
+  for (u32 i = 1; i < len; i++) {
+    string = _tc_asprintf("%s, %s", string, tc_print_type(types[i]));
+  }
+  string = _tc_asprintf("%s%s", string, end);
+  return string;
+}
+
+static const char *_print_field(const StructField *field) {
+  return _tc_asprintf("%s: %s", field->name, tc_print_type(field->type));
+}
+
 static const char *tc_print_type(const Type *type) {
-  return "[TODO print type]";
+  switch (type->type) {
+    case T_BUILTIN: return _builtin_type_names[type->builtin];
+    case T_NAMED:   return type->named->name->lexeme;
+    case T_ERROR:   return "[ERROR TYPE]";
+    case T_RANGE:   return "range";
+    case T_LIST: {
+      return _tc_asprintf("%s[]", tc_print_type(type->list->item_type));
+    }
+    case T_VECTOR: {
+      return _tc_asprintf(
+        "[%s; %u]",
+        tc_print_type(type->vec->item_type), type->vec->len
+      );
+    }
+    case T_MAP: {
+      return _tc_asprintf(
+        "%s[%s]",
+        tc_print_type(type->map->value_type), tc_print_type(type->map->key_type)
+      );
+    }
+    case T_TUPLE: {
+      return _print_type_list(type->tuple->types, type->tuple->len, "[", "]");
+    }
+    case T_UNION: {
+      return _print_type_list(
+        type->union_type->types, type->union_type->len,
+        "union { ", " }"
+      );
+    }
+    case T_STRUCT: {
+      StructField **fields = type->struct_type->fields;
+      const char *string = _tc_asprintf("struct { %s", _print_field(fields[0]));
+      for (u32 i = 1; i < type->struct_type->len; i++) {
+        string = _tc_asprintf("%s, %s", string, _print_field(fields[i]));
+      }
+      return _tc_asprintf("%s }", string);
+    }
+    case T_ENUM: {
+      Identifier **variants = type->enum_type->values;
+      const char *string = _tc_asprintf("enum { %s", variants[0]->lexeme);
+      for (u32 i = 1; i < type->enum_type->len; i++) {
+        string = _tc_asprintf("%s, %s", string, variants[i]->lexeme);
+      }
+      return _tc_asprintf("%s }", string);
+    }
+  }
 }
 
 /* -- Type checking: variables ---------------------------------------------- */
@@ -531,7 +621,7 @@ static bool _is_numvec_type(const Type *type) {
   if (type->type == T_VECTOR && _is_numeric_type(type->vec->item_type)) {
     return true;
   } else if (type->type == T_TUPLE) {
-    for (u32 i = 1; i < type->tuple->len; i++) {
+    for (u32 i = 0; i < type->tuple->len; i++) {
       if (!_is_numeric_type(type->tuple->types[i])) return false;
     }
     return true;
@@ -541,10 +631,19 @@ static bool _is_numvec_type(const Type *type) {
 }
 
 // Assumes type is a numeric vector!
-static BuiltinType _get_numvec_item_type(const Type *type) {
+static BuiltinType _numvec_item_type(const Type *type) {
   switch (type->type) {
     case T_VECTOR: return type->vec->item_type->builtin;
     case T_TUPLE: return T_FLOAT;
+    default: assert(false); // Unreachable
+  }
+}
+
+// Assumes type is a numeric vector!
+static u32 _numvec_len(const Type *type) {
+  switch (type->type) {
+    case T_VECTOR: return type->vec->len;
+    case T_TUPLE: return type->tuple->len;
     default: assert(false); // Unreachable
   }
 }
@@ -1181,8 +1280,8 @@ static Type *_arithmetic_numeric_type(Symbols *s, Type *l, Type *r, BinaryExpr *
     return _upgrade_numeric_type(l->builtin, r->builtin);
   } else if (_is_numvec_type(r)) {
     return _vector_of(
-      _upgrade_numeric_type(l->builtin, _get_numvec_item_type(r)),
-      r->vec->len
+      _upgrade_numeric_type(l->builtin, _numvec_item_type(r)),
+      _numvec_len(r)
     );
   } else {
     return tc_report_op_type(
@@ -1194,18 +1293,18 @@ static Type *_arithmetic_numeric_type(Symbols *s, Type *l, Type *r, BinaryExpr *
 
 static Type *_arithmetic_vector_type(Symbols *s, Type *l, Type *r, BinaryExpr *expr) {
   if (_is_numvec_type(r)) {
-    if (l->vec->len != r->vec->len) {
+    if (_numvec_len(l) != _numvec_len(r)) {
       return tc_report_error(&expr->meta.loc, "vector length mismatch");
     }
     Type *num_t = _upgrade_numeric_type(
-      _get_numvec_item_type(l),
-      _get_numvec_item_type(r)
+      _numvec_item_type(l),
+      _numvec_item_type(r)
     );
-    return _vector_of(num_t, l->vec->len);
+    return _vector_of(num_t, _numvec_len(l));
   } else if (_is_numeric_type(r)) {
     return _vector_of(
-      _upgrade_numeric_type(_get_numvec_item_type(l), r->builtin),
-      l->vec->len
+      _upgrade_numeric_type(_numvec_item_type(l), r->builtin),
+      _numvec_len(l)
     );
   } else {
     return tc_report_op_type(

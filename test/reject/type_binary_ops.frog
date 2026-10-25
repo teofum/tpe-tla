@@ -10,7 +10,7 @@ u := x * [1, 2, 3]    // OK: int * int vector
 
 v := x * [1, 2.5, 3]  // OK: int * float vector
 
-v = [1, 2] * 0.5      // OK: int vector * float
+v = [1, 2] * 0.5      // Type error: dimension mismatch
 
 foo := x < y          // OK: numeric types
 
