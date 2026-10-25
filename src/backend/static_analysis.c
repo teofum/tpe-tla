@@ -1299,6 +1299,9 @@ static Type *_assignment_type(Symbols *s, const AssignmentExpr *expr) {
   Type *lhs_type = _variable_type(s, expr->left);
   Type *rhs_type = tc_check_expr(s, expr->right);
 
+  // Fail silently on error type; assume error has been reported upstream
+  if (_is_error(lhs_type) || _is_error(rhs_type)) return tc_error();
+
   if (tc_accepts_type(s, lhs_type, rhs_type)) return lhs_type;
   return tc_report_error_fmt(
     &expr->meta.loc,
@@ -1537,6 +1540,8 @@ static void _check_decl(Symbols *s, const DeclarationStmt *decl) {
   tc_debug_log("Decl", &decl->meta.loc);
 
   Type *value_type = tc_check_expr(s, decl->right);
+  // Fail silently; assume error has been reported upstream
+  if (_is_error(value_type)) return;
 
   if (decl->left_count == 1) {
     Type *decl_type = or_default(decl->type, value_type);
