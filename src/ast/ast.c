@@ -243,7 +243,7 @@ LiteralExpr *ast_vector_literal(Expr *value, u32 count) {
   LiteralExpr *literal = new(LiteralExpr);
   *literal = (LiteralExpr){
     .meta = _ast_get_metadata(),
-    .type = L_LIST_SHORT,
+    .type = L_VECTOR,
     .vec = list
   };
   return literal;
@@ -581,7 +581,7 @@ Type *ast_vector_type(Type *inner_type, u32 count) {
   *tuple = (VectorType){
     .meta = _ast_get_metadata(),
     .item_type = inner_type,
-    .count = count
+    .len = count
   };
 
   Type *type = new(Type);
@@ -822,7 +822,7 @@ void ast_free_literal(LiteralExpr *literal) {
     case L_STRING: ast_free_string_literal(literal->string); break;
     case L_BOOL: ast_free_bool_literal(literal->boolean); break;
     case L_LIST: ast_free_list_literal(literal->list); break;
-    case L_LIST_SHORT: ast_free_vector_literal(literal->vec); break;
+    case L_VECTOR: ast_free_vector_literal(literal->vec); break;
     case L_MAP: ast_free_map_literal(literal->map); break;
     case L_STRUCT: ast_free_struct_literal(literal->struct_literal); break;
     case L_ENUM: ast_free_enum_literal(literal->enum_literal); break;

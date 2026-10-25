@@ -15,10 +15,12 @@
     downstream, creating an error cascade
   - Don't report errors caused by an error type; assume something was reported
     upstream instead
-[ ] Mixed int/float tuple literals are inferred as heterogenous tuples, which
+[x] Mixed int/float tuple literals are inferred as heterogenous tuples, which
     means they can't be used as vectors. Add a special case so they resolve as
     float vectors.
-[ ] Short Tuple is kind of a crappy name, rename to vector
+  - Better to make them implicitly castable down the line to keep most specific
+    typing
+[x] Short Tuple is kind of a crappy name, rename to vector
 
 #=== General ==================================================================#
 

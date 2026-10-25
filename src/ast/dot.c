@@ -145,7 +145,7 @@ static void dot_type(Type *type, u64 pid) {
       }
       break;
     case T_VECTOR:
-      snprintf(label, 256, "Tuple Shorthand [%u]", type->vec->count);
+      snprintf(label, 256, "Tuple Shorthand [%u]", type->vec->len);
       dot_type(type->vec->item_type, id);
       break;
     case T_ENUM:
@@ -197,7 +197,7 @@ static void dot_literal(LiteralExpr *literal, u64 pid) {
         dot_expr(literal->list->exprs[i], id);
       }
       break;
-    case L_LIST_SHORT:
+    case L_VECTOR:
       label = new_array(char, 256);
       snprintf(label, 256, "Shorthand List [%u]", literal->vec->count);
       dot_expr(literal->vec->value, id);

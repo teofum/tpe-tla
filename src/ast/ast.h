@@ -49,7 +49,7 @@ typedef enum {
   L_BOOL,
   L_NIL,
   L_LIST,
-  L_LIST_SHORT,
+  L_VECTOR,
   L_MAP,
   L_STRUCT,
   L_ENUM,
@@ -502,7 +502,7 @@ struct TupleType {
 struct VectorType {
   ASTNodeMetadata meta;
   Type *item_type;
-  u32 count;
+  u32 len;
 };
 
 struct EnumType {
