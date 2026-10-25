@@ -1249,8 +1249,9 @@ static Type *_variable_type(Symbols *s, VariableExpr *var) {
 }
 
 static Type *_unary_type(Symbols *s, UnaryExpr *expr) {
-  Type *expr_type = tc_check_expr(s, expr->expr);
+  tc_debug_log("UnaryExpr", &expr->meta.loc);
 
+  Type *expr_type = tc_check_expr(s, expr->expr);
   switch (expr->op) {
     case BANG:
     case NOT: {
@@ -1319,7 +1320,6 @@ static Type *_binary_type(Symbols *s, BinaryExpr *expr) {
 
   Type *l_type = tc_check_expr(s, expr->left);
   Type *r_type = tc_check_expr(s, expr->right);
-
   switch (expr->op) {
     case PLUS:
     case STAR: {
@@ -1415,6 +1415,8 @@ static Type *_binary_type(Symbols *s, BinaryExpr *expr) {
 }
 
 static Type *_assignment_type(Symbols *s, const AssignmentExpr *expr) {
+  tc_debug_log("Assignment", &expr->meta.loc);
+
   Type *lhs_type = _variable_type(s, expr->left);
   Type *rhs_type = tc_check_expr(s, expr->right);
 
@@ -1430,6 +1432,8 @@ static Type *_assignment_type(Symbols *s, const AssignmentExpr *expr) {
 }
 
 static Type *_if_expr_type(Symbols *s, const IfExpr *expr) {
+  tc_debug_log("IfExpr", &expr->meta.loc);
+
   Type *condition_type = tc_check_expr(s, expr->condition);
   Type *true_type = tc_check_expr(s, expr->true_branch);
   Type *false_type = expr->false_branch
@@ -1454,8 +1458,9 @@ static Type *_if_expr_type(Symbols *s, const IfExpr *expr) {
 }
 
 static Type *_for_expr_type(Symbols *s, const ForExpr *expr) {
-  Type *iterable_type = tc_check_expr(s, expr->iterable);
+  tc_debug_log("ForExpr", &expr->meta.loc);
 
+  Type *iterable_type = tc_check_expr(s, expr->iterable);
   if (!_is_iterable(iterable_type)) {
     return tc_report_error_fmt(
       &expr->iterable->meta.loc,
@@ -1571,6 +1576,8 @@ static Type *_function_call_type(Symbols *s, const FunctionCallExpr *expr) {
 }
 
 static Type *_import_type(Symbols *s, const ImportExpr *expr) {
+  tc_debug_log("Import", &expr->meta.loc);
+
   switch (expr->type) {
     case IMPORT_URL: return _builtin_type(T_STRING);
     case IMPORT_CSV: {
@@ -1588,6 +1595,8 @@ static Type *_import_type(Symbols *s, const ImportExpr *expr) {
 }
 
 static Type *_env_type(Symbols *s, const EnvExpr *expr) {
+  tc_debug_log("Env", &expr->meta.loc);
+
   if (expr->default_value) {
     Type *default_value_type = tc_check_expr(s, expr->default_value);
     if (!_is_builtin(default_value_type, T_STRING)) {
@@ -1637,22 +1646,25 @@ static Type *_block_type(Symbols *s, const BlockExpr *expr) {
 }
 
 static Type *tc_check_expr(Symbols *s, const Expr *expr) {
-  tc_debug_log("Expr", &expr->meta.loc);
-
+  Type *type = NULL;
   switch (expr->type) {
-    case EXPR_LITERAL: return _literal_type(s, expr->literal);
-    case EXPR_VARIABLE: return _variable_type(s, expr->variable);
-    case EXPR_UNARY: return _unary_type(s, expr->unary);
-    case EXPR_BINARY: return _binary_type(s, expr->binary);
-    case EXPR_ASSIGNMENT: return _assignment_type(s,expr->assignment);
-    case EXPR_IF: return _if_expr_type(s, expr->if_expr);
-    case EXPR_FOR: return _for_expr_type(s, expr->for_expr);
-    case EXPR_BLOCK: return _block_type(s, expr->block);
-    case EXPR_FUNCTION_CALL: return _function_call_type(s, expr->function_call);
-    case EXPR_IMPORT: return _import_type(s, expr->import);
-    case EXPR_ENV: return _env_type(s, expr->env);
-    case EXPR_GROUP: return tc_check_expr(s, expr->group->inner_expr);
+    case EXPR_LITERAL: type = _literal_type(s, expr->literal); break;
+    case EXPR_VARIABLE: type = _variable_type(s, expr->variable); break;
+    case EXPR_UNARY: type = _unary_type(s, expr->unary); break;
+    case EXPR_BINARY: type = _binary_type(s, expr->binary); break;
+    case EXPR_ASSIGNMENT: type = _assignment_type(s,expr->assignment); break;
+    case EXPR_IF: type = _if_expr_type(s, expr->if_expr); break;
+    case EXPR_FOR: type = _for_expr_type(s, expr->for_expr); break;
+    case EXPR_BLOCK: type = _block_type(s, expr->block); break;
+    case EXPR_FUNCTION_CALL: type = _function_call_type(s, expr->function_call); break;
+    case EXPR_IMPORT: type = _import_type(s, expr->import); break;
+    case EXPR_ENV: type = _env_type(s, expr->env); break;
+    case EXPR_GROUP: type = tc_check_expr(s, expr->group->inner_expr); break;
   }
+
+  tc_debug_log("Expr", &expr->meta.loc);
+  logger_log(sa->tc_logger, LOG_DEBUG, "\t -> %s", tc_print_type(type));
+  return type;
 }
 
 static void _check_decl(Symbols *s, const DeclarationStmt *decl) {

@@ -102,7 +102,11 @@ AST_STMT_FUNC(ast_stmt_export, ExportStmt, STMT_EXPORT, export)
 
 Stmt *ast_stmt_decl(PartialDeclarationStmt *pdecl) {
   DeclarationStmt *decl = new(DeclarationStmt);
-  *decl = (DeclarationStmt){ .type = pdecl->type, .right = pdecl->right };
+  *decl = (DeclarationStmt){
+    .type = pdecl->type,
+    .right = pdecl->right,
+    .meta = _ast_get_metadata()
+  };
   ast_consume_identifier_list(pdecl->left, &decl->left, &decl->left_count);
   free(pdecl);
 
