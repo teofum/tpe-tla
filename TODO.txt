@@ -40,6 +40,8 @@
 [x] Improve and update README.md
   [x] Give the dang thing a name
 
+[ ] Add string slicing
+
 #=== Backend ==================================================================#
 
 [x] Hash map implementation
@@ -112,6 +114,7 @@
 /--- Evaluator ----------------------------------------------------------------/
 [ ] Value definitions
 [ ] Expression evaluators
+[ ] Builtin functions
 
 /--- Code Generation ----------------------------------------------------------/
 [ ] Values to code
