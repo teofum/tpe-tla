@@ -939,7 +939,7 @@ static Type *_vector_type(Symbols *s, VectorLiteral *vec) {
   Type *item_type = tc_check_expr(s, vec->value);
   if (_is_error(item_type)) return tc_error();
 
-  return _vector_of(item_type, vec->count);
+  return _vector_of(item_type, vec->len);
 }
 
 static bool _is_valid_map_key_type(const Type *type) {

@@ -12,9 +12,9 @@ typedef struct {
 
 typedef struct {
   Type *type;
+  const Value *value;
   Location loc;
   bool constant;
-  // TODO value
 } Symbol;
 
 typedef map(SymbolKey, TypeAliasStmt) TypeTable;

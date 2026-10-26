@@ -9,4 +9,7 @@
 #define map_or_null(x, f) ((x) ? f((x)) : NULL)
 #define or_default(x, d) ((x) ? (x) : (d))
 
+#define max(a, b) ((a) > (b) ? (a) : (b))
+#define min(a, b) ((a) < (b) ? (a) : (b))
+
 #endif

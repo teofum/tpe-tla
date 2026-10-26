@@ -21,6 +21,8 @@
   - Better to make them implicitly castable down the line to keep most specific
     typing
 [x] Short Tuple is kind of a crappy name, rename to vector
+[ ] Type checking constness fuckery
+[ ] Leaky strings in eval
 
 #=== General ==================================================================#
 

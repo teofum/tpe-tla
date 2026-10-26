@@ -1,6 +1,7 @@
 #ifndef AST_HEADER
 #define AST_HEADER
 
+#include <support/hash_map.h>
 #include <support/types.h>
 
 #define AST_LIST(T, name)                                             \
@@ -96,6 +97,20 @@ typedef enum {
 } BuiltinType;
 extern const char *builtin_type_str[];
 
+typedef enum {
+  // Primitive values
+  VAL_NIL,
+  VAL_INT,
+  VAL_FLOAT,
+  VAL_STRING,
+  VAL_BOOL,
+  VAL_ELEMENT,
+  // Composite values
+  VAL_LIST,     // Maps to lists, tuples, vectors
+  VAL_MAP,      // Maps to maps and structs
+  VAL_RANGE,
+} ValueType;
+
 typedef struct {
   i32 first_line;
   i32 first_column;
@@ -171,6 +186,13 @@ typedef struct FunctionDef FunctionDef;
 typedef struct Parameter Parameter;
 
 typedef struct Program Program;
+
+typedef struct Value Value;
+typedef struct Element Element;
+typedef map(char, Value) ElementAttributes;
+typedef struct List List;
+typedef map(Value, Value) Map;
+typedef struct Range Range;
 
 AST_LIST(Stmt, stmt);
 AST_LIST(Expr, expr);
@@ -387,7 +409,7 @@ struct ListLiteral {
 struct VectorLiteral {
   ASTNodeMetadata meta;
   Expr *value;
-  u32 count;
+  u32 len;
 };
 
 struct MapLiteral {
@@ -544,6 +566,39 @@ struct Program {
   u32 scope;
   u32 len;
   Stmt **statements;
+};
+
+// -----------------------------------------------------------------------------
+
+struct Value {
+  ValueType type;
+  union {
+    i64 integer;
+    f64 floating;
+    bool boolean;
+    const str *string;
+    Element *element;
+    List *list;
+    Map *map;
+    Range *range;
+  };
+};
+
+
+struct Element {
+  const char *tag;
+  ElementAttributes attributes;
+  List *children;
+};
+
+struct List {
+  usize len;
+  const Value **items;
+};
+
+struct Range {
+  i64 start;
+  i64 end;
 };
 
 // -----------------------------------------------------------------------------

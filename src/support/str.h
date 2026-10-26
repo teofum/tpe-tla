@@ -14,6 +14,9 @@ void str_append(str *string, str second);
 void str_append_temp(str *string, str second);
 void str_append_c(str *string, const char *second);
 
+i32 str_compare(str a, str b);
+bool str_equals(str a, str b);
+
 void str_free(str string);
 
 #endif

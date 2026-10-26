@@ -199,7 +199,7 @@ static void dot_literal(LiteralExpr *literal, u64 pid) {
       break;
     case L_VECTOR:
       label = new_array(char, 256);
-      snprintf(label, 256, "Shorthand List [%u]", literal->vec->count);
+      snprintf(label, 256, "Shorthand List [%u]", literal->vec->len);
       dot_expr(literal->vec->value, id);
       break;
     case L_MAP:

@@ -93,6 +93,17 @@ void str_append_c(str *string, const char *second) {
   str_append_temp(string, str_from_cstring(second));
 }
 
+i32 str_compare(str a, str b) {
+  u64 len = min(a.len, b.len);
+  i32 cmp = strncmp(a.ptr, b.ptr, len);
+  if (cmp != 0) return cmp;
+  return a.len - b.len;
+}
+
+bool str_equals(str a, str b) {
+  return str_compare(a, b) == 0;
+}
+
 void str_free(str string) {
   free(string.ptr);
 }

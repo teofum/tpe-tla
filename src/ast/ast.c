@@ -241,7 +241,7 @@ LiteralExpr *ast_vector_literal(Expr *value, u32 count) {
   *list = (VectorLiteral){
     .meta = _ast_get_metadata(),
     .value = value,
-    .count = count
+    .len = count
   };
 
   LiteralExpr *literal = new(LiteralExpr);
