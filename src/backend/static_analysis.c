@@ -65,7 +65,7 @@ void sa_init(CompilerState *compiler_state) {
   sa->tc_logger = logger_create("Typecheck", stderr,
     cs->options.typecheck_log_level
   );
-  sa->tc_arena = mem_dyn_arena_create(0);
+  sa->tc_arena = mem_dyn_arena_create(MEM_SIZE_AUTO);
 }
 
 void sa_shutdown() {

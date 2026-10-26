@@ -22,7 +22,7 @@
     typing
 [x] Short Tuple is kind of a crappy name, rename to vector
 [ ] Type checking constness fuckery
-[ ] Leaky strings in eval
+[ ] Leaky hashmaps in eval
 
 #=== General ==================================================================#
 

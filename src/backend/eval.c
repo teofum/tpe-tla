@@ -15,6 +15,7 @@
 #include <support/dyn_array.h>
 #include <support/hash_map.h>
 #include <support/logger.h>
+#include <support/mem.h>
 #include <support/state.h>
 #include <support/str.h>
 #include <support/types.h>
@@ -23,8 +24,10 @@
 #include "eval.h"
 
 typedef struct {
-  dyn_array *stack;
   Logger *logger;
+
+  dyn_array *stack;
+  dyn_arena *arena;
 } Evaluator;
 
 static CompilerState *cs = NULL;
@@ -57,12 +60,15 @@ void eval_init(CompilerState *compiler_state) {
   e = new(Evaluator);
   e->logger = logger_create("Eval", stderr, LOG_DEBUG);
   e->stack = new_dyn_array(u32);
+  e->arena = mem_dyn_arena_create(MEM_SIZE_AUTO);
 }
 
 void eval_shutdown() {
   if (!e) return;
 
   if (e->logger) logger_free(e->logger);
+  if (e->stack) dyn_array_free(e->stack);
+  if (e->arena) mem_dyn_arena_destroy(e->arena);
   free(e);
 
   e = NULL;
@@ -71,8 +77,8 @@ void eval_shutdown() {
 
 /* -- Evaluation: utils ----------------------------------------------------- */
 
-#define eval_new(T) new(T)
-#define eval_new_array(T, n) new_array(T, n)
+#define eval_new(T) ((T*)(mem_dyn_arena_calloc(e->arena, 1, sizeof(T))))
+#define eval_new_array(T, n) ((T*)(mem_dyn_arena_calloc(e->arena, n, sizeof(T))))
 
 #define eval_make(T, name, ...)               \
   T *name = eval_new(T);                      \
