@@ -1,6 +1,7 @@
 #include <ast/ast.h>
 #include <ast/symbols.h>
 #include <ast/dot.h>
+#include <backend/eval.h>
 #include <backend/static_analysis.h>
 #include <error/error.h>
 #include <frontend/frontend.h>
@@ -57,7 +58,14 @@ i32 main(i32 argc, char *const*argv) {
   }
   if (!err_gate()) return shutdown(cs);
 
-  // TODO: eval, codegen
+  // Evaluate
+  for (u32 i = 0; i < cs->options.input_file_count; i++) {
+    cs->status = eval_evaluate(i);
+    if (cs->status != STATUS_SUCCEEDED) break;
+  }
+  if (!err_gate()) return shutdown(cs);
+
+  // TODO: codegen
 
   return shutdown(cs);
 }
@@ -78,6 +86,7 @@ CompilerState *init(CompilerOptions *opts) {
   err_init(cs);
   fe_init(cs);
   sa_init(cs);
+  eval_init(cs);
 
   return cs;
 }
@@ -98,6 +107,7 @@ CompilationStatus shutdown(CompilerState *cs) {
   logger_free(cs->logger);
   options_free(&cs->options);
 
+  eval_shutdown();
   sa_shutdown();
   fe_shutdown();
   err_shutdown();

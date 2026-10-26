@@ -12,6 +12,7 @@
 #include <stdio.h>
 
 #include <ast/ast.h>
+#include <support/dyn_array.h>
 #include <support/hash_map.h>
 #include <support/logger.h>
 #include <support/state.h>
@@ -22,11 +23,31 @@
 #include "eval.h"
 
 typedef struct {
+  dyn_array *stack;
   Logger *logger;
 } Evaluator;
 
 static CompilerState *cs = NULL;
 static Evaluator *e = NULL;
+
+/* -- Scope ----------------------------------------------------------------- */
+
+static u32 _push_scope(u32 scope) {
+  dyn_array_push(e->stack, &scope);
+  return scope;
+}
+
+static void _pop_scope() {
+  dyn_array_remove_unordered(e->stack, dyn_array_size(e->stack) - 1);
+}
+
+static u32 _peek_scope() {
+  return *(u32 *)dyn_array_get(e->stack, dyn_array_size(e->stack) - 1);
+}
+
+static u32 _get_scope(u32 level) {
+  return *(u32 *)dyn_array_get(e->stack, dyn_array_size(e->stack) - 1 - level);
+}
 
 /* -- Module init/shutdown -------------------------------------------------- */
 
@@ -35,6 +56,7 @@ void eval_init(CompilerState *compiler_state) {
 
   e = new(Evaluator);
   e->logger = logger_create("Eval", stderr, LOG_DEBUG);
+  e->stack = new_dyn_array(u32);
 }
 
 void eval_shutdown() {
@@ -118,7 +140,7 @@ static const Value *_bool(bool bool_value) {
 }
 
 static const Value *_str(const str *str_value) {
-  eval_make(Value, value, { .type = VAL_BOOL, .string = str_value });
+  eval_make(Value, value, { .type = VAL_STRING, .string = str_value });
   return value;
 }
 
@@ -177,7 +199,7 @@ static const Value *eval_map(const MapLiteral *map) {
   Map *map_v = eval_new(Map);
   map_init(map_v, eval_hash_value, eval_compare_values);
 
-  for (u32 i = 1; i < map->len; i++) {
+  for (u32 i = 0; i < map->len; i++) {
     const Value *key_v = eval_expr(map->entries[i]->key);
     const Value *value_v = eval_expr(map->entries[i]->value);
     if (!map_insert(map_v, (Value *)key_v, (Value *)value_v)) {
@@ -230,6 +252,49 @@ static const Value *eval_expr(const Expr *expr) {
   assert(false); // perish
 }
 
+static const Value *eval_stmt(const Stmt *stmt) {
+  switch (stmt->type) {
+    case STMT_EXPR: return eval_expr(stmt->expr);
+  }
+  assert(false); // perish
+}
+
+static const Value *eval_program(const Program *program) {
+  _push_scope(program->scope);
+
+  const Value *value = NULL;
+  if (program->len == 1) {
+    value = eval_stmt(program->statements[0]);
+  } else {
+    eval_make(List, vlist, {
+      .len = program->len,
+      .items = eval_new_array(const Value *, program->len)
+    });
+    for (u32 i = 0; i < program->len; i++) {
+      vlist->items[i] = eval_stmt(program->statements[i]);
+    }
+    eval_make(Value, v, { .type = VAL_LIST, .list = vlist });
+    value = v;
+  }
+
+  _pop_scope();
+  return value;
+}
+
 CompilationStatus eval_evaluate(i32 file_idx) {
+  cs->current_file = file_idx;
+
+  Program *ast = cs->asts[file_idx];
+  assert(ast != NULL); // If we got to this point without an AST we have a bug
+
+  Symbols *sym = cs->symbol_data[file_idx];
+  assert(sym != NULL); // If we got to this point without a symbol table we have a bug
+
+  dyn_array_clear(e->stack);
+  // mem_dyn_arena_free_all(sa->tc_arena);
+  const Value *val = eval_program(ast);
+  assert(dyn_array_size(e->stack) == 0); // Unbalanced stack is a bug
+
+  cs->current_file = -1;
   return STATUS_SUCCEEDED;
 }
