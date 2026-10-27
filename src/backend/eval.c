@@ -22,6 +22,7 @@
 #include <support/util.h>
 
 #include "eval.h"
+#include "frontend/bison/bison_parser.h"
 
 typedef struct {
   Logger *logger;
@@ -160,6 +161,16 @@ static const Value *_str_id(const Identifier *id) {
   return _str(str_value);
 }
 
+static const Value *_list(usize len) {
+  eval_make(List, list_v, {
+    .len = len,
+    .items = eval_new_array(const Value *, len)
+  });
+
+  eval_make(Value, value, { .type = VAL_LIST, .list = list_v });
+  return value;
+}
+
 /* -- Evaluation ------------------------------------------------------------ */
 
 static const Value *eval_expr(const Expr *expr);
@@ -179,16 +190,11 @@ static const Value *eval_range(const RangeLiteral *range) {
 }
 
 static const Value *eval_list(const ListLiteral *list) {
-  eval_make(List, list_v, {
-    .len = list->len,
-    .items = eval_new_array(const Value *, list->len)
-  });
-
+  const Value *value = _list(list->len);
   for (u32 i = 0; i < list->len; i++) {
-    list_v->items[i] = eval_expr(list->exprs[i]);
+    value->list->items[i] = eval_expr(list->exprs[i]);
   }
 
-  eval_make(Value, value, { .type = VAL_LIST, .list = list_v });
   return value;
 }
 
@@ -255,9 +261,231 @@ static const Value *eval_literal(const LiteralExpr *expr) {
   }
 }
 
+static const Value *eval_unary(const UnaryExpr *expr) {
+  const Value *inner = eval_expr(expr->expr);
+  if (!inner) return NULL;
+
+  switch (expr->op) {
+    case NOT:
+    case BANG: {
+      assert(inner->type == VAL_BOOL);
+      return _bool(!inner->boolean);
+    }
+    case MINUS: {
+      switch (inner->type) {
+        case VAL_INT: return _int(-inner->integer);
+        case VAL_FLOAT: return _float(-inner->floating);
+        default: assert(false);
+      }
+    }
+    default: assert(false); // Unreachable
+  }
+}
+
+static const i64 _math_op_int(i64 l, i64 r, TokenLabel op) {
+  switch (op) {
+    case PLUS: return l + r;
+    case MINUS: return l - r;
+    case STAR: return l * r;
+    case SLASH: return l / r;
+    default: assert(false);
+  }
+}
+
+static const f64 _math_op_float(f64 l, f64 r, TokenLabel op) {
+  switch (op) {
+    case PLUS: return l + r;
+    case MINUS: return l - r;
+    case STAR: return l * r;
+    case SLASH: return l / r;
+    default: assert(false);
+  }
+}
+
+static const Value *eval_math_float(f64 l, const Value *r, TokenLabel op) {
+  switch (r->type) {
+    case VAL_INT: return _float(_math_op_float(l, (f64)r->integer, op));
+    case VAL_FLOAT: return _float(_math_op_float(l, r->floating, op));
+    case VAL_LIST: {
+      const Value *value = _list(r->list->len);
+      for (u32 i = 0; i < r->list->len; i++) {
+        value->list->items[i] = eval_math_float(l, r->list->items[i], op);
+      }
+      return value;
+    }
+    default: assert(false);
+  }
+}
+
+static const Value *eval_math_int(i64 l, const Value *r, TokenLabel op) {
+  switch (r->type) {
+    case VAL_INT: return _int(_math_op_int(l, r->integer, op));
+    case VAL_FLOAT: return _float(_math_op_float((f64)l, r->floating, op));
+    case VAL_LIST: {
+      const Value *value = _list(r->list->len);
+      for (u32 i = 0; i < r->list->len; i++) {
+        value->list->items[i] = eval_math_int(l, r->list->items[i], op);
+      }
+      return value;
+    }
+    default: assert(false);
+  }
+}
+
+static const Value *_math_vec_item(const Value *l, const Value *r, TokenLabel op) {
+  switch (l->type) {
+    case VAL_INT: return eval_math_int(l->integer, r, op);
+    case VAL_FLOAT: return eval_math_float(l->floating, r, op);
+    default: assert(false);
+  }
+}
+
+static const Value *eval_math_vec(const List *l, const Value *r, TokenLabel op) {
+  const Value *value = _list(l->len);
+  for (u32 i = 0; i < l->len; i++) {
+    const Value *l_item = l->items[i];
+    const Value *r_item = (r->type == VAL_LIST) ? r->list->items[i] : r;
+    value->list->items[i] = _math_vec_item(l_item, r_item, op);
+  }
+  return value;
+}
+
+static const Value *eval_string_op(const str *l, const Value *r, TokenLabel op) {
+  switch (op) {
+    case PLUS: // TODO
+    case STAR: // TODO
+    default: assert(false);
+  }
+}
+
+static bool _cmp_int(i64 l, i64 r, TokenLabel op) {
+  switch (op) {
+    case GREATER_EQUAL: return l >= r;
+    case GREATER: return l > r;
+    case LESS_EQUAL: return l <= r;
+    case LESS: return l < r;
+    default: assert(false);
+  }
+}
+
+static bool _cmp_float(f64 l, f64 r, TokenLabel op) {
+  switch (op) {
+    case GREATER_EQUAL: return l >= r;
+    case GREATER: return l > r;
+    case LESS_EQUAL: return l <= r;
+    case LESS: return l < r;
+    default: assert(false);
+  }
+}
+
+static const Value *eval_comp_float(f64 l, const Value *r, TokenLabel op) {
+  switch (r->type) {
+    case VAL_INT: return _bool(_cmp_float(l, (f64)r->integer, op));
+    case VAL_FLOAT: return _bool(_cmp_float(l, r->floating, op));
+    default: assert(false);
+  }
+}
+
+static const Value *eval_comp_int(i64 l, const Value *r, TokenLabel op) {
+  switch (r->type) {
+    case VAL_INT: return _bool(_cmp_int(l, r->integer, op));
+    case VAL_FLOAT: return _bool(_cmp_float((f64)l, r->floating, op));
+    default: assert(false);
+  }
+}
+
+static const Value *eval_comp_str(const str *l, const Value *r, TokenLabel op) {
+  assert(r->type == VAL_STRING);
+  i32 cmp = str_compare(*l, *r->string);
+  switch (op) {
+    case GREATER_EQUAL: return _bool(cmp >= 0);
+    case GREATER: return _bool(cmp > 0);
+    case LESS_EQUAL: return _bool(cmp <= 0);
+    case LESS: return _bool(cmp < 0);
+    default: assert(false);
+  }
+}
+
+static const Value *eval_binary(const BinaryExpr *expr) {
+  const Value *left = eval_expr(expr->left);
+  if (!left) return NULL;
+
+  switch (expr->op) {
+    case PLUS:
+    case STAR: {
+      const Value *right = eval_expr(expr->right);
+      if (!right) return NULL;
+
+      switch (left->type) {
+        case VAL_INT: return eval_math_int(left->integer, right, expr->op);
+        case VAL_FLOAT: return eval_math_float(left->floating, right, expr->op);
+        case VAL_LIST: return eval_math_vec(left->list, right, expr->op);
+        case VAL_STRING: return eval_string_op(left->string, right, expr->op);
+        default: assert(false);
+      }
+    }
+    case MINUS:
+    case SLASH: {
+      const Value *right = eval_expr(expr->right);
+      if (!right) return NULL;
+
+      switch (left->type) {
+        case VAL_INT: return eval_math_int(left->integer, right, expr->op);
+        case VAL_FLOAT: return eval_math_float(left->floating, right, expr->op);
+        case VAL_LIST: return eval_math_vec(left->list, right, expr->op);
+        default: assert(false);
+      }
+    }
+    case GREATER_EQUAL:
+    case GREATER:
+    case LESS_EQUAL:
+    case LESS: {
+      const Value *right = eval_expr(expr->right);
+      if (!right) return NULL;
+
+      switch (left->type) {
+        case VAL_INT: return eval_comp_int(left->integer, right, expr->op);
+        case VAL_FLOAT: return eval_comp_float(left->floating, right, expr->op);
+        case VAL_STRING: return eval_comp_str(left->string, right, expr->op);
+        default: assert(false);
+      }
+    }
+    case EQUAL_EQUAL:
+    case BANG_EQUAL: {
+      const Value *right = eval_expr(expr->right);
+      if (!right) return NULL;
+
+      return _bool(eval_compare_values(left, right));
+    }
+    case AND: {
+      assert(left->type == VAL_BOOL);
+      if (!left) return _bool(false);
+
+      const Value *right = eval_expr(expr->right);
+      if (!right) return NULL;
+
+      assert(right->type == VAL_BOOL);
+      return right;
+    }
+    case OR: {
+      assert(left->type == VAL_BOOL);
+      if (left) return _bool(true);
+
+      const Value *right = eval_expr(expr->right);
+      if (!right) return NULL;
+
+      assert(right->type == VAL_BOOL);
+      return right;
+    }
+    default: assert(false); // Unreachable
+  }
+}
+
 static const Value *eval_expr(const Expr *expr) {
   switch (expr->type) {
     case EXPR_LITERAL: return eval_literal(expr->literal);
+    case EXPR_UNARY: return eval_unary(expr->unary);
+    case EXPR_BINARY: return eval_binary(expr->binary);
   }
   assert(false); // perish
 }

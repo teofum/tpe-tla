@@ -114,8 +114,20 @@
   [x] Memory management (custom allocator)
 
 /--- Evaluator ----------------------------------------------------------------/
-[ ] Value definitions
+[x] Value definitions
 [ ] Expression evaluators
+  [x] Literals
+  [ ] Variables
+  [x] Unary/binary operators
+  [ ] Assignments
+  [ ] If expressions
+  [ ] For expressions
+  [ ] Function calls
+  [ ] Import expressions
+  [ ] Env expressions
+  [ ] Blocks
+[ ] Statement evaluators
+  [ ] Declarations/constants
 [ ] Builtin functions
 
 /--- Code Generation ----------------------------------------------------------/
