@@ -77,8 +77,12 @@ void eval_shutdown() {
 
 /* -- Evaluation: utils ----------------------------------------------------- */
 
-#define eval_new(T) ((T*)(mem_dyn_arena_calloc(e->arena, 1, sizeof(T))))
-#define eval_new_array(T, n) ((T*)(mem_dyn_arena_calloc(e->arena, n, sizeof(T))))
+static void *eval_calloc(usize count, usize size) {
+  return mem_dyn_arena_calloc(e->arena, count, size);
+}
+
+#define eval_new(T) ((T*)(eval_calloc(1, sizeof(T))))
+#define eval_new_array(T, n) ((T*)(eval_calloc(n, sizeof(T))))
 
 #define eval_make(T, name, ...)               \
   T *name = eval_new(T);                      \
@@ -203,7 +207,7 @@ static const Value *eval_vector(const VectorLiteral *vec) {
 
 static const Value *eval_map(const MapLiteral *map) {
   Map *map_v = eval_new(Map);
-  map_init(map_v, eval_hash_value, eval_compare_values);
+  map_inita(map_v, eval_hash_value, eval_compare_values, eval_calloc, NULL);
 
   for (u32 i = 0; i < map->len; i++) {
     const Value *key_v = eval_expr(map->entries[i]->key);
@@ -220,7 +224,7 @@ static const Value *eval_map(const MapLiteral *map) {
 
 static const Value *eval_struct(const StructLiteral *struct_l) {
   Map *map_v = eval_new(Map);
-  map_init(map_v, eval_hash_value, eval_compare_values);
+  map_inita(map_v, eval_hash_value, eval_compare_values, eval_calloc, NULL);
 
   for (u32 i = 1; i < struct_l->len; i++) {
     const Value *key_v = _str_id(struct_l->fields[i]->name);

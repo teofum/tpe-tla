@@ -17,7 +17,13 @@ struct map_entry {
   void *value;
 };
 
-void _map_base_init(_map_base *mb, _map_base_hash_fn hash_fn, _map_base_compare_fn compare_fn) {
+void _map_base_init(
+  _map_base *mb,
+  _map_base_hash_fn hash_fn,
+  _map_base_compare_fn compare_fn,
+  _map_base_allocator alloc,
+  _map_base_deallocator dealloc
+) {
   assert(hash_fn != NULL);
   assert(compare_fn != NULL);
 
@@ -25,6 +31,8 @@ void _map_base_init(_map_base *mb, _map_base_hash_fn hash_fn, _map_base_compare_
   *mb = (_map_base){
     .hash = hash_fn,
     .compare = compare_fn,
+    .alloc = alloc,
+    .dealloc = dealloc,
   };
 }
 
@@ -87,7 +95,7 @@ static void _map_rehash(_map_base *mb, usize new_size) {
   assert((new_size & (new_size - 1)) == 0);
   assert(new_size >= mb->size);
 
-  map_entry *new_table = new_array(map_entry, new_size);
+  map_entry *new_table = mb->alloc(new_size, sizeof(map_entry));
   assert(new_table);
 
   map_entry *old_table = mb->table;
@@ -103,7 +111,7 @@ static void _map_rehash(_map_base *mb, usize new_size) {
       assert(new_entry);
       *new_entry = *entry;
     }
-    free(old_table);
+    if (mb->dealloc) mb->dealloc(old_table);
   }
 }
 

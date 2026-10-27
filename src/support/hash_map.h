@@ -13,6 +13,8 @@ typedef usize (*_map_base_hash_fn)(const void *);
 typedef bool (*_map_base_compare_fn)(const void *, const void *);
 typedef void *(*_map_base_key_clone_fn)(const void *);
 typedef void (*_map_base_destructor)(void *);
+typedef void *(*_map_base_allocator)(usize, usize);
+typedef void (*_map_base_deallocator)(void *);
 
 typedef struct map_entry map_entry;
 typedef struct {
@@ -24,6 +26,8 @@ typedef struct {
   _map_base_key_clone_fn key_clone;
   _map_base_destructor key_destructor;
   _map_base_destructor value_destructor;
+  _map_base_allocator alloc;
+  _map_base_deallocator dealloc;
 } _map_base;
 
 #define map(K, V)                                           \
@@ -45,7 +49,17 @@ typedef struct {
     typeof((m)->map_types->hash_fn) _hash_fn = (hash);                          \
     typeof((m)->map_types->compare_fn) _compare_fn = (compare);                 \
     _map_base_init(&(m)->_map, (_map_base_hash_fn)_hash_fn,                     \
-                               (_map_base_compare_fn)_compare_fn);              \
+                               (_map_base_compare_fn)_compare_fn,               \
+                               calloc, free);                                   \
+  } while(0)
+
+#define map_inita(m, hash, compare, alloc, dealloc)                             \
+  do {                                                                          \
+    typeof((m)->map_types->hash_fn) _hash_fn = (hash);                          \
+    typeof((m)->map_types->compare_fn) _compare_fn = (compare);                 \
+    _map_base_init(&(m)->_map, (_map_base_hash_fn)_hash_fn,                     \
+                               (_map_base_compare_fn)_compare_fn,               \
+                               alloc, dealloc);                                 \
   } while(0)
 
 #define map_manage_keys(m, clone_fn, destructor)                                \
@@ -109,8 +123,18 @@ typedef struct {
 
 #define map_free(m) _map_base_free(&((m)->_map))
 
-void _map_base_init(_map_base *mb, _map_base_hash_fn hash_fn, _map_base_compare_fn compare_fn);
-void _map_base_manage_keys(_map_base *mb, _map_base_key_clone_fn key_clone_fn, _map_base_destructor key_destructor);
+void _map_base_init(
+  _map_base *mb,
+  _map_base_hash_fn hash_fn,
+  _map_base_compare_fn compare_fn,
+  _map_base_allocator alloc,
+  _map_base_deallocator dealloc
+);
+void _map_base_manage_keys(
+  _map_base *mb,
+  _map_base_key_clone_fn key_clone_fn,
+  _map_base_destructor key_destructor
+);
 void _map_base_manage_values(_map_base *mb, _map_base_destructor value_destructor);
 void _map_base_free(_map_base *mb);
 
