@@ -23,6 +23,7 @@
 [x] Short Tuple is kind of a crappy name, rename to vector
 [ ] Type checking constness fuckery
 [x] Leaky hashmaps in eval
+[ ] Typecheck currently accepts multi-index or slices as LHS in an assignment
 
 #=== General ==================================================================#
 
@@ -119,13 +120,14 @@
   [x] Literals
   [ ] Variables
   [x] Unary/binary operators
+    [ ] String operations
   [ ] Assignments
   [ ] If expressions
   [ ] For expressions
   [ ] Function calls
   [ ] Import expressions
   [ ] Env expressions
-  [ ] Blocks
+  [x] Blocks
 [ ] Statement evaluators
   [ ] Declarations/constants
 [ ] Builtin functions

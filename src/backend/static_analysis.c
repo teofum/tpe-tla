@@ -483,6 +483,10 @@ static const char *tc_print_type(const Type *type) {
   }
 }
 
+static bool _is_assignment(const Stmt *stmt) {
+  return stmt->type == STMT_EXPR && stmt->expr->type == EXPR_ASSIGNMENT;
+}
+
 /* -- Type checking: variables ---------------------------------------------- */
 
 static const Type *tc_resolve_named_type(Symbols *s, const NamedType *named) {
@@ -1619,7 +1623,7 @@ static Type *tc_check_block(Symbols *s, const BlockExpr *expr) {
 
   for (u32 i = 0; i < expr->len; i++) {
     Type *stmt_type = tc_check_stmt(s, expr->statements[i]);
-    if (stmt_type) {
+    if (stmt_type && !_is_assignment(expr->statements[i])) {
       if (type_count > 0 && !tc_compare_types(s, block_types[0], stmt_type)) {
         homogenous = false;
       }

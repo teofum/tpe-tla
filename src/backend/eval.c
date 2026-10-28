@@ -22,6 +22,7 @@
 #include <support/util.h>
 
 #include "eval.h"
+#include "ast/symbols.h"
 #include "frontend/bison/bison_parser.h"
 
 typedef struct {
@@ -171,13 +172,48 @@ static const Value *_list(usize len) {
   return value;
 }
 
+static bool _is_assignment(const Stmt *stmt) {
+  return stmt->type == STMT_EXPR && stmt->expr->type == EXPR_ASSIGNMENT;
+}
+
+/* -- Evaluation: symbols --------------------------------------------------- */
+
+static Symbol *_get_symbol(const Symbols *s, const Identifier *name) {
+  Symbol *symbol = NULL;
+  u32 level = 0, scope = 0;
+
+  do {
+    scope = _get_scope(level++);
+    SymbolKey key = { .name = name->lexeme, .scope = scope };
+    symbol = map_get(s->symbols, &key);
+  } while (!symbol && scope != 0);
+
+  assert(symbol != NULL); // Undefined variable
+  return symbol;
+}
+
+static const Value *eval_get_symbol(const Symbols *s, const Identifier *name) {
+  return _get_symbol(s, name)->value;
+}
+
+static void eval_update_symbol(
+  const Symbols *s,
+  const Identifier *name,
+  const Value *new_value
+) {
+  Symbol *sym = _get_symbol(s, name);
+  assert(sym != NULL);
+  sym->value = new_value;
+}
+
 /* -- Evaluation ------------------------------------------------------------ */
 
-static const Value *eval_expr(const Expr *expr);
+static const Value *eval_expr(const Symbols *s, const Expr *expr);
+static const Value *eval_stmt(const Symbols *s, const Stmt *stmt);
 
-static const Value *eval_range(const RangeLiteral *range) {
-  const Value *start_v = eval_expr(range->start);
-  const Value *end_v = eval_expr(range->end);
+static const Value *eval_range(const Symbols *s, const RangeLiteral *range) {
+  const Value *start_v = eval_expr(s, range->start);
+  const Value *end_v = eval_expr(s, range->end);
   assert(start_v->type == VAL_INT);
   assert(end_v->type == VAL_INT);
 
@@ -189,35 +225,35 @@ static const Value *eval_range(const RangeLiteral *range) {
   return value;
 }
 
-static const Value *eval_list(const ListLiteral *list) {
+static const Value *eval_list(const Symbols *s, const ListLiteral *list) {
   const Value *value = _list(list->len);
   for (u32 i = 0; i < list->len; i++) {
-    value->list->items[i] = eval_expr(list->exprs[i]);
+    value->list->items[i] = eval_expr(s, list->exprs[i]);
   }
 
   return value;
 }
 
-static const Value *eval_vector(const VectorLiteral *vec) {
+static const Value *eval_vector(const Symbols *s, const VectorLiteral *vec) {
   eval_make(List, list_v, {
     .len = vec->len,
     .items = eval_new_array(const Value *, vec->len)
   });
 
-  const Value *item_val = eval_expr(vec->value);
+  const Value *item_val = eval_expr(s, vec->value);
   for (u32 i = 0; i < vec->len; i++) list_v->items[i] = item_val;
 
   eval_make(Value, value, { .type = VAL_LIST, .list = list_v });
   return value;
 }
 
-static const Value *eval_map(const MapLiteral *map) {
+static const Value *eval_map(const Symbols *s, const MapLiteral *map) {
   Map *map_v = eval_new(Map);
   map_inita(map_v, eval_hash_value, eval_compare_values, eval_calloc, NULL);
 
   for (u32 i = 0; i < map->len; i++) {
-    const Value *key_v = eval_expr(map->entries[i]->key);
-    const Value *value_v = eval_expr(map->entries[i]->value);
+    const Value *key_v = eval_expr(s, map->entries[i]->key);
+    const Value *value_v = eval_expr(s, map->entries[i]->value);
     if (!map_insert(map_v, (Value *)key_v, (Value *)value_v)) {
       // TODO duplicate key in map literal error
       return _nil();
@@ -228,13 +264,13 @@ static const Value *eval_map(const MapLiteral *map) {
   return value;
 }
 
-static const Value *eval_struct(const StructLiteral *struct_l) {
+static const Value *eval_struct(const Symbols *s, const StructLiteral *struct_l) {
   Map *map_v = eval_new(Map);
   map_inita(map_v, eval_hash_value, eval_compare_values, eval_calloc, NULL);
 
   for (u32 i = 1; i < struct_l->len; i++) {
     const Value *key_v = _str_id(struct_l->fields[i]->name);
-    const Value *value_v = eval_expr(struct_l->fields[i]->value);
+    const Value *value_v = eval_expr(s, struct_l->fields[i]->value);
     if (!map_insert(map_v, (Value *)key_v, (Value *)value_v)) {
       // TODO duplicate key in map literal error
       return _nil();
@@ -245,24 +281,118 @@ static const Value *eval_struct(const StructLiteral *struct_l) {
   return value;
 }
 
-static const Value *eval_literal(const LiteralExpr *expr) {
+static const Value *eval_literal(const Symbols *s, const LiteralExpr *expr) {
   switch (expr->type) {
     case L_NIL: return _nil();
     case L_INTEGER: return _int(expr->integer->value);
     case L_FLOAT: return _float(expr->floating->value);
     case L_BOOL: return _bool(expr->boolean->value);
     case L_STRING: return _str(&expr->string->value);
-    case L_RANGE: return eval_range(expr->range);
-    case L_LIST: return eval_list(expr->list);
-    case L_VECTOR: return eval_vector(expr->vec);
-    case L_MAP: return eval_map(expr->map);
-    case L_STRUCT: return eval_struct(expr->struct_literal);
+    case L_RANGE: return eval_range(s, expr->range);
+    case L_LIST: return eval_list(s, expr->list);
+    case L_VECTOR: return eval_vector(s, expr->vec);
+    case L_MAP: return eval_map(s, expr->map);
+    case L_STRUCT: return eval_struct(s, expr->struct_literal);
     case L_ENUM: assert(false); // TODO
   }
 }
 
-static const Value *eval_unary(const UnaryExpr *expr) {
-  const Value *inner = eval_expr(expr->expr);
+static const Value *eval_list_idx(
+  const Symbols *s,
+  const Value *container,
+  const IndexedVariable *var
+) {
+  const Value *value = NULL;
+  u32 item_count = 0;
+  for (u32 i = 0; i < var->index_count; i++) {
+    const Value *idx = eval_expr(s, var->indices[i]);
+    const Value *item_v = NULL;
+    switch (idx->type) {
+      case VAL_INT: {
+        // TODO bounds check
+        item_v = container->list->items[idx->integer];
+        break;
+      }
+      case VAL_RANGE: {
+        u32 start = idx->range->start;
+        if (start < 0) start += container->list->len;
+        u32 end = idx->range->end;
+        if (end < 0) end += container->list->len;
+        // TODO bounds check
+
+        item_v = _list(end - start);
+        for (u32 j = 0; j < end - start; j++) {
+          item_v->list->items[j] = container->list->items[start + j];
+        }
+        break;
+      }
+      default: assert(false);
+    }
+
+    if (item_count == 0) {
+      value = item_v;
+      item_count = 1;
+    } else if (item_count == 1) {
+      const Value *first = value;
+      value = _list(var->index_count);
+      value->list->items[0] = first;
+      value->list->items[item_count++] = item_v;
+    } else {
+      value->list->items[item_count++] = item_v;
+    }
+  }
+
+  return value;
+}
+
+static const Value *eval_map_idx(
+  const Symbols *s,
+  const Value *container,
+  const IndexedVariable *var
+) {
+  const Value *value = NULL;
+  u32 item_count = 0;
+  for (u32 i = 0; i < var->index_count; i++) {
+    const Value *idx = eval_expr(s, var->indices[i]);
+    const Value *item_v = map_get(container->map, (Value *)idx);
+    if (item_count == 0) {
+      value = item_v;
+      item_count = 1;
+    } else if (item_count == 1) {
+      const Value *first = value;
+      value = _list(var->index_count);
+      value->list->items[0] = first;
+      value->list->items[item_count++] = item_v;
+    } else {
+      value->list->items[item_count++] = item_v;
+    }
+  }
+
+  return value;
+}
+
+static const Value *eval_variable(const Symbols *s, const VariableExpr *var) {
+  switch (var->type) {
+    case V_NAMED: return eval_get_symbol(s, var->named->name);
+    case V_STRUCT_MEMBER: {
+      const Value *struct_v = eval_variable(s, var->struct_member->struct_expr);
+      assert(struct_v->type == VAL_MAP);
+      const Value *key_v = _str_id(var->struct_member->name);
+      return map_get(struct_v->map, (Value *)key_v);
+    }
+    case V_INDEX: {
+      const Value *container_v = eval_variable(s, var->indexed->container);
+      switch (container_v->type) {
+        case VAL_LIST: return eval_list_idx(s, container_v, var->indexed);
+        case VAL_MAP: return eval_map_idx(s, container_v, var->indexed);
+        default: assert(false);
+      }
+    }
+  }
+}
+
+static const Value *eval_unary(const Symbols *s, const UnaryExpr *expr) {
+  const Value *inner = eval_expr(s, expr->expr);
   if (!inner) return NULL;
 
   switch (expr->op) {
@@ -406,14 +536,14 @@ static const Value *eval_comp_str(const str *l, const Value *r, TokenLabel op) {
   }
 }
 
-static const Value *eval_binary(const BinaryExpr *expr) {
-  const Value *left = eval_expr(expr->left);
+static const Value *eval_binary(const Symbols *s, const BinaryExpr *expr) {
+  const Value *left = eval_expr(s, expr->left);
   if (!left) return NULL;
 
   switch (expr->op) {
     case PLUS:
     case STAR: {
-      const Value *right = eval_expr(expr->right);
+      const Value *right = eval_expr(s, expr->right);
       if (!right) return NULL;
 
       switch (left->type) {
@@ -426,7 +556,7 @@ static const Value *eval_binary(const BinaryExpr *expr) {
     }
     case MINUS:
     case SLASH: {
-      const Value *right = eval_expr(expr->right);
+      const Value *right = eval_expr(s, expr->right);
       if (!right) return NULL;
 
       switch (left->type) {
@@ -440,7 +570,7 @@ static const Value *eval_binary(const BinaryExpr *expr) {
     case GREATER:
     case LESS_EQUAL:
     case LESS: {
-      const Value *right = eval_expr(expr->right);
+      const Value *right = eval_expr(s, expr->right);
       if (!right) return NULL;
 
       switch (left->type) {
@@ -452,7 +582,7 @@ static const Value *eval_binary(const BinaryExpr *expr) {
     }
     case EQUAL_EQUAL:
     case BANG_EQUAL: {
-      const Value *right = eval_expr(expr->right);
+      const Value *right = eval_expr(s, expr->right);
       if (!right) return NULL;
 
       return _bool(eval_compare_values(left, right));
@@ -461,7 +591,7 @@ static const Value *eval_binary(const BinaryExpr *expr) {
       assert(left->type == VAL_BOOL);
       if (!left) return _bool(false);
 
-      const Value *right = eval_expr(expr->right);
+      const Value *right = eval_expr(s, expr->right);
       if (!right) return NULL;
 
       assert(right->type == VAL_BOOL);
@@ -471,7 +601,7 @@ static const Value *eval_binary(const BinaryExpr *expr) {
       assert(left->type == VAL_BOOL);
       if (left) return _bool(true);
 
-      const Value *right = eval_expr(expr->right);
+      const Value *right = eval_expr(s, expr->right);
       if (!right) return NULL;
 
       assert(right->type == VAL_BOOL);
@@ -481,38 +611,144 @@ static const Value *eval_binary(const BinaryExpr *expr) {
   }
 }
 
-static const Value *eval_expr(const Expr *expr) {
+static const Value *_block(const Symbols *s, const BlockExpr *expr) {
+  const Value *value = NULL;
+  u32 item_count = 0;
+
+  for (u32 i = 0; i < expr->len; i++) {
+    const Value *stmt_v = eval_stmt(s, expr->statements[i]);
+    if (!stmt_v || _is_assignment(expr->statements[i])) continue;
+
+    if (item_count == 0) {
+      value = stmt_v;
+      item_count++;
+    } else if (item_count == 1) {
+      const Value *lv = _list(expr->len);
+      lv->list->items[0] = value;
+      lv->list->items[item_count++] = stmt_v;
+      value = lv;
+    } else {
+      value->list->items[item_count++] = stmt_v;
+    }
+  }
+
+  if (item_count > 1) value->list->len = item_count;
+  return value;
+}
+
+static const Value *eval_block(const Symbols *s, const BlockExpr *expr) {
+  _push_scope(expr->scope);
+  const Value *value = _block(s, expr);
+  _pop_scope();
+  return value;
+}
+
+static const Value *eval_assignment(const Symbols *s, const AssignmentExpr *a) {
+  switch (a->left->type) {
+    case V_NAMED: {
+      const Value *r_value = eval_expr(s, a->right);
+      eval_update_symbol(s, a->left->named->name, r_value);
+      return r_value;
+    }
+    case V_STRUCT_MEMBER: {
+      const Value *struct_v = eval_variable(
+        s,
+        a->left->struct_member->struct_expr
+      );
+      const Value *r_value = eval_expr(s, a->right);
+      map_put(
+        struct_v->map,
+        (Value *)_str_id(a->left->struct_member->name),
+        (Value *)r_value
+      );
+      return r_value;
+    }
+    case V_INDEX: {
+      assert(a->left->indexed->index_count == 1);
+      const Value *container_v = eval_variable(s, a->left->indexed->container);
+      const Value *idx_v = eval_expr(s, a->left->indexed->indices[0]);
+      const Value *r_value = eval_expr(s, a->right);
+      switch (container_v->type) {
+        case VAL_MAP: {
+          map_put(container_v->map, (Value *)idx_v, (Value *)r_value);
+          return r_value;
+        }
+        case VAL_LIST: {
+          assert(idx_v->type == VAL_INT);
+          // TODO bounds check
+          container_v->list->items[idx_v->integer] = r_value;
+          return r_value;
+        }
+        default: assert(false);
+      }
+    }
+  }
+}
+
+static const Value *eval_expr(const Symbols *s, const Expr *expr) {
   switch (expr->type) {
-    case EXPR_LITERAL: return eval_literal(expr->literal);
-    case EXPR_UNARY: return eval_unary(expr->unary);
-    case EXPR_BINARY: return eval_binary(expr->binary);
+    case EXPR_LITERAL: return eval_literal(s, expr->literal);
+    case EXPR_VARIABLE: return eval_variable(s, expr->variable);
+    case EXPR_UNARY: return eval_unary(s, expr->unary);
+    case EXPR_BINARY: return eval_binary(s, expr->binary);
+    case EXPR_ASSIGNMENT: return eval_assignment(s, expr->assignment);
+    case EXPR_BLOCK: return eval_block(s, expr->block);
+    case EXPR_GROUP: return eval_expr(s, expr->group->inner_expr);
   }
   assert(false); // perish
 }
 
-static const Value *eval_stmt(const Stmt *stmt) {
+static const Value *eval_decl(const Symbols *s, const DeclarationStmt *decl) {
+  const Value *r_value = eval_expr(s, decl->right);
+  if (decl->left_count == 1) {
+    eval_update_symbol(s, decl->left[0], r_value);
+  } else {
+    assert(r_value->type == VAL_LIST);
+    // TODO check left count <= right len
+    for (u32 i = 0; i < decl->left_count; i++) {
+      eval_update_symbol(s, decl->left[i], r_value->list->items[i]);
+    }
+  }
+  return NULL;
+}
+
+static const Value *eval_stmt(const Symbols *s, const Stmt *stmt) {
   switch (stmt->type) {
-    case STMT_EXPR: return eval_expr(stmt->expr);
+    case STMT_EXPR: return eval_expr(s, stmt->expr);
+    case STMT_DECLARATION: return eval_decl(s, stmt->decl);
+    case STMT_TYPE_ALIAS: return NULL;
+    case STMT_EXPORT: return NULL;
+    case STMT_FUNCTION_DEF: return NULL;
+    case STMT_PARSE_ERROR: assert(false); // Unreachable
   }
   assert(false); // perish
 }
 
-static const Value *eval_program(const Program *program) {
+static const Value *eval_program(const Symbols *s, const Program *program) {
   _push_scope(program->scope);
 
   const Value *value = NULL;
   if (program->len == 1) {
-    value = eval_stmt(program->statements[0]);
+    value = eval_stmt(s, program->statements[0]);
   } else {
-    eval_make(List, vlist, {
-      .len = program->len,
-      .items = eval_new_array(const Value *, program->len)
-    });
+    u32 item_count = 0;
     for (u32 i = 0; i < program->len; i++) {
-      vlist->items[i] = eval_stmt(program->statements[i]);
+      const Value *stmt_v = eval_stmt(s, program->statements[i]);
+      if (!stmt_v || _is_assignment(program->statements[i])) continue;
+
+      if (item_count == 0) {
+        value = stmt_v;
+        item_count++;
+      } else if (item_count == 1) {
+        const Value *lv = _list(program->len);
+        lv->list->items[0] = value;
+        lv->list->items[item_count++] = stmt_v;
+        value = lv;
+      } else {
+        value->list->items[item_count++] = stmt_v;
+      }
     }
-    eval_make(Value, v, { .type = VAL_LIST, .list = vlist });
-    value = v;
+    if (item_count > 1) value->list->len = item_count;
   }
 
   _pop_scope();
@@ -530,7 +766,7 @@ CompilationStatus eval_evaluate(i32 file_idx) {
 
   dyn_array_clear(e->stack);
   // mem_dyn_arena_free_all(sa->tc_arena);
-  const Value *val = eval_program(ast);
+  const Value *val = eval_program(sym, ast);
   assert(dyn_array_size(e->stack) == 0); // Unbalanced stack is a bug
 
   cs->current_file = -1;
