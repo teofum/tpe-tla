@@ -179,6 +179,24 @@ static bool _is_assignment(const Stmt *stmt) {
 
 /* -- Evaluation: symbols --------------------------------------------------- */
 
+static const FunctionDef *_resolve_function(
+  const Symbols *s,
+  const Identifier *name
+) {
+  const FunctionDef *function = NULL;
+  u32 level = 0, scope = 0;
+
+  do {
+    scope = _get_scope(level++);
+    SymbolKey key = { .name = name->lexeme, .scope = scope };
+    function = map_get(s->functions, &key);
+  } while (!function && scope != 0);
+
+  assert(function != NULL);
+  return function;
+}
+
+
 static Symbol *_get_symbol(const Symbols *s, const Identifier *name) {
   Symbol *symbol = NULL;
   u32 level = 0, scope = 0;
@@ -711,6 +729,32 @@ static const Value *eval_for(const Symbols *s, const ForExpr *expr) {
   return value;
 }
 
+static const Value *eval_call(const Symbols *s, const FunctionCallExpr *call) {
+  const FunctionDef *def = _resolve_function(s, call->name);
+
+  const Value **arg_values = eval_new_array(const Value *, call->args_len);
+  for (u32 i = 0; i < call->args_len; i++) {
+    arg_values[i] = eval_expr(s, call->args[i]->value);
+  }
+
+  const Value *composable_v = NULL;
+  if (call->composable) {
+    composable_v = eval_expr(s, call->composable);
+  }
+  // TODO actually use the composable!!
+
+  _push_scope(def->scope);
+
+  for (u32 i = 0; i < call->args_len; i++) {
+    const Identifier *name = or_default(call->args[i]->name, def->params[i]->name);
+    eval_update_symbol(s, name, arg_values[i]);
+  }
+  const Value *value = _block(s, def->body);
+
+  _pop_scope();
+  return value;
+}
+
 static const Value *eval_expr(const Symbols *s, const Expr *expr) {
   switch (expr->type) {
     case EXPR_LITERAL: return eval_literal(s, expr->literal);
@@ -720,6 +764,7 @@ static const Value *eval_expr(const Symbols *s, const Expr *expr) {
     case EXPR_ASSIGNMENT: return eval_assignment(s, expr->assignment);
     case EXPR_IF: return eval_if(s, expr->if_expr);
     case EXPR_FOR: return eval_for(s, expr->for_expr);
+    case EXPR_FUNCTION_CALL: return eval_call(s, expr->function_call);
     case EXPR_BLOCK: return eval_block(s, expr->block);
     case EXPR_GROUP: return eval_expr(s, expr->group->inner_expr);
   }

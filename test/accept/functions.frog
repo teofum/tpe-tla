@@ -1,0 +1,10 @@
+square is function(x: float) -> float {
+  x * x
+}
+
+square(4)
+square(0.5)
+
+for x in [1, 2, 3, 4, 5] {
+  square(x)
+}

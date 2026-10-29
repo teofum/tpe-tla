@@ -44,6 +44,8 @@
   [x] Give the dang thing a name
 
 [ ] Add string slicing
+[ ] Add function composition
+[ ] Add default function values
 
 #=== Backend ==================================================================#
 
@@ -122,9 +124,9 @@
   [x] Unary/binary operators
     [ ] String operations
   [x] Assignments
-  [ ] If expressions
-  [ ] For expressions
-  [ ] Function calls
+  [x] If expressions
+  [x] For expressions
+  [x] Function calls
   [ ] Import expressions
   [ ] Env expressions
   [x] Blocks
