@@ -118,18 +118,18 @@
 [x] Value definitions
 [ ] Expression evaluators
   [x] Literals
-  [ ] Variables
+  [x] Variables
   [x] Unary/binary operators
     [ ] String operations
-  [ ] Assignments
+  [x] Assignments
   [ ] If expressions
   [ ] For expressions
   [ ] Function calls
   [ ] Import expressions
   [ ] Env expressions
   [x] Blocks
-[ ] Statement evaluators
-  [ ] Declarations/constants
+[x] Statement evaluators
+  [x] Declarations/constants
 [ ] Builtin functions
 
 /--- Code Generation ----------------------------------------------------------/

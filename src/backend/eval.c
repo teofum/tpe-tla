@@ -712,10 +712,17 @@ static const Value *eval_decl(const Symbols *s, const DeclarationStmt *decl) {
   return NULL;
 }
 
+static const Value *eval_const(const Symbols *s, const ConstantStmt *constant) {
+  const Value *r_value = eval_expr(s, constant->right);
+  eval_update_symbol(s, constant->left, r_value);
+  return NULL;
+}
+
 static const Value *eval_stmt(const Symbols *s, const Stmt *stmt) {
   switch (stmt->type) {
     case STMT_EXPR: return eval_expr(s, stmt->expr);
     case STMT_DECLARATION: return eval_decl(s, stmt->decl);
+    case STMT_CONSTANT: return eval_const(s, stmt->constant);
     case STMT_TYPE_ALIAS: return NULL;
     case STMT_EXPORT: return NULL;
     case STMT_FUNCTION_DEF: return NULL;
