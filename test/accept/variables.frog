@@ -17,3 +17,6 @@ z := array[bar]
 x
 y
 z
+if x < z { 88 }                       // Should be skipped
+if x < z { 88 } else { 99 }           // Should be 99
+if x >= y + z { array[0] } else { 5 } // Should be 1

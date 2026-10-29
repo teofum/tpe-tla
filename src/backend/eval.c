@@ -685,6 +685,14 @@ static const Value *eval_assignment(const Symbols *s, const AssignmentExpr *a) {
   }
 }
 
+static const Value *eval_if(const Symbols *s, const IfExpr *expr) {
+  const Value *cond_v = eval_expr(s, expr->condition);
+  assert(cond_v->type == VAL_BOOL);
+  return cond_v->boolean
+    ? eval_expr(s, expr->true_branch)
+    : (expr->false_branch ? eval_expr(s, expr->false_branch) : NULL);
+}
+
 static const Value *eval_expr(const Symbols *s, const Expr *expr) {
   switch (expr->type) {
     case EXPR_LITERAL: return eval_literal(s, expr->literal);
@@ -692,6 +700,7 @@ static const Value *eval_expr(const Symbols *s, const Expr *expr) {
     case EXPR_UNARY: return eval_unary(s, expr->unary);
     case EXPR_BINARY: return eval_binary(s, expr->binary);
     case EXPR_ASSIGNMENT: return eval_assignment(s, expr->assignment);
+    case EXPR_IF: return eval_if(s, expr->if_expr);
     case EXPR_BLOCK: return eval_block(s, expr->block);
     case EXPR_GROUP: return eval_expr(s, expr->group->inner_expr);
   }
