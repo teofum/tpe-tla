@@ -9,6 +9,7 @@
 \* ========================================================================== */
 
 #include <assert.h>
+#include <math.h>
 #include <stdio.h>
 
 #include <ast/ast.h>
@@ -693,6 +694,23 @@ static const Value *eval_if(const Symbols *s, const IfExpr *expr) {
     : (expr->false_branch ? eval_expr(s, expr->false_branch) : NULL);
 }
 
+static const Value *eval_for(const Symbols *s, const ForExpr *expr) {
+  const Value *iterable_v = eval_expr(s, expr->iterable);
+  assert(iterable_v->type == VAL_LIST);
+
+  _push_scope(expr->body->block->scope);
+
+  const Value *value = _list(iterable_v->list->len);
+  for (u32 i = 0; i < iterable_v->list->len; i++) {
+    eval_update_symbol(s, expr->var_id, iterable_v->list->items[i]);
+    if (expr->idx_id) eval_update_symbol(s, expr->idx_id, _int(i));
+    value->list->items[i] = _block(s, expr->body->block);
+  }
+
+  _pop_scope();
+  return value;
+}
+
 static const Value *eval_expr(const Symbols *s, const Expr *expr) {
   switch (expr->type) {
     case EXPR_LITERAL: return eval_literal(s, expr->literal);
@@ -701,6 +719,7 @@ static const Value *eval_expr(const Symbols *s, const Expr *expr) {
     case EXPR_BINARY: return eval_binary(s, expr->binary);
     case EXPR_ASSIGNMENT: return eval_assignment(s, expr->assignment);
     case EXPR_IF: return eval_if(s, expr->if_expr);
+    case EXPR_FOR: return eval_for(s, expr->for_expr);
     case EXPR_BLOCK: return eval_block(s, expr->block);
     case EXPR_GROUP: return eval_expr(s, expr->group->inner_expr);
   }

@@ -1483,7 +1483,7 @@ static Type *_for_expr_type(Symbols *s, const ForExpr *expr) {
     Symbol *idx_iterator = _symbol_of(_builtin_type(T_INT), true);
     tc_define_symbol(s, expr->idx_id, idx_iterator);
   }
-  Type *body_type = tc_check_expr(s, expr->body);
+  Type *body_type = tc_check_block(s, expr->body->block);
   _pop_scope();
 
   switch (iterable_type->type) {
