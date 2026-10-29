@@ -1,0 +1,5 @@
+name := "world"
+
+"Hello, " + name + "!"
+
+"Hello, " + name * 5 + "!" * 10

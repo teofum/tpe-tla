@@ -9,7 +9,6 @@
 \* ========================================================================== */
 
 #include <assert.h>
-#include <math.h>
 #include <stdio.h>
 
 #include <ast/ast.h>
@@ -79,6 +78,10 @@ void eval_shutdown() {
 }
 
 /* -- Evaluation: utils ----------------------------------------------------- */
+
+static void *eval_malloc(usize size) {
+  return mem_dyn_arena_malloc(e->arena, size);
+}
 
 static void *eval_calloc(usize count, usize size) {
   return mem_dyn_arena_calloc(e->arena, count, size);
@@ -499,10 +502,40 @@ static const Value *eval_math_vec(const List *l, const Value *r, TokenLabel op) 
   return value;
 }
 
+static str eval_stringify(const Value *v) {
+  switch (v->type) {
+    case VAL_STRING: return *v->string;
+    default: return str_from_cstring_a(eval_malloc, "(TODO stringify values)");
+  }
+}
+
+static const Value *eval_string_concat(const str *l, const str *r) {
+  str empty = { .ptr = "", .len = 0 };
+  str *concat = eval_new(str);
+  *concat = str_concat_a(eval_malloc, 2, empty, *l, *r);
+  return _str(concat);
+}
+
+static const Value *eval_string_times(const str *l, i64 n) {
+  str empty = { .ptr = "", .len = 0 };
+  str *result = eval_new(str);
+  *result = empty;
+  for (u32 i = 0; i < n; i++) {
+    *result = str_concat_a(eval_malloc, 2, empty, *result, *l);
+  }
+  return _str(result);
+}
+
 static const Value *eval_string_op(const str *l, const Value *r, TokenLabel op) {
   switch (op) {
-    case PLUS: // TODO
-    case STAR: // TODO
+    case PLUS: {
+      str r_str = eval_stringify(r);
+      return eval_string_concat(l, &r_str);
+    }
+    case STAR: {
+      assert(r->type == VAL_INT);
+      return eval_string_times(l, r->integer);
+    }
     default: assert(false);
   }
 }
@@ -801,7 +834,6 @@ static const Value *eval_stmt(const Symbols *s, const Stmt *stmt) {
     case STMT_FUNCTION_DEF: return NULL;
     case STMT_PARSE_ERROR: assert(false); // Unreachable
   }
-  assert(false); // perish
 }
 
 static const Value *eval_program(const Symbols *s, const Program *program) {

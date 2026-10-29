@@ -24,6 +24,7 @@
 [ ] Type checking constness fuckery
 [x] Leaky hashmaps in eval
 [ ] Typecheck currently accepts multi-index or slices as LHS in an assignment
+[ ] Hashing function for values is literally 4
 
 #=== General ==================================================================#
 
@@ -46,6 +47,7 @@
 [ ] Add string slicing
 [ ] Add function composition
 [ ] Add default function values
+[ ] Iterable ranges
 
 #=== Backend ==================================================================#
 
@@ -122,7 +124,7 @@
   [x] Literals
   [x] Variables
   [x] Unary/binary operators
-    [ ] String operations
+    [x] String operations
   [x] Assignments
   [x] If expressions
   [x] For expressions

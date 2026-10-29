@@ -5,6 +5,10 @@
 
 #define MEM_SIZE_AUTO 0
 
+typedef void *(*malloc_t)(usize);
+typedef void *(*calloc_t)(usize, usize);
+typedef void (*free_t)(void *);
+
 typedef struct dyn_arena dyn_arena;
 
 dyn_arena *mem_dyn_arena_create(usize block_size);
