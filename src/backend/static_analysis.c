@@ -1811,7 +1811,7 @@ static void _check_constant(Symbols *s, const ConstantStmt *constant) {
 }
 
 static void _check_function_def(Symbols *s, const FunctionDef *def) {
-  st_push(sa->stack, def->scope);
+  st_push(sa->stack, def->body->scope);
 
   for (u32 i = 0; i < def->params_len; i++) {
     if (def->params[i]->default_value) {

@@ -547,7 +547,6 @@ struct StructField {
 struct FunctionDef {
   ASTNodeMetadata meta;
   Identifier *name;
-  Scope scope;
   u32 params_len;
   Parameter **params;
   Type *compose_type;

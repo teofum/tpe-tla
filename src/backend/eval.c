@@ -787,7 +787,7 @@ static const Value *eval_call(const Symbols *s, const FunctionCallExpr *call) {
     composable_v = eval_expr(s, call->composable);
   }
 
-  st_push(e->stack, def->scope);
+  st_push(e->stack, def->body->scope);
 
   for (u32 i = 0; i < call->args_len; i++) {
     const Identifier *name = or_default(call->args[i]->name, def->params[i]->name);

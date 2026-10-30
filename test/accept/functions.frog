@@ -4,6 +4,8 @@ square is function(x: float) -> float {
   x * y
 }
 
+multiply is function(x: int, y: int) -> int { x * y }
+
 square(4)
 square(0.5)
 
