@@ -32,6 +32,8 @@ static LogLevel _error_to_log_level[] = {
   [ERR_WARNING] = LOG_WARNING,
 };
 
+/* -------------------------------------------------------------------------- */
+
 void err_init(CompilerState *compiler_state) {
   cs = compiler_state;
 
@@ -50,6 +52,8 @@ void err_shutdown() {
   e = NULL;
   cs = NULL;
 }
+
+/* -------------------------------------------------------------------------- */
 
 static Error _make_error(
   ErrorType type,
@@ -129,6 +133,27 @@ void err_report_compose(const Location *loc, ErrorLevel level) {
   Error error = _make_error(ERR_COMPOSE, CS_TYPECHECK, level, loc);
   da_push(e->errors, &error);
 }
+
+void err_report_oob(i64 idx, i64 array_len, const Location *loc, ErrorLevel level) {
+  Error error = _make_error(ERR_OOB, CS_EVAL, ERR_ERROR, loc);
+  error.bounds = new(BoundsError);
+  *error.bounds = (BoundsError){ .idx = idx, .array_len = array_len };
+  da_push(e->errors, &error);
+}
+
+void err_report_range(i64 start, i64 end, const Location *loc, ErrorLevel level) {
+  Error error = _make_error(ERR_RANGE, CS_EVAL, ERR_ERROR, loc);
+  error.range = new(RangeError);
+  *error.range = (RangeError){ .start = start, .end = end };
+  da_push(e->errors, &error);
+}
+
+void err_report_partial_range(const Location *loc, ErrorLevel level) {
+  Error error = _make_error(ERR_RANGE_PARTIAL, CS_EVAL, level, loc);
+  da_push(e->errors, &error);
+}
+
+/* -------------------------------------------------------------------------- */
 
 static void _log(Error *error, const char *const format, ...) {
   va_list args;
@@ -305,6 +330,29 @@ static void _log_compose_error(Error *error) {
   _log_error_with_loc(error_str, error);
 }
 
+static void _log_bounds_error(Error *error) {
+  BoundsError *bounds = error->bounds;
+  str error_str = str_format(
+    "index %i out of bounds for array of length %i",
+    bounds->idx, bounds->array_len
+  );
+  _log_error_with_loc(error_str, error);
+}
+
+static void _log_range_error(Error *error) {
+  RangeError *range = error->range;
+  str error_str = str_format(
+    "range %i..%i has a negative span",
+    range->start, range->end
+  );
+  _log_error_with_loc(error_str, error);
+}
+
+static void _log_partial_range_error(Error *error) {
+  str error_str = str_format("incomplete range expressions are not iterable");
+  _log_error_with_loc(error_str, error);
+}
+
 static void _log_error(Error *error) {
   switch (error->type) {
     case ERR_SYNTAX: _log_syntax_error(error); break;
@@ -317,6 +365,9 @@ static void _log_error(Error *error) {
     case ERR_FN_ARG_POS: _log_fn_arg_pos_error(error); break;
     case ERR_FN_PARAM_REQ: _log_fn_param_req_error(error); break;
     case ERR_COMPOSE: _log_compose_error(error); break;
+    case ERR_OOB: _log_bounds_error(error); break;
+    case ERR_RANGE: _log_range_error(error); break;
+    case ERR_RANGE_PARTIAL: _log_partial_range_error(error); break;
   }
 }
 
@@ -340,6 +391,8 @@ bool err_gate() {
   return errors == 0;
 }
 
+/* -------------------------------------------------------------------------- */
+
 void err_free_error(Error *e) {
   switch (e->type) {
     case ERR_SYNTAX: err_free_syntax_error(e->syntax); break;
@@ -352,6 +405,9 @@ void err_free_error(Error *e) {
     case ERR_FN_ARG_POS: err_free_fn_arg_pos_error(e->fn_arg_pos); break;
     case ERR_FN_PARAM_REQ: err_free_fn_param_req_error(e->fn_param_req); break;
     case ERR_COMPOSE: break;
+    case ERR_OOB: err_free_bounds_error(e->bounds); break;
+    case ERR_RANGE: err_free_range_error(e->range); break;
+    case ERR_RANGE_PARTIAL: break;
   }
 }
 
@@ -397,5 +453,13 @@ void err_free_fn_arg_pos_error(FnArgPosError *e) {
 }
 
 void err_free_fn_param_req_error(FnParamReqError *e) {
+  free(e);
+}
+
+void err_free_bounds_error(BoundsError *e) {
+  free(e);
+}
+
+void err_free_range_error(RangeError *e) {
   free(e);
 }

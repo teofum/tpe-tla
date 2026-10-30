@@ -18,6 +18,10 @@ typedef enum {
   ERR_FN_ARG_POS,       // Function call positional argument after named
   ERR_FN_PARAM_REQ,     // Function call required parameter unset
   ERR_COMPOSE,          // Compose expression in function with no compose type
+  // Evaluation errors
+  ERR_OOB,              // Index out of bounds
+  ERR_RANGE,            // Invalid range
+  ERR_RANGE_PARTIAL,    // Partial range where full range is required
 } ErrorType;
 
 typedef enum {
@@ -42,6 +46,8 @@ typedef struct FnArgCountError FnArgCountError;
 typedef struct FnArgNameError FnArgNameError;
 typedef struct FnArgPosError FnArgPosError;
 typedef struct FnParamReqError FnParamReqError;
+typedef struct BoundsError BoundsError;
+typedef struct RangeError RangeError;
 
 typedef struct {
   ErrorType type;
@@ -60,6 +66,8 @@ typedef struct {
     FnArgNameError *fn_arg_name;
     FnArgPosError *fn_arg_pos;
     FnParamReqError *fn_param_req;
+    BoundsError *bounds;
+    RangeError *range;
   };
 } Error;
 
@@ -107,6 +115,16 @@ struct FnParamReqError {
   const Parameter *param;
 };
 
+struct BoundsError {
+  i64 idx;
+  i64 array_len;
+};
+
+struct RangeError {
+  i64 start;
+  i64 end;
+};
+
 void err_init(CompilerState *compiler_state);
 void err_shutdown();
 
@@ -120,6 +138,9 @@ void err_report_fn_arg_name(const FunctionCallExpr *call, const Argument *arg, E
 void err_report_fn_arg_pos(const Argument *arg, ErrorLevel level);
 void err_report_fn_param_req(const FunctionCallExpr *call, const Parameter *param, ErrorLevel level);
 void err_report_compose(const Location *loc, ErrorLevel level);
+void err_report_oob(i64 idx, i64 array_len, const Location *loc, ErrorLevel level);
+void err_report_range(i64 start, i64 end, const Location *loc, ErrorLevel level);
+void err_report_partial_range(const Location *loc, ErrorLevel level);
 bool err_gate();
 
 void err_free_error(Error *e);
@@ -132,5 +153,7 @@ void err_free_fn_arg_count_error(FnArgCountError *e);
 void err_free_fn_arg_name_error(FnArgNameError *e);
 void err_free_fn_arg_pos_error(FnArgPosError *e);
 void err_free_fn_param_req_error(FnParamReqError *e);
+void err_free_bounds_error(BoundsError *e);
+void err_free_range_error(RangeError *e);
 
 #endif

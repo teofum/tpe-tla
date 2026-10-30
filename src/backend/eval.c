@@ -25,6 +25,7 @@
 #include <support/util.h>
 
 #include "eval.h"
+#include "error/error.h"
 
 typedef struct {
   Logger *logger;
@@ -160,6 +161,13 @@ static const Value *_list(usize len) {
 
 static bool _is_assignment(const Stmt *stmt) {
   return stmt->type == STMT_EXPR && stmt->expr->type == EXPR_ASSIGNMENT;
+}
+
+static bool _in_bounds(i64 idx, const List *list, const Location *loc) {
+  bool in_bounds = idx >= 0 && idx < list->len;
+  if (!in_bounds) err_report_oob(idx, list->len, loc, ERR_ERROR);
+
+  return in_bounds;
 }
 
 static Identifier _composable = {
@@ -319,25 +327,41 @@ static const Value *eval_list_idx(
   const Value *value = NULL;
   u32 item_count = 0;
   for (u32 i = 0; i < var->index_count; i++) {
-    const Value *idx = eval_expr(s, var->indices[i]);
+    const Expr *idx = var->indices[i];
+    const Value *idx_v = eval_expr(s, idx);
     const Value *item_v = NULL;
-    switch (idx->type) {
+    switch (idx_v->type) {
       case VAL_INT: {
-        // TODO bounds check
-        item_v = container->list->items[idx->integer];
+        i64 idx_int = idx_v->integer;
+        if (idx_int < 0) idx_int += container->list->len;
+        if (_in_bounds(idx_int, container->list, &idx->meta.loc)) {
+          item_v = container->list->items[idx_int];
+        }
         break;
       }
       case VAL_RANGE: {
-        const Range *r = idx->range;
+        const Range *r = idx_v->range;
         i64 start = r->has_start ? r->start : 0;
+        const Location *start_loc = r->has_start
+          ? &idx->literal->range->start->meta.loc
+          : &idx->literal->range->meta.loc;
         if (start < 0) start += container->list->len;
         i64 end = r->has_end ? r->end : container->list->len;
+        const Location *end_loc = r->has_end
+          ? &idx->literal->range->end->meta.loc
+          : &idx->literal->range->meta.loc;
         if (end < 0) end += container->list->len;
-        // TODO bounds check
 
-        item_v = _list(end - start);
-        for (u32 j = 0; j < end - start; j++) {
-          item_v->list->items[j] = container->list->items[start + j];
+        if (end < start) {
+          err_report_range(start, end, &idx->meta.loc, ERR_ERROR);
+        } else if (
+          _in_bounds(start, container->list, start_loc)
+          && (end == start || _in_bounds(end - 1, container->list, end_loc))
+        ) {
+          item_v = _list(end - start);
+          for (u32 j = 0; j < end - start; j++) {
+            item_v->list->items[j] = container->list->items[start + j];
+          }
         }
         break;
       }
@@ -710,8 +734,9 @@ static const Value *eval_assignment(const Symbols *s, const AssignmentExpr *a) {
     }
     case V_INDEX: {
       assert(a->left->indexed->index_count == 1);
+      const Expr *idx = a->left->indexed->indices[0];
       const Value *container_v = eval_variable(s, a->left->indexed->container);
-      const Value *idx_v = eval_expr(s, a->left->indexed->indices[0]);
+      const Value *idx_v = eval_expr(s, idx);
       const Value *r_value = eval_expr(s, a->right);
       switch (container_v->type) {
         case VAL_MAP: {
@@ -720,7 +745,9 @@ static const Value *eval_assignment(const Symbols *s, const AssignmentExpr *a) {
         }
         case VAL_LIST: {
           assert(idx_v->type == VAL_INT);
-          // TODO bounds check
+          if (!_in_bounds(idx_v->integer, container_v->list, &idx->meta.loc)) {
+            return NULL;
+          }
           container_v->list->items[idx_v->integer] = r_value;
           return r_value;
         }
@@ -756,7 +783,14 @@ static const Value *eval_for(const Symbols *s, const ForExpr *expr) {
     }
     case VAL_RANGE: {
       const Range *r = iterable_v->range;
-      // TODO range check
+      if (!r->has_start || !r->has_end) {
+        err_report_partial_range(&expr->iterable->meta.loc, ERR_ERROR);
+        break;
+      }
+      if (r->end < r->start) {
+        err_report_range(r->start, r->end, &expr->iterable->meta.loc, ERR_ERROR);
+        break;
+      }
 
       i64 len = r->end - r->start;
       value = _list(len);

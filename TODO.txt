@@ -47,12 +47,14 @@
 
 [x] Modify dyn_array to have a type safe API more similar to the hash map
 
-[ ] Add string slicing
-[x] Add function composition
+[ ] String slicing
+[x] Function composition
 [x] Iterable ranges
+[ ] Decomposition statement for list composing
 
 [ ] Remove default function values
 [ ] Remove enums
+[ ] MAYBE: Remove list/tuple literals and replace with blocks?
 
 #=== Backend ==================================================================#
 
@@ -139,7 +141,7 @@
 [x] Statement evaluators
   [x] Declarations/constants
 [ ] Builtin functions
-[ ] Error handling
+[x] Error handling
 
 /--- Code Generation ----------------------------------------------------------/
 [ ] Values to code

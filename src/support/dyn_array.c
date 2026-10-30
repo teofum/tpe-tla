@@ -96,6 +96,7 @@ void _da_base_reserve(_da_base *da, usize cap) {
   void *new_data = da->alloc(cap, da->el_size);
   assert(new_data != NULL);
   memcpy(new_data, da->data, da->el_size * da->size);
+  if (da->dealloc) da->dealloc(da->data);
   da->data = new_data;
   da->cap = cap;
 }

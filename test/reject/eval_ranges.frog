@@ -1,0 +1,14 @@
+xs: int[] = for x in 1..20 { x }
+
+xs[0]         // OK
+xs[1..10]     // OK
+xs[5..]       // OK
+xs[-1]        // OK
+
+xs[99]        // Index out of bounds error
+xs[-99]       // Index out of bounds error
+xs[..99]      // Index out of bounds error
+
+xs[5..1]      // Invalid range error
+
+for x in ..5 { x }  // Incomplete range error
