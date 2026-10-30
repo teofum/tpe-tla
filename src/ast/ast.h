@@ -1,6 +1,7 @@
 #ifndef AST_HEADER
 #define AST_HEADER
 
+#include <backend/scope.h>
 #include <support/hash_map.h>
 #include <support/types.h>
 
@@ -41,6 +42,7 @@ typedef enum {
   EXPR_FUNCTION_CALL,
   EXPR_IMPORT,
   EXPR_ENV,
+  EXPR_COMPOSE,
 } ExprType;
 
 typedef enum {
@@ -342,7 +344,7 @@ struct ForExpr {
 
 struct BlockExpr {
   ASTNodeMetadata meta;
-  u32 scope;
+  Scope scope;
   u32 len;
   Stmt **statements;
 };
@@ -545,7 +547,7 @@ struct StructField {
 struct FunctionDef {
   ASTNodeMetadata meta;
   Identifier *name;
-  u32 scope;
+  Scope scope;
   u32 params_len;
   Parameter **params;
   Type *return_type;
@@ -563,7 +565,7 @@ struct Parameter {
 
 struct Program {
   ASTNodeMetadata meta;
-  u32 scope;
+  Scope scope;
   u32 len;
   Stmt **statements;
 };
@@ -635,6 +637,7 @@ Expr *ast_expr_block(BlockExpr *block);
 Expr *ast_expr_function_call(FunctionCallExpr *function_call);
 Expr *ast_expr_import(ImportExpr *import);
 Expr *ast_expr_env(EnvExpr *env);
+Expr *ast_expr_compose();
 
 LiteralExpr *ast_integer_literal(IntegerLiteral *i);
 LiteralExpr *ast_float_literal(FloatLiteral *f);

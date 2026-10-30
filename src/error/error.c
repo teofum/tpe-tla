@@ -17,8 +17,10 @@
 #define INDENTED_NL "\n\t\t"
 #define INDENT "\t\t"
 
+typedef dyn_array(Error) ErrorList;
+
 typedef struct {
-  dyn_array *errors;
+  ErrorList *errors;
   Logger *logger;
 } ErrorState;
 
@@ -34,12 +36,15 @@ void err_init(CompilerState *compiler_state) {
   cs = compiler_state;
 
   e = new(ErrorState);
-  e->errors = new_dyn_array_d(Error, err_free_error);
+  e->errors = new(ErrorList);
+  da_init(e->errors);
+  da_manage(e->errors, err_free_error);
   e->logger = cs->logger;
 }
 
 void err_shutdown() {
-  dyn_array_free(e->errors);
+  da_free(e->errors);
+  free(e->errors);
   free(e);
 
   e = NULL;
@@ -64,37 +69,37 @@ static Error _make_error(
 void err_report_syntax(SyntaxError *s, const Location *loc, ErrorLevel level) {
   Error error = _make_error(ERR_SYNTAX, CS_PARSE, level, loc);
   error.syntax = s;
-  dyn_array_push(e->errors, &error);
+  da_push(e->errors, &error);
 }
 
 void err_report_import(ImportError *i, const Location *loc, ErrorLevel level) {
   Error error = _make_error(ERR_IMPORT, CS_PARSE, level, loc);
   error.import_type = i;
-  dyn_array_push(e->errors, &error);
+  da_push(e->errors, &error);
 }
 
 void err_report_redef(RedefError *r, const Location *loc, ErrorLevel level) {
   Error error = _make_error(ERR_REDEF, CS_STATIC_ANALYSIS, level, loc);
   error.redefinition = r;
-  dyn_array_push(e->errors, &error);
+  da_push(e->errors, &error);
 }
 
 void err_report_undef(UndefError *u, const Location *loc, ErrorLevel level) {
   Error error = _make_error(ERR_UNDEF, CS_STATIC_ANALYSIS, level, loc);
   error.undef_symbol = u;
-  dyn_array_push(e->errors, &error);
+  da_push(e->errors, &error);
 }
 
 void err_report_type(TypeError *t, const Location *loc, ErrorLevel level) {
   Error error = _make_error(ERR_TYPE, CS_TYPECHECK, level, loc);
   error.type_error = t;
-  dyn_array_push(e->errors, &error);
+  da_push(e->errors, &error);
 }
 
 void err_report_fn_arg_count(FnArgCountError *f, const Location *loc, ErrorLevel level) {
   Error error = _make_error(ERR_FN_ARG_COUNT, CS_TYPECHECK, level, loc);
   error.fn_arg_count = f;
-  dyn_array_push(e->errors, &error);
+  da_push(e->errors, &error);
 }
 
 void err_report_fn_arg_name(const FunctionCallExpr *call, const Argument *arg, ErrorLevel level) {
@@ -102,14 +107,14 @@ void err_report_fn_arg_name(const FunctionCallExpr *call, const Argument *arg, E
   error.fn_arg_name = new(FnArgNameError);
   error.fn_arg_name->arg = arg;
   error.fn_arg_name->call = call;
-  dyn_array_push(e->errors, &error);
+  da_push(e->errors, &error);
 }
 
 void err_report_fn_arg_pos(const Argument *arg, ErrorLevel level) {
   Error error = _make_error(ERR_FN_ARG_POS, CS_TYPECHECK, level, &arg->meta.loc);
   error.fn_arg_pos = new(FnArgPosError);
   error.fn_arg_pos->arg = arg;
-  dyn_array_push(e->errors, &error);
+  da_push(e->errors, &error);
 }
 
 void err_report_fn_param_req(const FunctionCallExpr *call, const Parameter *p, ErrorLevel level) {
@@ -117,7 +122,7 @@ void err_report_fn_param_req(const FunctionCallExpr *call, const Parameter *p, E
   error.fn_param_req = new(FnParamReqError);
   error.fn_param_req->param = p;
   error.fn_param_req->call = call;
-  dyn_array_push(e->errors, &error);
+  da_push(e->errors, &error);
 }
 
 static void _log(Error *error, const char *const format, ...) {
@@ -306,7 +311,7 @@ static void _log_error(Error *error) {
 bool err_gate() {
   u32 errors = 0;
 
-  for_each(Error, error, e->errors) {
+  for_each(error, e->errors) {
     if (error->level == ERR_ERROR) errors++;
     _log_error(error);
   }
@@ -318,7 +323,7 @@ bool err_gate() {
     );
   }
 
-  dyn_array_clear(e->errors);
+  da_clear(e->errors);
   if (errors > 0) cs->status = STATUS_FAILED;
   return errors == 0;
 }

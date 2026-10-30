@@ -110,6 +110,11 @@ PARSE_EXPR_FUNC(function_call, FunctionCallExpr, "Function Call Expr %s", expr->
 PARSE_EXPR_FUNC(import, ImportExpr, "Import Expr %s", expr->path->token->lexeme)
 PARSE_EXPR_FUNC(env, EnvExpr, "Env Expr %s", expr->env_name->token->lexeme)
 
+Expr *parse_compose_expr() {
+  fe_parser_log(LOG_DEBUG, "Compose Expr");
+  return ast_expr_compose();
+}
+
 // -----------------------------------------------------------------------------
 
 LiteralExpr *parse_integer_literal(IntegerLiteral *i) {

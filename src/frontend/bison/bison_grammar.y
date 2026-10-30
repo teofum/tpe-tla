@@ -227,6 +227,7 @@ static void yyerror(YYLTYPE *location, const char *message) {
 %type <function_call>               function_call
 %type <import>                      import
 %type <env>                         env
+%type <token>                       compose
 
 %type <type>                        type
 %type <type>                        import_type
@@ -344,6 +345,7 @@ expression: literal                                                 { $$ = parse
   | function_call                                                   { $$ = parse_function_call_expr($1); }
   | import                                                          { $$ = parse_import_expr($1); }
   | env                                                             { $$ = parse_env_expr($1); }
+  | compose                                                         { $$ = parse_compose_expr(); }
   ;
 
 literal: simple_literal
@@ -452,6 +454,9 @@ for_expr: FOR IDENTIFIER COMMA IDENTIFIER IN expression block       { $$ = parse
   ;
 
 block: CURLY_L nl statement_list nl CURLY_R                         { $$ = parse_block($3); }
+  ;
+
+compose: COMPOSE                                                    { $$ = $1; }
   ;
 
 /*-- Expressions: function calls -------------------------------------------------------------------------------------*/

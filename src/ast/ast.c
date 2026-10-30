@@ -197,6 +197,12 @@ AST_EXPR_FUNC(ast_expr_function_call, FunctionCallExpr, EXPR_FUNCTION_CALL, func
 AST_EXPR_FUNC(ast_expr_import, ImportExpr, EXPR_IMPORT, import)
 AST_EXPR_FUNC(ast_expr_env, EnvExpr, EXPR_ENV, env)
 
+Expr *ast_expr_compose() {
+  Expr *expr = new(Expr);
+  *expr = (Expr){ .meta = _ast_get_metadata(), .type = EXPR_COMPOSE };
+  return expr;
+}
+
 // -----------------------------------------------------------------------------
 
 #define AST_LITERAL_FUNC(f_name, T, literal_t, p_name)  \
@@ -812,6 +818,7 @@ void ast_free_expr(Expr *expr) {
     case EXPR_FUNCTION_CALL: ast_free_function_call(expr->function_call); break;
     case EXPR_IMPORT: ast_free_import(expr->import); break;
     case EXPR_ENV: ast_free_env(expr->env); break;
+    case EXPR_COMPOSE: break;
   }
 
   free(expr);

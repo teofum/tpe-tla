@@ -44,6 +44,8 @@
 [x] Improve and update README.md
   [x] Give the dang thing a name
 
+[x] Modify dyn_array to have a type safe API more similar to the hash map
+
 [ ] Add string slicing
 [ ] Add function composition
 [ ] Add default function values
@@ -54,7 +56,6 @@
 [x] Hash map implementation
 [x] Symbol table definitions
 [x] Add scopes to AST
-[ ] Modify dyn_array to have a type safe API more similar to the hash map
 
 /--- Static Analyzer ----------------------------------------------------------/
 [x] Base module

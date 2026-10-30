@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <support/mem.h>
 #include <support/types.h>
 #include <support/util.h>
 
@@ -21,8 +22,8 @@ void _map_base_init(
   _map_base *mb,
   _map_base_hash_fn hash_fn,
   _map_base_compare_fn compare_fn,
-  _map_base_allocator alloc,
-  _map_base_deallocator dealloc
+  calloc_t alloc,
+  free_t dealloc
 ) {
   assert(hash_fn != NULL);
   assert(compare_fn != NULL);
@@ -150,7 +151,7 @@ void _map_base_free(_map_base *mb) {
 
   _map_free_keys(mb);
   _map_free_values(mb);
-  free(mb->table);
+  if (mb->dealloc) mb->dealloc(mb->table);
   memset(mb, 0, sizeof(_map_base));
 }
 

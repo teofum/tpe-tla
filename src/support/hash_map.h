@@ -7,14 +7,13 @@
 #ifndef HASH_MAP_HEADER
 #define HASH_MAP_HEADER
 
+#include <support/mem.h>
 #include <support/types.h>
 
 typedef usize (*_map_base_hash_fn)(const void *);
 typedef bool (*_map_base_compare_fn)(const void *, const void *);
 typedef void *(*_map_base_key_clone_fn)(const void *);
 typedef void (*_map_base_destructor)(void *);
-typedef void *(*_map_base_allocator)(usize, usize);
-typedef void (*_map_base_deallocator)(void *);
 
 typedef struct map_entry map_entry;
 typedef struct {
@@ -26,8 +25,8 @@ typedef struct {
   _map_base_key_clone_fn key_clone;
   _map_base_destructor key_destructor;
   _map_base_destructor value_destructor;
-  _map_base_allocator alloc;
-  _map_base_deallocator dealloc;
+  calloc_t alloc;
+  free_t dealloc;
 } _map_base;
 
 #define map(K, V)                                           \
@@ -127,8 +126,8 @@ void _map_base_init(
   _map_base *mb,
   _map_base_hash_fn hash_fn,
   _map_base_compare_fn compare_fn,
-  _map_base_allocator alloc,
-  _map_base_deallocator dealloc
+  calloc_t alloc,
+  free_t dealloc
 );
 void _map_base_manage_keys(
   _map_base *mb,

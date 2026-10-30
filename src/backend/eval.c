@@ -12,6 +12,9 @@
 #include <stdio.h>
 
 #include <ast/ast.h>
+#include <ast/symbols.h>
+#include <backend/scope.h>
+#include <frontend/bison/bison_parser.h>
 #include <support/dyn_array.h>
 #include <support/hash_map.h>
 #include <support/logger.h>
@@ -22,37 +25,16 @@
 #include <support/util.h>
 
 #include "eval.h"
-#include "ast/symbols.h"
-#include "frontend/bison/bison_parser.h"
 
 typedef struct {
   Logger *logger;
 
-  dyn_array *stack;
+  Stack *stack;
   dyn_arena *arena;
 } Evaluator;
 
 static CompilerState *cs = NULL;
 static Evaluator *e = NULL;
-
-/* -- Scope ----------------------------------------------------------------- */
-
-static u32 _push_scope(u32 scope) {
-  dyn_array_push(e->stack, &scope);
-  return scope;
-}
-
-static void _pop_scope() {
-  dyn_array_remove_unordered(e->stack, dyn_array_size(e->stack) - 1);
-}
-
-static u32 _peek_scope() {
-  return *(u32 *)dyn_array_get(e->stack, dyn_array_size(e->stack) - 1);
-}
-
-static u32 _get_scope(u32 level) {
-  return *(u32 *)dyn_array_get(e->stack, dyn_array_size(e->stack) - 1 - level);
-}
 
 /* -- Module init/shutdown -------------------------------------------------- */
 
@@ -61,7 +43,6 @@ void eval_init(CompilerState *compiler_state) {
 
   e = new(Evaluator);
   e->logger = logger_create("Eval", stderr, LOG_DEBUG);
-  e->stack = new_dyn_array(u32);
   e->arena = mem_dyn_arena_create(MEM_SIZE_AUTO);
 }
 
@@ -69,7 +50,6 @@ void eval_shutdown() {
   if (!e) return;
 
   if (e->logger) logger_free(e->logger);
-  if (e->stack) dyn_array_free(e->stack);
   if (e->arena) mem_dyn_arena_destroy(e->arena);
   free(e);
 
@@ -187,35 +167,33 @@ static const FunctionDef *_resolve_function(
   const Identifier *name
 ) {
   const FunctionDef *function = NULL;
-  u32 level = 0, scope = 0;
-
-  do {
-    scope = _get_scope(level++);
-    SymbolKey key = { .name = name->lexeme, .scope = scope };
+  StackEntry *st = st_current(e->stack);
+  while (!function && st) {
+    SymbolKey key = { .name = name->lexeme, .scope = st_scope(st).id };
     function = map_get(s->functions, &key);
-  } while (!function && scope != 0);
+    st = st_next(st);
+  }
 
   assert(function != NULL);
   return function;
 }
 
 
-static Symbol *_get_symbol(const Symbols *s, const Identifier *name) {
+static Symbol *_resolve_symbol(const Symbols *s, const Identifier *name) {
   Symbol *symbol = NULL;
-  u32 level = 0, scope = 0;
-
-  do {
-    scope = _get_scope(level++);
-    SymbolKey key = { .name = name->lexeme, .scope = scope };
+  StackEntry *st = st_current(e->stack);
+  while (!symbol && st) {
+    SymbolKey key = { .name = name->lexeme, .scope = st_scope(st).id };
     symbol = map_get(s->symbols, &key);
-  } while (!symbol && scope != 0);
+    st = st_next(st);
+  }
 
   assert(symbol != NULL); // Undefined variable
   return symbol;
 }
 
 static const Value *eval_get_symbol(const Symbols *s, const Identifier *name) {
-  return _get_symbol(s, name)->value;
+  return _resolve_symbol(s, name)->value;
 }
 
 static void eval_update_symbol(
@@ -223,7 +201,7 @@ static void eval_update_symbol(
   const Identifier *name,
   const Value *new_value
 ) {
-  Symbol *sym = _get_symbol(s, name);
+  Symbol *sym = _resolve_symbol(s, name);
   assert(sym != NULL);
   sym->value = new_value;
 }
@@ -689,9 +667,9 @@ static const Value *_block(const Symbols *s, const BlockExpr *expr) {
 }
 
 static const Value *eval_block(const Symbols *s, const BlockExpr *expr) {
-  _push_scope(expr->scope);
+  st_push(e->stack, expr->scope);
   const Value *value = _block(s, expr);
-  _pop_scope();
+  st_pop(e->stack);
   return value;
 }
 
@@ -749,7 +727,7 @@ static const Value *eval_for(const Symbols *s, const ForExpr *expr) {
   const Value *iterable_v = eval_expr(s, expr->iterable);
   assert(iterable_v->type == VAL_LIST);
 
-  _push_scope(expr->body->block->scope);
+  st_push(e->stack, expr->body->block->scope);
 
   const Value *value = _list(iterable_v->list->len);
   for (u32 i = 0; i < iterable_v->list->len; i++) {
@@ -758,7 +736,7 @@ static const Value *eval_for(const Symbols *s, const ForExpr *expr) {
     value->list->items[i] = _block(s, expr->body->block);
   }
 
-  _pop_scope();
+  st_pop(e->stack);
   return value;
 }
 
@@ -776,7 +754,7 @@ static const Value *eval_call(const Symbols *s, const FunctionCallExpr *call) {
   }
   // TODO actually use the composable!!
 
-  _push_scope(def->scope);
+  st_push(e->stack, def->scope);
 
   for (u32 i = 0; i < call->args_len; i++) {
     const Identifier *name = or_default(call->args[i]->name, def->params[i]->name);
@@ -784,7 +762,7 @@ static const Value *eval_call(const Symbols *s, const FunctionCallExpr *call) {
   }
   const Value *value = _block(s, def->body);
 
-  _pop_scope();
+  st_pop(e->stack);
   return value;
 }
 
@@ -837,7 +815,7 @@ static const Value *eval_stmt(const Symbols *s, const Stmt *stmt) {
 }
 
 static const Value *eval_program(const Symbols *s, const Program *program) {
-  _push_scope(program->scope);
+  st_push(e->stack, program->scope);
 
   const Value *value = NULL;
   if (program->len == 1) {
@@ -863,7 +841,7 @@ static const Value *eval_program(const Symbols *s, const Program *program) {
     if (item_count > 1) value->list->len = item_count;
   }
 
-  _pop_scope();
+  st_pop(e->stack);
   return value;
 }
 
@@ -876,10 +854,10 @@ CompilationStatus eval_evaluate(i32 file_idx) {
   Symbols *sym = cs->symbol_data[file_idx];
   assert(sym != NULL); // If we got to this point without a symbol table we have a bug
 
-  dyn_array_clear(e->stack);
+  e->stack = st_begin();
   // mem_dyn_arena_free_all(sa->tc_arena);
   const Value *val = eval_program(sym, ast);
-  assert(dyn_array_size(e->stack) == 0); // Unbalanced stack is a bug
+  st_end(e->stack);
 
   cs->current_file = -1;
   return STATUS_SUCCEEDED;

@@ -30,6 +30,7 @@ Expr *parse_block_expr(BlockExpr *block);
 Expr *parse_function_call_expr(FunctionCallExpr *function_call);
 Expr *parse_import_expr(ImportExpr *import);
 Expr *parse_env_expr(EnvExpr *env);
+Expr *parse_compose_expr();
 
 LiteralExpr *parse_integer_literal(IntegerLiteral *i);
 LiteralExpr *parse_float_literal(FloatLiteral *f);

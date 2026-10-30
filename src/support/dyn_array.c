@@ -2,6 +2,7 @@
 #include <stdlib.h>
 
 #include <string.h>
+#include <support/mem.h>
 #include <support/types.h>
 #include <support/util.h>
 
@@ -10,49 +11,43 @@
 #define DEFAULT_CAP 4
 #define next_cap(x) ((x) * 2)
 
-struct dyn_array {
-  usize el_size;
-  usize size;
-  usize cap;
-  void *data;
-  destructor_t el_destructor;
-};
-
-dyn_array *dyn_array_create(usize el_size, destructor_t destructor) {
-  dyn_array *array = new(dyn_array);
-  *array = (dyn_array){
+void _da_base_init(_da_base *da, usize el_size, calloc_t alloc, free_t dealloc) {
+  *da = (_da_base) {
+    .el_size = el_size,
     .size = 0,
     .cap = DEFAULT_CAP,
-    .el_size = el_size,
-    .data = calloc(DEFAULT_CAP, el_size),
-    .el_destructor = destructor,
+    .alloc = alloc,
+    .dealloc = dealloc,
+    .destructor = NULL,
+    .data = alloc(DEFAULT_CAP, el_size),
   };
-
-  return array;
 }
 
-void dyn_array_free(dyn_array *da) {
-  dyn_array_clear(da);
-  free(da->data);
-  free(da);
+void _da_base_manage(_da_base *da, _da_base_destructor d) {
+  da->destructor = d;
 }
 
-void dyn_array_push(dyn_array *da, void *v) {
-  if (da->size == da->cap) dyn_array_reserve(da, next_cap(da->cap));
+void _da_base_free(_da_base *da) {
+  _da_base_clear(da);
+  if (da->dealloc) da->dealloc(da->data);
+}
+
+void _da_base_push(_da_base *da, void *v) {
+  if (da->size == da->cap) _da_base_reserve(da, next_cap(da->cap));
 
   usize offset = da->size * da->el_size;
   memcpy(da->data + offset, v, da->el_size);
   da->size++;
 }
 
-void *dyn_array_get(dyn_array *da, usize i) {
+void *_da_base_get(_da_base *da, usize i) {
   if (i >= da->size) return NULL;
 
   usize offset = i * da->el_size;
   return da->data + offset;
 }
 
-void *dyn_array_next(dyn_array *da, void *v) {
+void *_da_base_next(_da_base *da, void *v) {
   if ((usize)(v - da->data) % da->el_size != 0) return NULL;
   usize i = (usize)(v - da->data) / da->el_size + 1;
   if (i >= da->size) return NULL;
@@ -61,11 +56,11 @@ void *dyn_array_next(dyn_array *da, void *v) {
   return da->data + offset;
 }
 
-void dyn_array_remove(dyn_array *da, usize i) {
+void _da_base_remove(_da_base *da, usize i) {
   if (i >= da->size) return;
 
   usize offset = i * da->el_size;
-  if (da->el_destructor) da->el_destructor((void**)(da->data + offset));
+  if (da->destructor) da->destructor(da->data + offset);
   for (usize j = i + 1; j < da->size; j++) {
     usize j_offset = j * da->el_size;
     usize prev_offset = (j - 1) * da->el_size;
@@ -74,39 +69,41 @@ void dyn_array_remove(dyn_array *da, usize i) {
   da->size--;
 }
 
-void dyn_array_remove_unordered(dyn_array *da, usize i) {
+void _da_base_remove_unordered(_da_base *da, usize i) {
   if (i >= da->size) return;
 
   usize offset = i * da->el_size;
   usize last_offset = (da->size - 1) * da->el_size;
-  if (da->el_destructor) da->el_destructor((void**)(da->data + offset));
+  if (da->destructor) da->destructor(da->data + offset);
   memcpy(da->data + offset, da->data + last_offset, da->el_size);
   da->size--;
 }
 
-void dyn_array_clear(dyn_array *da) {
-  if (da->el_destructor) {
+void _da_base_clear(_da_base *da) {
+  if (da->destructor) {
     for (usize i = 0; i < da->size; i++) {
       usize offset = i * da->el_size;
-      da->el_destructor((void**)(da->data + offset));
+      da->destructor(da->data + offset);
     }
   }
 
   da->size = 0;
 }
 
-void dyn_array_reserve(dyn_array *da, usize cap) {
+void _da_base_reserve(_da_base *da, usize cap) {
   if (cap <= da->cap) return;
 
-  da->data = realloc(da->data, da->el_size * cap);
-  assert(da->data != NULL);
+  void *new_data = da->alloc(cap, da->el_size);
+  assert(new_data != NULL);
+  memcpy(new_data, da->data, da->el_size * da->size);
+  da->data = new_data;
   da->cap = cap;
 }
 
-usize dyn_array_size(dyn_array *da) {
+usize _da_base_size(_da_base *da) {
   return da->size;
 }
 
-usize dyn_array_cap(dyn_array *da) {
+usize _da_base_cap(_da_base *da) {
   return da->cap;
 }
