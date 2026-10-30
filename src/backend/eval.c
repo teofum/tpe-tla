@@ -15,6 +15,7 @@
 #include <ast/symbols.h>
 #include <backend/scope.h>
 #include <frontend/bison/bison_parser.h>
+#include <string.h>
 #include <support/dyn_array.h>
 #include <support/hash_map.h>
 #include <support/logger.h>
@@ -115,6 +116,13 @@ static bool eval_compare_values(const Value *a, const Value *b) {
         && a->range->start == b->range->start
         && a->range->end == b->range->end;
     }
+  }
+}
+
+static str eval_stringify(const Value *v) {
+  switch (v->type) {
+    case VAL_STRING: return *v->string;
+    default: return str_from_cstring_a(eval_malloc, "(TODO stringify values)");
   }
 }
 
@@ -277,7 +285,13 @@ static const Value *eval_map(const Symbols *s, const MapLiteral *map) {
     const Value *key_v = eval_expr(s, map->entries[i]->key);
     const Value *value_v = eval_expr(s, map->entries[i]->value);
     if (!map_insert(map_v, (Value *)key_v, (Value *)value_v)) {
-      // TODO duplicate key in map literal error
+      str key_str = eval_stringify(key_v);
+      char *msg = NULL;
+      asprintf(&msg,
+        "duplicate map literal key '%.*s'",
+        (i32)key_str.len, key_str.ptr
+      );
+      err_report_key(msg, &map->entries[i]->key->meta.loc, ERR_ERROR);
       return _nil();
     }
   }
@@ -294,7 +308,12 @@ static const Value *eval_struct(const Symbols *s, const StructLiteral *struct_l)
     const Value *key_v = _str_id(struct_l->fields[i]->name);
     const Value *value_v = eval_expr(s, struct_l->fields[i]->value);
     if (!map_insert(map_v, (Value *)key_v, (Value *)value_v)) {
-      // TODO duplicate key in map literal error
+      char *msg = NULL;
+      asprintf(&msg,
+        "duplicate struct literal field '%s'",
+        struct_l->fields[i]->name->lexeme
+      );
+      err_report_key(msg, &struct_l->fields[i]->name->loc, ERR_ERROR);
       return _nil();
     }
   }
@@ -517,13 +536,6 @@ static const Value *eval_math_vec(const List *l, const Value *r, TokenLabel op) 
     value->list->items[i] = _math_vec_item(l_item, r_item, op);
   }
   return value;
-}
-
-static str eval_stringify(const Value *v) {
-  switch (v->type) {
-    case VAL_STRING: return *v->string;
-    default: return str_from_cstring_a(eval_malloc, "(TODO stringify values)");
-  }
 }
 
 static const Value *eval_string_concat(const str *l, const str *r) {

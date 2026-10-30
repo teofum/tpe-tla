@@ -141,7 +141,10 @@
 [x] Statement evaluators
   [x] Declarations/constants
 [ ] Builtin functions
-[x] Error handling
+[ ] Error handling
+  [x] Ranges and indices
+  [x] Map/struct literal duplicate keys
+  [ ] Declaration lhs/rhs count mismatch
 
 /--- Code Generation ----------------------------------------------------------/
 [ ] Values to code

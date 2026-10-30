@@ -1,0 +1,22 @@
+// OK
+x: string[int] = [ 4 = "hello", 5 = "world" ]
+
+// Duplicate key
+y: string[int] = [ 4 = "hello", 4 = "world" ]
+
+// Duplicate key
+z: string[int] = [ 4 = "hello", { 2 + 2 } = "world" ]
+
+// Duplicate key
+foo: string[string] = [ "aabb" = "hello", { "aa" + "bb" } = "world" ]
+
+Foo is struct {
+  abc: int,
+  xyz: float
+}
+
+// OK
+my_foo: Foo = { .abc = 5, .xyz = 6.5 }
+
+// Duplicate key
+my_foo2 := { .abc = 5, .abc = 6, .xyz = 6.5 }
