@@ -501,7 +501,7 @@ static const Type *tc_resolve_named_type(Symbols *s, const NamedType *named) {
       .object_name = strdup(named->name->lexeme),
     };
     err_report_undef(error, &named->meta.loc, ERR_ERROR);
-    return NULL;
+    return tc_error();
   }
 
   return alias->type;
