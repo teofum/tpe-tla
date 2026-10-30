@@ -875,7 +875,14 @@ static const Value *eval_decl(const Symbols *s, const DeclarationStmt *decl) {
     eval_update_symbol(s, decl->left[0], r_value);
   } else {
     assert(r_value->type == VAL_LIST);
-    // TODO check left count <= right len
+    if (decl->left_count != r_value->list->len) {
+      char *msg = NULL;
+      asprintf(&msg,
+        "declaration symbol count mismatch: expected %lu, got %u",
+        r_value->list->len, decl->left_count
+      );
+      err_report_key(msg, &decl->meta.loc, ERR_ERROR);
+    }
     for (u32 i = 0; i < decl->left_count; i++) {
       eval_update_symbol(s, decl->left[i], r_value->list->items[i]);
     }
