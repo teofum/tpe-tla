@@ -735,15 +735,32 @@ static const Value *eval_if(const Symbols *s, const IfExpr *expr) {
 
 static const Value *eval_for(const Symbols *s, const ForExpr *expr) {
   const Value *iterable_v = eval_expr(s, expr->iterable);
-  assert(iterable_v->type == VAL_LIST);
 
   st_push(e->stack, expr->body->block->scope);
 
-  const Value *value = _list(iterable_v->list->len);
-  for (u32 i = 0; i < iterable_v->list->len; i++) {
-    eval_update_symbol(s, expr->var_id, iterable_v->list->items[i]);
-    if (expr->idx_id) eval_update_symbol(s, expr->idx_id, _int(i));
-    value->list->items[i] = _block(s, expr->body->block);
+  const Value *value = NULL;
+  switch (iterable_v->type) {
+    case VAL_LIST: {
+      value = _list(iterable_v->list->len);
+      for (u32 i = 0; i < iterable_v->list->len; i++) {
+        eval_update_symbol(s, expr->var_id, iterable_v->list->items[i]);
+        if (expr->idx_id) eval_update_symbol(s, expr->idx_id, _int(i));
+        value->list->items[i] = _block(s, expr->body->block);
+      }
+      break;
+    }
+    case VAL_RANGE: {
+      i64 len = iterable_v->range->end - iterable_v->range->start;
+      value = _list(len);
+      // TODO range check
+      for (u32 i = 0; i < len; i++) {
+        eval_update_symbol(s, expr->var_id, _int(i + iterable_v->range->start));
+        if (expr->idx_id) eval_update_symbol(s, expr->idx_id, _int(i));
+        value->list->items[i] = _block(s, expr->body->block);
+      }
+      break;
+    }
+    default: assert(false);
   }
 
   st_pop(e->stack);

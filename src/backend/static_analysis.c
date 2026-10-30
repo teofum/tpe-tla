@@ -653,7 +653,7 @@ static u32 _numvec_len(const Type *type) {
 }
 
 static bool _is_iterable(const Type *type) {
-  return type->type == T_VECTOR || type->type == T_LIST;
+  return type->type == T_VECTOR || type->type == T_LIST || type->type == T_RANGE;
 }
 
 static Type *_upgrade_numeric_type(BuiltinType l, BuiltinType r) {
@@ -1472,9 +1472,11 @@ static Type *_for_expr_type(Symbols *s, const ForExpr *expr) {
     );
   }
 
-  Type *iterator_type = iterable_type->type == T_LIST
-    ? iterable_type->list->item_type
-    : iterable_type->vec->item_type;
+  Type *iterator_type = iterable_type->type == T_RANGE
+    ? _builtin_type(T_INT)
+    : iterable_type->type == T_LIST
+      ? iterable_type->list->item_type
+      : iterable_type->vec->item_type;
 
   st_push(sa->stack, expr->body->block->scope);
   Symbol *iterator = _symbol_of(iterator_type, true);
@@ -1487,7 +1489,8 @@ static Type *_for_expr_type(Symbols *s, const ForExpr *expr) {
   st_pop(sa->stack);
 
   switch (iterable_type->type) {
-    case T_LIST: {
+    case T_LIST:
+    case T_RANGE: {
       return _list_of(body_type);
     }
     case T_VECTOR: {

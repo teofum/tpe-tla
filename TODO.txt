@@ -50,7 +50,7 @@
 [ ] Add string slicing
 [x] Add function composition
 [ ] Add default function values
-[ ] Iterable ranges
+[x] Iterable ranges
 
 #=== Backend ==================================================================#
 
@@ -137,6 +137,7 @@
 [x] Statement evaluators
   [x] Declarations/constants
 [ ] Builtin functions
+[ ] Error handling
 
 /--- Code Generation ----------------------------------------------------------/
 [ ] Values to code
