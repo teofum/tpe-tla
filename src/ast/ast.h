@@ -600,6 +600,8 @@ struct List {
 };
 
 struct Range {
+  bool has_start;
+  bool has_end;
   i64 start;
   i64 end;
 };

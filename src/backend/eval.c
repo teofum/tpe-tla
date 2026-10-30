@@ -109,7 +109,9 @@ static bool eval_compare_values(const Value *a, const Value *b) {
     case VAL_MAP: return eval_compare_maps(a->map, b->map);
     case VAL_ELEMENT: return eval_compare_elements(a->element, b->element);
     case VAL_RANGE: {
-      return a->range->start == b->range->start
+      return a->range->has_start == b->range->has_start
+        && a->range->has_end == b->range->has_end
+        && a->range->start == b->range->start
         && a->range->end == b->range->end;
     }
   }
@@ -222,14 +224,16 @@ static const Value *eval_expr(const Symbols *s, const Expr *expr);
 static const Value *eval_stmt(const Symbols *s, const Stmt *stmt);
 
 static const Value *eval_range(const Symbols *s, const RangeLiteral *range) {
-  const Value *start_v = eval_expr(s, range->start);
-  const Value *end_v = eval_expr(s, range->end);
-  assert(start_v->type == VAL_INT);
-  assert(end_v->type == VAL_INT);
+  const Value *start_v = range->start ? eval_expr(s, range->start) : NULL;
+  const Value *end_v = range->end ? eval_expr(s, range->end) : NULL;
+  assert(!start_v || start_v->type == VAL_INT);
+  assert(!end_v || end_v->type == VAL_INT);
 
   eval_make(Range, range_v, {
-    .start = start_v->integer,
-    .end = end_v->integer,
+    .has_start = start_v != NULL,
+    .has_end = end_v != NULL,
+    .start = start_v ? start_v->integer : 0,
+    .end = end_v ? end_v->integer : 0,
   });
   eval_make(Value, value, { .type = VAL_RANGE, .range = range_v });
   return value;
@@ -324,9 +328,10 @@ static const Value *eval_list_idx(
         break;
       }
       case VAL_RANGE: {
-        u32 start = idx->range->start;
+        const Range *r = idx->range;
+        i64 start = r->has_start ? r->start : 0;
         if (start < 0) start += container->list->len;
-        u32 end = idx->range->end;
+        i64 end = r->has_end ? r->end : container->list->len;
         if (end < 0) end += container->list->len;
         // TODO bounds check
 
@@ -750,11 +755,13 @@ static const Value *eval_for(const Symbols *s, const ForExpr *expr) {
       break;
     }
     case VAL_RANGE: {
-      i64 len = iterable_v->range->end - iterable_v->range->start;
-      value = _list(len);
+      const Range *r = iterable_v->range;
       // TODO range check
+
+      i64 len = r->end - r->start;
+      value = _list(len);
       for (u32 i = 0; i < len; i++) {
-        eval_update_symbol(s, expr->var_id, _int(i + iterable_v->range->start));
+        eval_update_symbol(s, expr->var_id, _int(i + r->start));
         if (expr->idx_id) eval_update_symbol(s, expr->idx_id, _int(i));
         value->list->items[i] = _block(s, expr->body->block);
       }

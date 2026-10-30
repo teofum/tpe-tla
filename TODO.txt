@@ -49,8 +49,10 @@
 
 [ ] Add string slicing
 [x] Add function composition
-[ ] Add default function values
 [x] Iterable ranges
+
+[ ] Remove default function values
+[ ] Remove enums
 
 #=== Backend ==================================================================#
 
