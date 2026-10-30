@@ -382,6 +382,12 @@ static void dot_env(EnvExpr *env, u64 pid) {
   if (env->default_value) dot_expr(env->default_value, id);
 }
 
+static void dot_compose(u64 pid) {
+  u64 id = next_id();
+  _node(id, "Compose", NODE_BASE);
+  _edge(pid, id);
+}
+
 static void dot_expr(Expr *expr, u64 pid) {
   switch (expr->type) {
     case EXPR_LITERAL: return dot_literal(expr->literal, pid);
@@ -396,6 +402,7 @@ static void dot_expr(Expr *expr, u64 pid) {
     case EXPR_FUNCTION_CALL: return dot_function_call(expr->function_call, pid);
     case EXPR_IMPORT: return dot_import(expr->import, pid);
     case EXPR_ENV: return dot_env(expr->env, pid);
+    case EXPR_COMPOSE: return dot_compose(pid);
   }
 }
 

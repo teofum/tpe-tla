@@ -550,6 +550,7 @@ struct FunctionDef {
   Scope scope;
   u32 params_len;
   Parameter **params;
+  Type *compose_type;
   Type *return_type;
   BlockExpr *body;
 };
@@ -676,7 +677,13 @@ Type *ast_vector_type(Type *type, u32 count);
 Type *ast_enum_type(IdentifierList *values);
 Type *ast_builtin_type(BuiltinType builtin_type);
 
-FunctionDef *ast_function_def(Identifier *id, ParameterList *params, Type *return_type, BlockExpr *body);
+FunctionDef *ast_function_def(
+  Identifier *id,
+  ParameterList *params,
+  Type *compose_type,
+  Type *return_type,
+  BlockExpr *body
+);
 
 StructField *ast_struct_field(Identifier *id, Type *type, Expr *default_value);
 StructLiteralField *ast_struct_literal_field(Identifier *id, Expr *value);

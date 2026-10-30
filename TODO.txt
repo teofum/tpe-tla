@@ -43,11 +43,12 @@
 
 [x] Improve and update README.md
   [x] Give the dang thing a name
+[ ] Add a proper help message
 
 [x] Modify dyn_array to have a type safe API more similar to the hash map
 
 [ ] Add string slicing
-[ ] Add function composition
+[x] Add function composition
 [ ] Add default function values
 [ ] Iterable ranges
 

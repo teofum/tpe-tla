@@ -1,0 +1,16 @@
+multiply is function(x: float, y: float) -> float {
+  x * y
+}
+
+multiply(5, 2)        // OK
+multiply(4.5, 0.5)    // OK
+multiply("hello", 1)  // Type error
+
+composable is function compose int -> int[] {
+  compose
+  compose
+  compose
+}
+
+composable: 5         // OK
+composable: "hello"   // Type error

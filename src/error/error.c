@@ -125,6 +125,11 @@ void err_report_fn_param_req(const FunctionCallExpr *call, const Parameter *p, E
   da_push(e->errors, &error);
 }
 
+void err_report_compose(const Location *loc, ErrorLevel level) {
+  Error error = _make_error(ERR_COMPOSE, CS_TYPECHECK, level, loc);
+  da_push(e->errors, &error);
+}
+
 static void _log(Error *error, const char *const format, ...) {
   va_list args;
   va_start(args, format);
@@ -293,6 +298,12 @@ static void _log_fn_param_req_error(Error *error) {
   _log_error_with_loc(error_str, error);
 }
 
+static void _log_compose_error(Error *error) {
+  str error_str = str_format(
+    "compose expression is not in a composable function body"
+  );
+  _log_error_with_loc(error_str, error);
+}
 
 static void _log_error(Error *error) {
   switch (error->type) {
@@ -305,6 +316,7 @@ static void _log_error(Error *error) {
     case ERR_FN_ARG_NAME: _log_fn_arg_name_error(error); break;
     case ERR_FN_ARG_POS: _log_fn_arg_pos_error(error); break;
     case ERR_FN_PARAM_REQ: _log_fn_param_req_error(error); break;
+    case ERR_COMPOSE: _log_compose_error(error); break;
   }
 }
 
@@ -339,6 +351,7 @@ void err_free_error(Error *e) {
     case ERR_FN_ARG_NAME: err_free_fn_arg_name_error(e->fn_arg_name); break;
     case ERR_FN_ARG_POS: err_free_fn_arg_pos_error(e->fn_arg_pos); break;
     case ERR_FN_PARAM_REQ: err_free_fn_param_req_error(e->fn_param_req); break;
+    case ERR_COMPOSE: break;
   }
 }
 

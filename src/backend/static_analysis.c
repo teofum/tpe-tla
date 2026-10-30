@@ -468,6 +468,16 @@ static bool _is_assignment(const Stmt *stmt) {
   return stmt->type == STMT_EXPR && stmt->expr->type == EXPR_ASSIGNMENT;
 }
 
+static Identifier _composable = {
+  .lexeme = "$compose",
+  .label = IDENTIFIER,
+  .len = 8,
+  .loc = {0}
+};
+static const Identifier *_composable_id() {
+  return &_composable;
+}
+
 /* -- Type checking: variables ---------------------------------------------- */
 
 static const Type *tc_resolve_named_type(Symbols *s, const NamedType *named) {
@@ -546,6 +556,18 @@ static const Symbol *tc_resolve_symbol(Symbols *s, const Identifier *name) {
     };
     err_report_undef(error, &name->loc, ERR_ERROR);
     return NULL;
+  }
+
+  return symbol;
+}
+
+static const Symbol *tc_resolve_composable(Symbols *s) {
+  const Symbol *symbol = NULL;
+  StackEntry *st = st_current(sa->stack);
+  while (!symbol && st) {
+    SymbolKey key = { .name = _composable.lexeme, .scope = st_scope(st).id };
+    symbol = map_get(s->symbols, &key);
+    st = st_next(st);
   }
 
   return symbol;
@@ -1524,7 +1546,7 @@ static bool _check_function_args(
     Type *arg_type = tc_check_expr(s, arg->value);
     if (!tc_accepts_type(s, param->type, arg_type)) {
       tc_report_error_fmt(
-        &param->meta.loc,
+        &arg->meta.loc,
         "%s is not assignable to %s",
         tc_print_type(arg_type), tc_print_type(param->type)
       );
@@ -1550,8 +1572,17 @@ static Type *_function_call_type(Symbols *s, const FunctionCallExpr *expr) {
   if (!def) return tc_error();
 
   bool valid = _check_function_args(s, expr, def);
-  if (expr->composable && !tc_check_expr(s, expr->composable)) {
-    valid = false; // No need to error here; composable typecheck should report
+  if (expr->composable) {
+    Type *composable_type = tc_check_expr(s, expr->composable);
+    if (!composable_type) {
+      valid = false;
+    } else if (!tc_accepts_type(s, def->compose_type, composable_type)) {
+      tc_report_error_fmt(
+        &expr->composable->meta.loc,
+        "%s is not assignable to %s",
+        tc_print_type(composable_type), tc_print_type(def->compose_type)
+      );
+    }
   }
 
   return valid ? def->return_type : tc_error();
@@ -1627,6 +1658,15 @@ static Type *_block_type(Symbols *s, const BlockExpr *expr) {
   return type;
 }
 
+static Type *_compose_type(Symbols *s, const Expr *expr) {
+  const Symbol *composable = tc_resolve_composable(s);
+  if (!composable) {
+    err_report_compose(&expr->meta.loc, ERR_ERROR);
+  }
+
+  return composable->type;
+}
+
 static Type *tc_check_expr(Symbols *s, const Expr *expr) {
   Type *type = NULL;
   switch (expr->type) {
@@ -1642,6 +1682,7 @@ static Type *tc_check_expr(Symbols *s, const Expr *expr) {
     case EXPR_IMPORT: type = _import_type(s, expr->import); break;
     case EXPR_ENV: type = _env_type(s, expr->env); break;
     case EXPR_GROUP: type = tc_check_expr(s, expr->group->inner_expr); break;
+    case EXPR_COMPOSE: type = _compose_type(s, expr); break;
   }
 
   tc_debug_log("Expr", &expr->meta.loc);
@@ -1784,6 +1825,11 @@ static void _check_function_def(Symbols *s, const FunctionDef *def) {
 
     Symbol *param = _symbol_of(def->params[i]->type, true);
     tc_define_symbol(s, def->params[i]->name, param);
+  }
+
+  if (def->compose_type) {
+    Symbol *composable = _symbol_of(def->compose_type, true);
+    tc_define_symbol(s, _composable_id(), composable);
   }
 
   Type *body_type = tc_check_block(s, def->body);

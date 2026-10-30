@@ -13,10 +13,11 @@ typedef enum {
   ERR_UNDEF,            // Undefined symbol reference
   // Type errors
   ERR_TYPE,             // Type error
-  ERR_FN_ARG_COUNT,    // Function call argument count mismatch
-  ERR_FN_ARG_NAME,     // Function call argument invalid name
-  ERR_FN_ARG_POS,      // Function call positional argument after named
-  ERR_FN_PARAM_REQ,    // Function call required parameter unset
+  ERR_FN_ARG_COUNT,     // Function call argument count mismatch
+  ERR_FN_ARG_NAME,      // Function call argument invalid name
+  ERR_FN_ARG_POS,       // Function call positional argument after named
+  ERR_FN_PARAM_REQ,     // Function call required parameter unset
+  ERR_COMPOSE,          // Compose expression in function with no compose type
 } ErrorType;
 
 typedef enum {
@@ -118,6 +119,7 @@ void err_report_fn_arg_count(FnArgCountError *error, const Location *loc, ErrorL
 void err_report_fn_arg_name(const FunctionCallExpr *call, const Argument *arg, ErrorLevel level);
 void err_report_fn_arg_pos(const Argument *arg, ErrorLevel level);
 void err_report_fn_param_req(const FunctionCallExpr *call, const Parameter *param, ErrorLevel level);
+void err_report_compose(const Location *loc, ErrorLevel level);
 bool err_gate();
 
 void err_free_error(Error *e);

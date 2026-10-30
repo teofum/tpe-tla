@@ -231,6 +231,7 @@ static void yyerror(YYLTYPE *location, const char *message) {
 
 %type <type>                        type
 %type <type>                        import_type
+%type <type>                        compose_type
 %type <struct_field>                struct_field
 %type <struct_literal_field>        struct_literal_field
 %type <map_entry>                   map_entry
@@ -312,7 +313,7 @@ constant: IDENTIFIER COLON_COLON type EQUAL expression              { $$ = parse
 type_alias: IDENTIFIER IS type                                      { $$ = parse_type_alias($1, $3); }
   ;
 
-function_def: IDENTIFIER IS FUNCTION parameters ARROW type nl block { $$ = parse_function_def($1, $4, $6, $8); }
+function_def: IDENTIFIER IS FUNCTION parameters compose_type ARROW type nl block { $$ = parse_function_def($1, $4, $5, $7, $9); }
   ;
 
 parameters: PAREN_L nl parameter_list nl PAREN_R                    { $$ = $3; }
@@ -326,6 +327,10 @@ parameter_list: parameter                                           { $$ = parse
 
 parameter: IDENTIFIER COLON type                                    { $$ = parse_parameter($1, $3, NULL); }
   | IDENTIFIER COLON type EQUAL expression                          { $$ = parse_parameter($1, $3, $5); }
+  ;
+
+compose_type: COMPOSE type                                          { $$ = $2; }
+  | %empty                                                          { $$ = NULL; }
   ;
 
 export: EXPORT identifier_list                                      { $$ = parse_export($2); }

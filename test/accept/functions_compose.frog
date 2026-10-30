@@ -1,0 +1,7 @@
+composable is function compose int -> int[] {
+  compose
+  compose
+  compose
+}
+
+composable: 5

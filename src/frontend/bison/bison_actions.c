@@ -348,9 +348,15 @@ Type *parse_nil_type() {
 
 // -----------------------------------------------------------------------------
 
-FunctionDef *parse_function_def(Identifier *id, ParameterList *params, Type *return_type, BlockExpr *body) {
+FunctionDef *parse_function_def(
+  Identifier *id,
+  ParameterList *params,
+  Type *compose_type,
+  Type *return_type,
+  BlockExpr *body
+) {
   fe_parser_log(LOG_DEBUG, "Function Definition %s", id->lexeme);
-  return ast_function_def(id, params, return_type, body);
+  return ast_function_def(id, params, compose_type, return_type, body);
 }
 
 static Argument *_parse_argument(Expr *expr) {

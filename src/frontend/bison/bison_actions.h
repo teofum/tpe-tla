@@ -74,7 +74,7 @@ Type *parse_vector_type(Type *type, IntegerLiteral *count);
 Type *parse_enum_type(IdentifierList *values);
 Type *parse_nil_type();
 
-FunctionDef *parse_function_def(Identifier *id, ParameterList *params, Type *return_type, BlockExpr *body);
+FunctionDef *parse_function_def(Identifier *id, ParameterList *params, Type *compose_type, Type *return_type, BlockExpr *body);
 FunctionCallExpr *parse_function_call(Identifier *id, ExprList *args, Expr *composable, IdentifierList *classlist, Identifier *html_id);
 
 StructFieldList *parse_struct_field_list(StructField *head, StructFieldList *tail);

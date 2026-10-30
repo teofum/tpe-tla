@@ -160,6 +160,16 @@ static bool _is_assignment(const Stmt *stmt) {
   return stmt->type == STMT_EXPR && stmt->expr->type == EXPR_ASSIGNMENT;
 }
 
+static Identifier _composable = {
+  .lexeme = "$compose",
+  .label = IDENTIFIER,
+  .len = 8,
+  .loc = {0}
+};
+static const Identifier *_composable_id() {
+  return &_composable;
+}
+
 /* -- Evaluation: symbols --------------------------------------------------- */
 
 static const FunctionDef *_resolve_function(
@@ -752,7 +762,6 @@ static const Value *eval_call(const Symbols *s, const FunctionCallExpr *call) {
   if (call->composable) {
     composable_v = eval_expr(s, call->composable);
   }
-  // TODO actually use the composable!!
 
   st_push(e->stack, def->scope);
 
@@ -760,10 +769,17 @@ static const Value *eval_call(const Symbols *s, const FunctionCallExpr *call) {
     const Identifier *name = or_default(call->args[i]->name, def->params[i]->name);
     eval_update_symbol(s, name, arg_values[i]);
   }
+  if (composable_v) {
+    eval_update_symbol(s, _composable_id(), composable_v);
+  }
   const Value *value = _block(s, def->body);
 
   st_pop(e->stack);
   return value;
+}
+
+static const Value *eval_compose(const Symbols *s, const Expr *expr) {
+  return eval_get_symbol(s, _composable_id());
 }
 
 static const Value *eval_expr(const Symbols *s, const Expr *expr) {
@@ -778,6 +794,7 @@ static const Value *eval_expr(const Symbols *s, const Expr *expr) {
     case EXPR_FUNCTION_CALL: return eval_call(s, expr->function_call);
     case EXPR_BLOCK: return eval_block(s, expr->block);
     case EXPR_GROUP: return eval_expr(s, expr->group->inner_expr);
+    case EXPR_COMPOSE: return eval_compose(s, expr);
   }
   assert(false); // perish
 }

@@ -632,11 +632,18 @@ Type *ast_builtin_type(BuiltinType builtin_type) {
 
 // -----------------------------------------------------------------------------
 
-FunctionDef *ast_function_def(Identifier *id, ParameterList *params, Type *return_type, BlockExpr *body) {
+FunctionDef *ast_function_def(
+  Identifier *id,
+  ParameterList *params,
+  Type *compose_type,
+  Type *return_type,
+  BlockExpr *body
+) {
   FunctionDef *function = new(FunctionDef);
   *function = (FunctionDef){
     .meta = _ast_get_metadata(),
     .name = id,
+    .compose_type = compose_type,
     .return_type = return_type,
     .body = body,
   };
@@ -1144,6 +1151,7 @@ void ast_free_function_def(FunctionDef *f) {
   for (u32 i = 0; i < f->params_len; i++) {
     ast_free_parameter(f->params[i]);
   }
+  ast_free_type(f->compose_type);
   ast_free_type(f->return_type);
   ast_free_block(f->body);
   free(f->params);

@@ -1,5 +1,7 @@
 square is function(x: float) -> float {
-  x * x
+  y: float = 5
+  y = x
+  x * y
 }
 
 square(4)
