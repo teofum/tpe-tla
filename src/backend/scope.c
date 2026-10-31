@@ -53,9 +53,9 @@ StackEntry *st_current(Stack *st) {
   return st->current;
 }
 
-StackEntry *st_next(StackEntry *st) {
+StackEntry *st_next(StackEntry *st, bool variable) {
   // Cut off symbol lookup at function scope
-  if (st->scope.type == SC_FUNCTION) return NULL;
+  if (variable && st->scope.type == SC_FUNCTION) return NULL;
   return st->parent;
 }
 

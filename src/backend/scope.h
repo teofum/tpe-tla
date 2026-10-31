@@ -4,6 +4,7 @@
 #include <support/dyn_array.h>
 
 typedef enum {
+  SC_GLOBAL,
   SC_FILE,
   SC_BLOCK,
   SC_FUNCTION,
@@ -27,7 +28,7 @@ Scope st_pop(Stack *st);
 Scope st_peek(Stack *st);
 
 StackEntry *st_current(Stack *st);
-StackEntry *st_next(StackEntry *st);
+StackEntry *st_next(StackEntry *st, bool variable);
 Scope st_scope(StackEntry *st);
 
 #endif

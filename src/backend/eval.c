@@ -46,6 +46,9 @@ void eval_init(CompilerState *compiler_state) {
   e = new(Evaluator);
   e->logger = logger_create("Eval", stderr, LOG_DEBUG);
   e->arena = mem_dyn_arena_create(MEM_SIZE_AUTO);
+
+  e->stack = st_begin();
+  st_push(e->stack, cs->global_scope);
 }
 
 void eval_shutdown() {
@@ -53,6 +56,10 @@ void eval_shutdown() {
 
   if (e->logger) logger_free(e->logger);
   if (e->arena) mem_dyn_arena_destroy(e->arena);
+  if (e->stack) {
+    st_pop(e->stack);
+    st_end(e->stack);
+  }
   free(e);
 
   e = NULL;
@@ -199,7 +206,7 @@ static const FunctionDef *_resolve_function(
   while (!function && st) {
     SymbolKey key = { .name = name->lexeme, .scope = st_scope(st).id };
     function = map_get(s->functions, &key);
-    st = st_next(st);
+    st = st_next(st, false);
   }
 
   assert(function != NULL);
@@ -213,7 +220,7 @@ static Symbol *_resolve_symbol(const Symbols *s, const Identifier *name) {
   while (!symbol && st) {
     SymbolKey key = { .name = name->lexeme, .scope = st_scope(st).id };
     symbol = map_get(s->symbols, &key);
-    st = st_next(st);
+    st = st_next(st, true);
   }
 
   assert(symbol != NULL); // Undefined variable
@@ -948,10 +955,8 @@ CompilationStatus eval_evaluate(i32 file_idx) {
   Symbols *sym = cs->symbol_data[file_idx];
   assert(sym != NULL); // If we got to this point without a symbol table we have a bug
 
-  e->stack = st_begin();
-  // mem_dyn_arena_free_all(sa->tc_arena);
   const Value *val = eval_program(sym, ast);
-  st_end(e->stack);
+  assert(st_peek(e->stack).type == SC_GLOBAL);
 
   cs->current_file = -1;
   return STATUS_SUCCEEDED;

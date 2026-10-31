@@ -43,6 +43,10 @@ void sa_init(CompilerState *compiler_state) {
     cs->options.typecheck_log_level
   );
   sa->tc_arena = mem_dyn_arena_create(MEM_SIZE_AUTO);
+
+  cs->global_scope = sc_new(SC_GLOBAL);
+  sa->stack = st_begin();
+  st_push(sa->stack, cs->global_scope);
 }
 
 void sa_shutdown() {
@@ -51,6 +55,10 @@ void sa_shutdown() {
   if (sa->sym_logger) logger_free(sa->sym_logger);
   if (sa->tc_logger) logger_free(sa->tc_logger);
   if (sa->tc_arena) mem_dyn_arena_destroy(sa->tc_arena);
+  if (sa->stack) {
+    st_pop(sa->stack);
+    st_end(sa->stack);
+  }
   free(sa);
 
   sa = NULL;
@@ -116,11 +124,12 @@ static void _static_tables_add_function(Symbols *s, FunctionDef *function) {
     );
 
     FunctionDef *prev = map_get(s->functions, &key);
+    bool builtin = prev->body == NULL;
     RedefError *error = new(RedefError);
     *error = (RedefError){
-      .object_type = "function",
+      .object_type = builtin ? "builtin function" : "function",
       .object_name = strdup(key.name),
-      .previous_definition = prev->meta.loc
+      .previous_definition = builtin ? (Location){0} : prev->meta.loc
     };
     err_report_redef(error, &function->meta.loc, ERR_ERROR);
   }
@@ -272,9 +281,8 @@ CompilationStatus sa_build_static_tables(i32 file_idx) {
   map_manage_keys(sym->functions, sk_clone, sk_free);
   cs->symbol_data[file_idx] = sym;
 
-  sa->stack = st_begin();
   _build_static_tables_ast(sym, ast);
-  st_end(sa->stack);
+  assert(st_peek(sa->stack).type == SC_GLOBAL);
 
   cs->current_file = -1;
   return STATUS_SUCCEEDED;
@@ -486,7 +494,7 @@ static const Type *tc_resolve_named_type(Symbols *s, const NamedType *named) {
   while (!alias && st) {
     SymbolKey key = { .name = named->name->lexeme, .scope = st_scope(st).id };
     alias = map_get(s->types, &key);
-    st = st_next(st);
+    st = st_next(st, false);
   }
 
   if (!alias) {
@@ -513,7 +521,7 @@ static const FunctionDef *tc_resolve_function(Symbols *s, const Identifier *name
   while (!function && st) {
     SymbolKey key = { .name = name->lexeme, .scope = st_scope(st).id };
     function = map_get(s->functions, &key);
-    st = st_next(st);
+    st = st_next(st, false);
   }
 
   if (!function) {
@@ -540,7 +548,7 @@ static const Symbol *tc_resolve_symbol(Symbols *s, const Identifier *name) {
   while (!symbol && st) {
     SymbolKey key = { .name = name->lexeme, .scope = st_scope(st).id };
     symbol = map_get(s->symbols, &key);
-    st = st_next(st);
+    st = st_next(st, true);
   }
 
   if (!symbol) {
@@ -567,7 +575,7 @@ static const Symbol *tc_resolve_composable(Symbols *s) {
   while (!symbol && st) {
     SymbolKey key = { .name = _composable.lexeme, .scope = st_scope(st).id };
     symbol = map_get(s->symbols, &key);
-    st = st_next(st);
+    st = st_next(st, true);
   }
 
   return symbol;
@@ -1897,10 +1905,9 @@ CompilationStatus sa_build_tables_and_typecheck(i32 file_idx) {
   map_init(sym->symbols, sk_hash, sk_compare);
   map_manage_keys(sym->symbols, sk_clone, sk_free);
 
-  sa->stack = st_begin();
   mem_dyn_arena_free_all(sa->tc_arena);
   tc_check_ast(sym, ast);
-  st_end(sa->stack);
+  assert(st_peek(sa->stack).type == SC_GLOBAL);
 
   cs->current_file = -1;
   return STATUS_SUCCEEDED;
