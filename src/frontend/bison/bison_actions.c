@@ -530,9 +530,9 @@ MapEntry *parse_map_entry_block(BlockExpr *key, Expr *value) {
   return ast_map_entry(ast_expr_block(key), value);
 }
 
-Parameter *parse_parameter(Identifier *id, Type *type, Expr *default_value) {
+Parameter *parse_parameter(Identifier *id, Type *type) {
   fe_parser_log(LOG_DEBUG, "Parameter %s", id->lexeme);
-  return ast_parameter(id, type, default_value);
+  return ast_parameter(id, type);
 }
 
 // -----------------------------------------------------------------------------

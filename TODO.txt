@@ -52,7 +52,7 @@
 [x] Iterable ranges
 [ ] Decomposition statement for list composing
 
-[ ] Remove default function values
+[x] Remove default function parameter values
 [ ] Remove enums
 [ ] MAYBE: Remove list/tuple literals and replace with blocks?
 

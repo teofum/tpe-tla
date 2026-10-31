@@ -558,7 +558,6 @@ struct Parameter {
   ASTNodeMetadata meta;
   Identifier *name;
   Type *type;
-  Expr *default_value;
 };
 
 // -----------------------------------------------------------------------------
@@ -689,7 +688,7 @@ FunctionDef *ast_function_def(
 StructField *ast_struct_field(Identifier *id, Type *type, Expr *default_value);
 StructLiteralField *ast_struct_literal_field(Identifier *id, Expr *value);
 MapEntry *ast_map_entry(Expr *key, Expr *value);
-Parameter *ast_parameter(Identifier *id, Type *type, Expr *default_value);
+Parameter *ast_parameter(Identifier *id, Type *type);
 Argument *ast_argument(Identifier *id, Expr *value);
 
 Program *ast_program(StmtList *statements);

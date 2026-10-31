@@ -325,8 +325,7 @@ parameter_list: parameter                                           { $$ = parse
   | parameter_list COMMA nl parameter                               { $$ = parse_parameter_list($4, $1); }
   ;
 
-parameter: IDENTIFIER COLON type                                    { $$ = parse_parameter($1, $3, NULL); }
-  | IDENTIFIER COLON type EQUAL expression                          { $$ = parse_parameter($1, $3, $5); }
+parameter: IDENTIFIER COLON type                                    { $$ = parse_parameter($1, $3); }
   ;
 
 compose_type: COMPOSE type                                          { $$ = $2; }

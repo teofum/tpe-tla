@@ -90,7 +90,7 @@ StructField *parse_struct_field(Identifier *id, Type *type, Expr *default_value)
 StructLiteralField *parse_struct_literal_field(Identifier *id, Expr *value);
 MapEntry *parse_map_entry_literal(LiteralExpr *key, Expr *value);
 MapEntry *parse_map_entry_block(BlockExpr *key, Expr *value);
-Parameter *parse_parameter(Identifier *id, Type *type, Expr *default_value);
+Parameter *parse_parameter(Identifier *id, Type *type);
 
 Program *parse_program(StmtList *statements);
 

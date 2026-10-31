@@ -690,13 +690,12 @@ MapEntry *ast_map_entry(Expr *key, Expr *value) {
   return entry;
 }
 
-Parameter *ast_parameter(Identifier *id, Type *type, Expr *default_value) {
+Parameter *ast_parameter(Identifier *id, Type *type) {
   Parameter *param = new(Parameter);
   *param = (Parameter){
     .meta = _ast_get_metadata(),
     .name = id,
     .type = type,
-    .default_value = default_value,
   };
 
   return param;
@@ -1188,7 +1187,6 @@ void ast_free_parameter(Parameter *p) {
 
   ast_free_identifier(p->name);
   ast_free_type(p->type);
-  ast_free_expr(p->default_value);
   free(p);
 }
 
