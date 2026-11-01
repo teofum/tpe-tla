@@ -196,7 +196,12 @@ typedef struct List List;
 typedef map(Value, Value) Map;
 typedef struct Range Range;
 
-typedef const Value *(*BuiltinFunction)(const Value **, const Value *, const FunctionDef *);
+typedef const Value *(*BuiltinFunction)(
+  const Value **,
+  const Value *,
+  const FunctionDef *,
+  const FunctionCallExpr *
+);
 
 AST_LIST(Stmt, stmt);
 AST_LIST(Expr, expr);

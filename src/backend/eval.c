@@ -844,7 +844,7 @@ static const Value *eval_call(const Symbols *s, const FunctionCallExpr *call) {
   }
 
   if (def->body == NULL) {
-    return def->builtin(arg_values, composable_v, def);
+    return def->builtin(arg_values, composable_v, def, call);
   }
 
   st_push(e->stack, def->body->scope);
