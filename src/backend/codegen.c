@@ -93,7 +93,7 @@ static void _write_value(const Value *v, const char *sep, i32 indent) {
         _write_value(
           v->list->items[i],
           i == v->list->len - 1 ? "" : " ",
-          indent >= 0 ? indent + 1 : -1
+          indent
         );
       }
       break;
@@ -101,7 +101,7 @@ static void _write_value(const Value *v, const char *sep, i32 indent) {
     case VAL_MAP: assert(false); // TODO error
     case VAL_RANGE: assert(false); // TODO error
   }
-  if (cg->pretty && indent >= 0) _p("\n");
+  if (cg->pretty && indent >= 0 && v->type != VAL_LIST) _p("\n");
 }
 
 void cg_generate(u32 file_idx) {
