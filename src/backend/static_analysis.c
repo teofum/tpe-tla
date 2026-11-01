@@ -1585,17 +1585,36 @@ static Type *_function_call_type(Symbols *s, const FunctionCallExpr *expr) {
   if (!def) return tc_error();
 
   bool valid = _check_function_args(s, expr, def);
-  if (expr->composable) {
-    Type *composable_type = tc_check_expr(s, expr->composable);
-    if (!composable_type) {
-      valid = false;
-    } else if (!tc_accepts_type(s, def->compose_type, composable_type)) {
-      tc_report_error_fmt(
-        &expr->composable->meta.loc,
-        "%s is not assignable to %s",
-        tc_print_type(composable_type), tc_print_type(def->compose_type)
-      );
+  Type *composable_type = expr->composable
+    ? tc_check_expr(s, expr->composable)
+    : NULL;
+
+  if (def->compose_type) {
+    if (composable_type) {
+      if (_is_error(composable_type)) {
+        return tc_error();
+      } else if (!tc_accepts_type(s, def->compose_type, composable_type)) {
+        return tc_report_error_fmt(
+          &expr->composable->meta.loc,
+          "%s is not assignable to %s",
+          tc_print_type(composable_type), tc_print_type(def->compose_type)
+        );
+      }
+    } else {
+      if (!tc_accepts_type(s, def->compose_type, _builtin(T_NIL))) {
+        return tc_report_error_fmt(
+          &expr->meta.loc,
+          "function '%s' expects a composable",
+          def->name->lexeme
+        );
+      }
     }
+  } else if (composable_type) {
+    return tc_report_error_fmt(
+      &expr->composable->meta.loc,
+      "function '%s' is not composable",
+      def->name->lexeme
+    );
   }
 
   return valid ? def->return_type : tc_error();
@@ -1642,9 +1661,15 @@ static Type *tc_check_block(Symbols *s, const BlockExpr *expr) {
   Type **block_types = tc_new_array(Type *, expr->len);
   u32 type_count = 0;
   bool homogenous = true;
+  bool valid = true;
 
   for (u32 i = 0; i < expr->len; i++) {
     Type *stmt_type = tc_check_stmt(s, expr->statements[i]);
+    if (_is_error(stmt_type)) {
+      valid = false;
+      continue;
+    }
+
     if (stmt_type && !_is_assignment(expr->statements[i])) {
       if (type_count > 0 && !tc_compare_types(s, block_types[0], stmt_type)) {
         homogenous = false;
@@ -1653,6 +1678,7 @@ static Type *tc_check_block(Symbols *s, const BlockExpr *expr) {
     }
   }
 
+  if (!valid) return tc_error();
   if (type_count == 0) {
     return tc_report_error_fmt(&expr->meta.loc, "empty block expression");
   } else if (type_count == 1) {
