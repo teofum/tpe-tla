@@ -26,6 +26,7 @@
 #include <support/util.h>
 
 #include "eval.h"
+#include "backend/builtins.h"
 #include "error/error.h"
 
 typedef struct {
@@ -840,6 +841,10 @@ static const Value *eval_call(const Symbols *s, const FunctionCallExpr *call) {
     composable_v = eval_expr(s, call->composable);
   }
 
+  if (def->body == NULL) {
+    return def->builtin(arg_values, composable_v, def);
+  }
+
   st_push(e->stack, def->body->scope);
 
   for (u32 i = 0; i < call->args_len; i++) {
@@ -955,6 +960,7 @@ CompilationStatus eval_evaluate(i32 file_idx) {
   Symbols *sym = cs->symbol_data[file_idx];
   assert(sym != NULL); // If we got to this point without a symbol table we have a bug
 
+  builtins_set_eval_arena(e->arena);
   const Value *val = eval_program(sym, ast);
   assert(st_peek(e->stack).type == SC_GLOBAL);
 

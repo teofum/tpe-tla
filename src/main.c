@@ -1,3 +1,4 @@
+#include "backend/builtins.h"
 #include <ast/ast.h>
 #include <ast/symbols.h>
 #include <ast/dot.h>
@@ -85,6 +86,7 @@ CompilerState *init(CompilerOptions *opts) {
   // Initialize compiler
   err_init(cs);
   fe_init(cs);
+  builtins_init(cs);
   sa_init(cs);
   eval_init(cs);
 
@@ -109,6 +111,7 @@ CompilationStatus shutdown(CompilerState *cs) {
 
   eval_shutdown();
   sa_shutdown();
+  builtins_shutdown();
   fe_shutdown();
   err_shutdown();
 

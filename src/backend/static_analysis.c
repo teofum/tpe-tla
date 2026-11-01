@@ -6,6 +6,7 @@
 
 #include <ast/ast.h>
 #include <ast/symbols.h>
+#include <backend/builtins.h>
 #include <backend/scope.h>
 #include <error/error.h>
 #include <frontend/bison/bison_parser.h>
@@ -280,6 +281,7 @@ CompilationStatus sa_build_static_tables(i32 file_idx) {
   map_init(sym->functions, sk_hash, sk_compare);
   map_manage_keys(sym->functions, sk_clone, sk_free);
   cs->symbol_data[file_idx] = sym;
+  builtins_register_fns(sym);
 
   _build_static_tables_ast(sym, ast);
   assert(st_peek(sa->stack).type == SC_GLOBAL);
@@ -313,7 +315,7 @@ static Identifier *tc_clone_id(const Identifier *id) {
   return clone;
 }
 
-static Type *_builtin_type(BuiltinType builtin) {
+static Type *_builtin(BuiltinType builtin) {
   tc_make(Type, type, { .type = T_BUILTIN, .builtin = builtin, .meta = {0} });
   return type;
 }
@@ -665,8 +667,8 @@ static bool _is_iterable(const Type *type) {
 }
 
 static Type *_upgrade_numeric_type(BuiltinType l, BuiltinType r) {
-  if (l == T_INT && r == T_INT) return _builtin_type(T_INT);
-  return _builtin_type(T_FLOAT);
+  if (l == T_INT && r == T_INT) return _builtin(T_INT);
+  return _builtin(T_FLOAT);
 }
 
 static bool _compare_list_types(Symbols *s, const ListType *a, const ListType *b) {
@@ -1081,11 +1083,11 @@ static Type *_literal_type(Symbols *s, LiteralExpr *expr) {
   tc_debug_log("Literal", &expr->meta.loc);
 
   switch (expr->type) {
-    case L_INTEGER:     return _builtin_type(T_INT);
-    case L_FLOAT:       return _builtin_type(T_FLOAT);
-    case L_STRING:      return _builtin_type(T_STRING);
-    case L_BOOL:        return _builtin_type(T_BOOL);
-    case L_NIL:         return _builtin_type(T_NIL);
+    case L_INTEGER:     return _builtin(T_INT);
+    case L_FLOAT:       return _builtin(T_FLOAT);
+    case L_STRING:      return _builtin(T_STRING);
+    case L_BOOL:        return _builtin(T_BOOL);
+    case L_NIL:         return _builtin(T_NIL);
     case L_LIST:        return _list_type(s, expr->list);
     case L_VECTOR:      return _vector_type(s, expr->vec);
     case L_MAP:         return _map_type(s, expr->map);
@@ -1379,7 +1381,7 @@ static Type *_binary_type(Symbols *s, BinaryExpr *expr) {
     case LESS: {
       if (_is_numeric_type(l_type)) {
         if (_is_numeric_type(r_type)) {
-          return _builtin_type(T_BOOL);
+          return _builtin(T_BOOL);
         } else {
           return tc_report_op_type(
             &expr->right->meta.loc,
@@ -1388,7 +1390,7 @@ static Type *_binary_type(Symbols *s, BinaryExpr *expr) {
         }
       } else if (_is_builtin(l_type, T_STRING)) {
         if (_is_builtin(r_type, T_STRING)) {
-          return _builtin_type(T_BOOL);
+          return _builtin(T_BOOL);
         } else {
           return tc_report_op_type(&expr->right->meta.loc, "string", r_type);
         }
@@ -1408,7 +1410,7 @@ static Type *_binary_type(Symbols *s, BinaryExpr *expr) {
           tc_print_type(l_type), tc_print_type(r_type)
         );
       }
-      return _builtin_type(T_BOOL);
+      return _builtin(T_BOOL);
     }
     case AND:
     case OR: {
@@ -1450,7 +1452,7 @@ static Type *_if_expr_type(Symbols *s, const IfExpr *expr) {
   Type *true_type = tc_check_expr(s, expr->true_branch);
   Type *false_type = expr->false_branch
     ? tc_check_expr(s, expr->false_branch)
-    : _builtin_type(T_VOID);
+    : _builtin(T_VOID);
 
   if (!_is_builtin(condition_type, T_BOOL)) {
     return tc_report_error_fmt(
@@ -1481,7 +1483,7 @@ static Type *_for_expr_type(Symbols *s, const ForExpr *expr) {
   }
 
   Type *iterator_type = iterable_type->type == T_RANGE
-    ? _builtin_type(T_INT)
+    ? _builtin(T_INT)
     : iterable_type->type == T_LIST
       ? iterable_type->list->item_type
       : iterable_type->vec->item_type;
@@ -1490,7 +1492,7 @@ static Type *_for_expr_type(Symbols *s, const ForExpr *expr) {
   Symbol *iterator = _symbol_of(iterator_type, true);
   tc_define_symbol(s, expr->var_id, iterator);
   if (expr->idx_id) {
-    Symbol *idx_iterator = _symbol_of(_builtin_type(T_INT), true);
+    Symbol *idx_iterator = _symbol_of(_builtin(T_INT), true);
     tc_define_symbol(s, expr->idx_id, idx_iterator);
   }
   Type *body_type = tc_check_block(s, expr->body->block);
@@ -1603,9 +1605,9 @@ static Type *_import_type(Symbols *s, const ImportExpr *expr) {
   tc_debug_log("Import", &expr->meta.loc);
 
   switch (expr->type) {
-    case IMPORT_URL: return _builtin_type(T_STRING);
+    case IMPORT_URL: return _builtin(T_STRING);
     case IMPORT_CSV: {
-      Type *string_type = _builtin_type(T_STRING);
+      Type *string_type = _builtin(T_STRING);
       Type *record_type = _map_of(string_type, string_type);
 
       Type *row_type = or_default(expr->data_type, record_type);
@@ -1631,7 +1633,7 @@ static Type *_env_type(Symbols *s, const EnvExpr *expr) {
       );
     }
   }
-  return _builtin_type(T_STRING);
+  return _builtin(T_STRING);
 }
 
 static Type *tc_check_block(Symbols *s, const BlockExpr *expr) {
@@ -1883,7 +1885,7 @@ static Type *tc_check_ast(Symbols *s, const Program *ast) {
   st_pop(sa->stack);
 
   if (type_count == 0) {
-    return _builtin_type(T_VOID);
+    return _builtin(T_VOID);
   } else if (type_count == 1) {
     return types[0];
   }
