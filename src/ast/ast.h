@@ -591,7 +591,8 @@ struct Value {
 
 struct Element {
   const char *tag;
-  ElementAttributes attributes;
+  bool self_closing;
+  ElementAttributes *attributes;
   List *children;
 };
 

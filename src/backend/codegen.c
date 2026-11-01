@@ -48,7 +48,22 @@ static void _write_value(const Value *v) {
     case VAL_BOOL: _p("%s ", v->boolean ? "true" : "false"); break;
     case VAL_STRING: _p("%.*s ", v->string->len, v->string->ptr); break;
     case VAL_NIL: break;
-    case VAL_ELEMENT: assert(false); // TODO
+    case VAL_ELEMENT: {
+      Element *el = v->element;
+      _p("<%s", el->tag);
+      // TODO attributes
+      _p("%s", el->self_closing ? "/>" : ">");
+
+      if (!el->self_closing) {
+        if (el->children) {
+          for (u32 i = 0; i < el->children->len; i++) {
+            _write_value(el->children->items[i]);
+          }
+        }
+        _p("</%s>", el->tag);
+      }
+      break;
+    }
     case VAL_LIST: {
       for (u32 i = 0; i < v->list->len; i++) {
         _write_value(v->list->items[i]);
