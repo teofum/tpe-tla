@@ -14,6 +14,8 @@
 
 typedef struct {
   FILE *out_file;
+  bool pretty;
+  u32 indent_size;
 } Codegen;
 
 CompilerState *cs = NULL;
@@ -25,6 +27,8 @@ void cg_init(CompilerState *compiler_state) {
   cs = compiler_state;
 
   cg = new(Codegen);
+  cg->pretty = true;
+  cg->indent_size = 2;
 }
 
 void cg_shutdown() {
@@ -40,9 +44,14 @@ static void _p(const char *fmt, ...) {
   va_end(args);
 }
 
+static void _indent(i32 level) {
+  if (level > 0) fprintf(cg->out_file, "%*s", level * cg->indent_size, "");
+}
+
 /* -- Codegen: generation --------------------------------------------------- */
 
-static void _write_value(const Value *v, const char *sep) {
+static void _write_value(const Value *v, const char *sep, i32 indent) {
+  if (cg->pretty) _indent(indent);
   switch (v->type) {
     case VAL_INT: _p("%ld%s", v->integer, sep); break;
     case VAL_FLOAT: _p("%f%s", v->floating, sep); break;
@@ -57,21 +66,24 @@ static void _write_value(const Value *v, const char *sep) {
       const Value *attr_value;
       map_foreach(attr_key, attr_value, el->attributes) {
         _p(" %s=\"", attr_key);
-        _write_value(attr_value, "");
+        _write_value(attr_value, "", -1);
         _p("\"");
       }
 
-      _p("%s", el->self_closing ? "/>" : ">");
+      _p("%s", el->self_closing ? " />" : ">");
 
       if (!el->self_closing) {
         if (el->children) {
+          if (cg->pretty) _p("\n");
           for (u32 i = 0; i < el->children->len; i++) {
             _write_value(
               el->children->items[i],
-              i == el->children->len - 1 ? "" : " "
+              i == el->children->len - 1 ? "" : " ",
+              indent + 1
             );
           }
         }
+        if (cg->pretty) _indent(indent);
         _p("</%s>", el->tag);
       }
       break;
@@ -80,7 +92,8 @@ static void _write_value(const Value *v, const char *sep) {
       for (u32 i = 0; i < v->list->len; i++) {
         _write_value(
           v->list->items[i],
-          i == v->list->len - 1 ? "" : " "
+          i == v->list->len - 1 ? "" : " ",
+          indent >= 0 ? indent + 1 : -1
         );
       }
       break;
@@ -88,6 +101,7 @@ static void _write_value(const Value *v, const char *sep) {
     case VAL_MAP: assert(false); // TODO error
     case VAL_RANGE: assert(false); // TODO error
   }
+  if (cg->pretty && indent >= 0) _p("\n");
 }
 
 void cg_generate(u32 file_idx) {
@@ -102,7 +116,7 @@ void cg_generate(u32 file_idx) {
     // cg->out_file = fopen(out_path, "w");
 
     cg->out_file = stdout;
-    _write_value(value, "");
+    _write_value(value, "", 0);
     fprintf(cg->out_file, "\n");
 
     // fclose(cg->out_file);

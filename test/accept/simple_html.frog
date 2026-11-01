@@ -2,11 +2,7 @@ html: {
   body: {
     div.test.classes: "Hello"
     div#myId: "World!"
+    img(src = "asdfdfsd")
     div(class = ["test", "classes"])
-
-    1
-    2
-    3
-    4
   }
 }

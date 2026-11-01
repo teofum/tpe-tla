@@ -12,6 +12,7 @@
 
 #include "builtins.h"
 #include "support/str.h"
+#include "support/types.h"
 
 static CompilerState *cs;
 static dyn_arena *builtins_arena;
@@ -651,6 +652,8 @@ static HTMLAttributeName *_attrs_per_element[HTML_ELEM_COUNT] = {
   [EL_VIDEO] = _video_attrs,
 };
 
+static map(char, HTMLElement) _elements_by_name;
+
 /* -- Memory ---------------------------------------------------------------- */
 
 static void *eval_malloc(usize size) {
@@ -802,6 +805,11 @@ void builtins_init(CompilerState *compiler_state) {
     _map_of(_builtin(T_STRING), _attr_string_type),
     _builtin(T_NIL)
   );
+
+  map_inita(&_elements_by_name, hash_cstring, compare_cstring, builtins_calloc, NULL);
+  for (HTMLElementName el = 0; el < HTML_ELEM_COUNT; el++) {
+    map_insert(&_elements_by_name, (char *)_elements[el].tag, &_elements[el]);
+  }
 }
 
 void builtins_shutdown() {
@@ -846,12 +854,14 @@ static const Value *element_fn(
   const FunctionDef *fn,
   const FunctionCallExpr *call
 ) {
+  const HTMLElement *el_def = map_get(&_elements_by_name, fn->name->lexeme);
+
   Element *element = eval_new(Element);
   *element = (Element){
     .tag = fn->name->lexeme,
-    .self_closing = false,
+    .self_closing = el_def->self_closing,
     .attributes = eval_new(ElementAttributes),
-    .children = _to_list(c)->list,
+    .children = c ? _to_list(c)->list : NULL,
   };
   map_inita(element->attributes, hash_cstring, compare_cstring, eval_calloc, NULL);
 
