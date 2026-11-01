@@ -151,7 +151,7 @@
 
 /--- Code Generation ----------------------------------------------------------/
 [x] Values to code
-  [ ] Element attributes
+  [x] Element attributes
 
 #=== Frontend =================================================================#
 
