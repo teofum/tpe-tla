@@ -1665,7 +1665,7 @@ static Type *tc_check_block(Symbols *s, const BlockExpr *expr) {
 
   for (u32 i = 0; i < expr->len; i++) {
     Type *stmt_type = tc_check_stmt(s, expr->statements[i]);
-    if (_is_error(stmt_type)) {
+    if (stmt_type && _is_error(stmt_type)) {
       valid = false;
       continue;
     }

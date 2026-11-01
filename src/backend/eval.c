@@ -839,7 +839,7 @@ static const Value *eval_call(const Symbols *s, const FunctionCallExpr *call) {
   const Value *composable_v = NULL;
   if (call->composable) {
     composable_v = eval_expr(s, call->composable);
-  } else {
+  } else if (def->compose_type) {
     composable_v = _nil();
   }
 
