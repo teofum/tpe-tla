@@ -1,5 +1,8 @@
 This file has implementation notes worth keeping in mind for the final report.
 
+Default parameter eval is inefficient, we could cache them since they are by
+definition the same each time the function is called. Too bad!
+
 #=== Overall architecture plan ================================================#
 
 The compiler will follow a sequence of steps; at the end of each an error gate

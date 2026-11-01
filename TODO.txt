@@ -52,9 +52,12 @@
 [x] Iterable ranges
 [ ] Decomposition statement for list composing
 
-[ ] Remove default function values
-[ ] Remove enums
+[/] Remove default function values
+  - Unremoved default function values (it turns out we needed those)
+[ ] Remove enums (I think we definitely do not need those)
 [ ] MAYBE: Remove list/tuple literals and replace with blocks?
+
+[ ] Add back compiler opts (disabled for debubbing)
 
 #=== Backend ==================================================================#
 

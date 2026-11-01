@@ -1569,7 +1569,11 @@ static bool _check_function_args(
 
   // Ensure all the required parameters are actually being passed
   for (u32 i = 0; i < def->params_len; i++) {
-    if (!params_set[i] && !def->params[i]->default_value) {
+    if (
+      !params_set[i]
+      && !def->params[i]->default_value                             // Defaulted
+      && !tc_accepts_type(s, def->params[i]->type, _builtin(T_NIL)) // Optional
+    ) {
       err_report_fn_param_req(expr, def->params[i], ERR_ERROR);
       valid = false;
     }

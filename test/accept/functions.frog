@@ -12,3 +12,13 @@ square(0.5)
 for x in [1, 2, 3, 4, 5] {
   square(x)
 }
+
+with_defaults is function(s: string = "hello", n: int = 2 * 3) -> string {
+  s * n
+}
+
+with_defaults()
+with_defaults(n = 2)
+with_defaults("hi")
+with_defaults("hi", 3)
+with_defaults(n = 2, s = "abc")

@@ -849,6 +849,13 @@ static const Value *eval_call(const Symbols *s, const FunctionCallExpr *call) {
 
   st_push(e->stack, def->body->scope);
 
+  for (u32 i = 0; i < def->params_len; i++) {
+    // Skip evaluating the default value if it's overriden by a positional argument
+    if (i < call->args_len && call->args[i]->name == NULL) continue;
+
+    const Value *default_value = eval_expr(s, def->params[i]->default_value);
+    eval_update_symbol(s, def->params[i]->name, default_value);
+  }
   for (u32 i = 0; i < call->args_len; i++) {
     const Identifier *name = or_default(call->args[i]->name, def->params[i]->name);
     eval_update_symbol(s, name, arg_values[i]);
