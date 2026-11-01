@@ -1569,7 +1569,7 @@ static bool _check_function_args(
 
   // Ensure all the required parameters are actually being passed
   for (u32 i = 0; i < def->params_len; i++) {
-    if (!params_set[i]) {
+    if (!params_set[i] && !def->params[i]->default_value) {
       err_report_fn_param_req(expr, def->params[i], ERR_ERROR);
       valid = false;
     }
@@ -1850,6 +1850,18 @@ static void _check_function_def(Symbols *s, const FunctionDef *def) {
   st_push(sa->stack, def->body->scope);
 
   for (u32 i = 0; i < def->params_len; i++) {
+    if (def->params[i]->default_value) {
+      Type *dv_type = tc_check_expr(s, def->params[i]->default_value);
+      if (!tc_accepts_type(s, def->params[i]->type, dv_type)) {
+        tc_report_error_fmt(
+          &def->params[i]->default_value->meta.loc,
+          "%s is not assignable to %s",
+          tc_print_type(dv_type), tc_print_type(def->params[i]->type)
+        );
+        continue;
+      }
+    }
+
     Symbol *param = _symbol_of(def->params[i]->type, true);
     tc_define_symbol(s, def->params[i]->name, param);
   }

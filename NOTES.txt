@@ -1,10 +1,5 @@
 This file has implementation notes worth keeping in mind for the final report.
 
-#=== Implementation notes (recent first) ======================================#
-
-- Removed default function parameter values. Tricky to evaluate and relatively
-  useless within the scope of the language, so cutting room floor it is.
-
 #=== Overall architecture plan ================================================#
 
 The compiler will follow a sequence of steps; at the end of each an error gate

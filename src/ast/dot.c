@@ -446,6 +446,7 @@ static void dot_parameter(Parameter *param, u64 pid) {
   _node(id, label, NODE_BASE);
   _edge(pid, id);
   dot_type(param->type, id);
+  if (param->default_value) dot_expr(param->default_value, id);
 }
 
 static void dot_function_def(FunctionDef *function, u64 pid) {
