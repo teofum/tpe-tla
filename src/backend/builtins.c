@@ -11,6 +11,7 @@
 #include <support/util.h>
 
 #include "builtins.h"
+#include "support/str.h"
 
 static CompilerState *cs;
 static dyn_arena *builtins_arena;
@@ -858,7 +859,20 @@ static const Value *element_fn(
     Parameter *p = fn->params[i];
     for (u32 i = 0; i < call->args_len; i++) {
       const Identifier *name = or_default(call->args[i]->name, fn->params[i]->name);
-      map_insert(element->attributes, name->lexeme, (Value *)args[i]);
+      if (args[i]->type == VAL_MAP) {
+        str base_name = str_from_cstring_a(eval_malloc, name->lexeme);
+        str dash = str_from_cstring_a(eval_malloc, "-");
+
+        const Value *attr_key;
+        const Value *attr_value;
+        map_foreach(attr_key, attr_value, args[i]->map) {
+          str attr_name = str_concat_a(eval_malloc, 2, dash, base_name, *attr_key->string);
+          char *attr_name_c = str_to_cstring_a(eval_malloc, attr_name);
+          map_insert(element->attributes, attr_name_c, (Value *)attr_value);
+        }
+      } else {
+        map_insert(element->attributes, name->lexeme, (Value *)args[i]);
+      }
     }
   }
 

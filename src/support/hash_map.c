@@ -67,6 +67,15 @@ static map_entry *_map_find(const _map_base *mb, const void *key, bool find_empt
   return NULL;
 }
 
+static map_entry *_map_entry_get_populated(const _map_base *mb, const map_entry *entry) {
+  if (mb->size > 0 && entry >= mb->table) {
+    for (; entry < &mb->table[mb->table_size]; entry++) {
+      if (entry->key) return (map_entry *)entry;
+    }
+  }
+  return NULL;
+}
+
 static void *_map_remove(_map_base *mb, map_entry *removed) {
   usize removed_idx = removed - mb->table;
   void *value = removed->value;
@@ -255,6 +264,31 @@ bool _map_base_delete(_map_base *mb, const void *key) {
   void *value = _map_remove(mb, entry);
   if (mb->value_destructor) mb->value_destructor(value);
   return true;
+}
+
+map_entry *_map_base_iter(const _map_base *mb, const map_entry *pos) {
+  if (!pos) pos = mb->table;
+  return _map_entry_get_populated(mb, pos);
+}
+
+bool _map_base_iter_valid(const _map_base *mb, const map_entry *pos) {
+  return mb && pos && pos->key && pos >= mb->table && pos < mb->table + mb->table_size;
+}
+
+bool _map_base_iter_next(const _map_base *mb, map_entry **pos) {
+  if (!*pos) return false;
+  *pos = _map_entry_get_populated(mb, *pos + 1);
+  return *pos != NULL;
+}
+
+const void *_map_base_iter_get_key(const map_entry *pos) {
+  if (!pos) return NULL;
+  return pos->key;
+}
+
+void *_map_base_iter_get_value(const map_entry *pos) {
+  if (!pos) return NULL;
+  return pos->value;
 }
 
 usize hash_djb2(const void *bytes, usize len) {

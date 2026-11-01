@@ -40,13 +40,23 @@ typedef struct {
       K *(*key_clone_fn)(const K *);                        \
       void (*key_destructor)(K *);                          \
       void (*value_destructor)(V *);                        \
-    } map_types[0];                                         \
+      struct {                                              \
+        _map_base *_map;                                    \
+        map_entry *_pos;                                    \
+        struct {                                            \
+          const K *key_t;                                   \
+          V *value_t;                                       \
+        } types[0];                                         \
+      } iterator_t;                                         \
+    } types[0];                                             \
   }
+
+#define map_iterator(T) typeof((T).types->iterator_t)
 
 #define map_init(m, hash, compare)                                              \
   do {                                                                          \
-    typeof((m)->map_types->hash_fn) _hash_fn = (hash);                          \
-    typeof((m)->map_types->compare_fn) _compare_fn = (compare);                 \
+    typeof((m)->types->hash_fn) _hash_fn = (hash);                              \
+    typeof((m)->types->compare_fn) _compare_fn = (compare);                     \
     _map_base_init(&(m)->_map, (_map_base_hash_fn)_hash_fn,                     \
                                (_map_base_compare_fn)_compare_fn,               \
                                calloc, free);                                   \
@@ -54,8 +64,8 @@ typedef struct {
 
 #define map_inita(m, hash, compare, alloc, dealloc)                             \
   do {                                                                          \
-    typeof((m)->map_types->hash_fn) _hash_fn = (hash);                          \
-    typeof((m)->map_types->compare_fn) _compare_fn = (compare);                 \
+    typeof((m)->types->hash_fn) _hash_fn = (hash);                              \
+    typeof((m)->types->compare_fn) _compare_fn = (compare);                     \
     _map_base_init(&(m)->_map, (_map_base_hash_fn)_hash_fn,                     \
                                (_map_base_compare_fn)_compare_fn,               \
                                alloc, dealloc);                                 \
@@ -63,64 +73,77 @@ typedef struct {
 
 #define map_manage_keys(m, clone_fn, destructor)                                \
   do {                                                                          \
-    typeof((m)->map_types->key_clone_fn) _key_clone_fn = (clone_fn);            \
-    typeof((m)->map_types->key_destructor) _key_destructor = (destructor);      \
+    typeof((m)->types->key_clone_fn) _key_clone_fn = (clone_fn);                \
+    typeof((m)->types->key_destructor) _key_destructor = (destructor);          \
     _map_base_manage_keys(&(m)->_map, (_map_base_key_clone_fn)_key_clone_fn,    \
                                       (_map_base_destructor)_key_destructor);   \
   } while(0)
 
 #define map_manage_values(m, destructor)                                            \
   do {                                                                              \
-    typeof((m)->map_types->value_destructor) _value_destructor = (destructor);      \
+    typeof((m)->types->value_destructor) _value_destructor = (destructor);          \
     _map_base_manage_values(&(m)->_map, (_map_base_destructor)_value_destructor);   \
   } while(0)
 
 #define map_insert(m, key, value)                                                   \
   ({                                                                                \
-    typeof((m)->map_types->key_t) _key = (key);                                     \
-    typeof((m)->map_types->value_t) _value = (value);                               \
+    typeof((m)->types->key_t) _key = (key);                                         \
+    typeof((m)->types->value_t) _value = (value);                                   \
     _map_base_insert(&(m)->_map, _key, _value);                                     \
   })
 
 #define map_upsert(m, key, value)                                                   \
   ({                                                                                \
-    typeof((m)->map_types->key_t) _key = (key);                                     \
-    typeof((m)->map_types->value_t) _value = (value);                               \
-    (typeof((m)->map_types->value_t))_map_base_upsert(&(m)->_map, _key, _value);  \
+    typeof((m)->types->key_t) _key = (key);                                         \
+    typeof((m)->types->value_t) _value = (value);                                   \
+    (typeof((m)->types->value_t))_map_base_upsert(&(m)->_map, _key, _value);        \
   })
 
 #define map_put(m, key, value)                                                      \
   ({                                                                                \
-    typeof((m)->map_types->key_t) _key = (key);                                     \
-    typeof((m)->map_types->value_t) _value = (value);                               \
+    typeof((m)->types->key_t) _key = (key);                                         \
+    typeof((m)->types->value_t) _value = (value);                                   \
     _map_base_put(&(m)->_map, _key, _value);                                        \
   })
 
 #define map_has(m, key)                                                             \
   ({                                                                                \
-    typeof((m)->map_types->key_t) _key = (key);                                     \
+    typeof((m)->types->key_t) _key = (key);                                         \
     _map_base_has(&(m)->_map, _key);                                                \
   })
 
 #define map_get(m, key)                                                             \
   ({                                                                                \
-    typeof((m)->map_types->key_t) _key = (key);                                     \
-    (typeof((m)->map_types->value_t))_map_base_get(&(m)->_map, _key);             \
+    typeof((m)->types->key_t) _key = (key);                                         \
+    (typeof((m)->types->value_t))_map_base_get(&(m)->_map, _key);                   \
   })
 
 #define map_remove(m, key)                                                          \
   ({                                                                                \
-    typeof((m)->map_types->key_t) _key = (key);                                     \
-    (typeof((m)->map_types->value_t))_map_base_remove(&(m)->_map, _key);          \
+    typeof((m)->types->key_t) _key = (key);                                         \
+    (typeof((m)->types->value_t))_map_base_remove(&(m)->_map, _key);                \
   })
 
 #define map_delete(m, key)                                                          \
   ({                                                                                \
-    typeof((m)->map_types->key_t) _key = (key);                                     \
+    typeof((m)->types->key_t) _key = (key);                                         \
     _map_base_delete(&(m)->_map, _key);                                             \
   })
 
+#define map_iter(m) ((map_iterator(*(m))){&(m)->_map, _map_base_iter(&(m)->_map, NULL)})
+#define map_iter_valid(it) (_map_base_iter_valid((it)->_map, (it)->_pos))
+#define map_iter_next(it) (_map_base_iter_next((it)->_map, &(it)->_pos))
+#define map_iter_key(it) ((typeof((it)->types->key_t)) _map_base_iter_get_key((it)->_pos))
+#define map_iter_value(it) ((typeof((it)->types->value_t)) _map_base_iter_get_value((it)->_pos))
+
 #define map_free(m) _map_base_free(&((m)->_map))
+
+#define map_foreach(key, value, m)                                      \
+  for (                                                                 \
+    map_iterator(*(m)) __it = map_iter(m);                              \
+    ((key) = map_iter_key(&__it)) && ((value) = map_iter_value(&__it)); \
+    map_iter_next(&__it)                                                \
+  )
 
 void _map_base_init(
   _map_base *mb,
@@ -146,6 +169,12 @@ void *_map_base_get(const _map_base *mb, const void *key);
 
 void *_map_base_remove(_map_base *mb, const void *key);
 bool _map_base_delete(_map_base *mb, const void *key);
+
+map_entry *_map_base_iter(const _map_base *mb, const map_entry *pos);
+bool _map_base_iter_valid(const _map_base *mb, const map_entry *pos);
+bool _map_base_iter_next(const _map_base *mb, map_entry **pos);
+const void *_map_base_iter_get_key(const map_entry *pos);
+void *_map_base_iter_get_value(const map_entry *pos);
 
 usize hash_djb2(const void *bytes, usize len);
 usize hash_cstring(const char *s);

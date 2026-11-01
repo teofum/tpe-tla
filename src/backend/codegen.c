@@ -10,6 +10,7 @@
 #include <support/util.h>
 
 #include "codegen.h"
+#include "support/hash_map.h"
 
 typedef struct {
   FILE *out_file;
@@ -41,23 +42,34 @@ static void _p(const char *fmt, ...) {
 
 /* -- Codegen: generation --------------------------------------------------- */
 
-static void _write_value(const Value *v) {
+static void _write_value(const Value *v, const char *sep) {
   switch (v->type) {
-    case VAL_INT: _p("%ld ", v->integer); break;
-    case VAL_FLOAT: _p("%f ", v->floating); break;
-    case VAL_BOOL: _p("%s ", v->boolean ? "true" : "false"); break;
-    case VAL_STRING: _p("%.*s ", v->string->len, v->string->ptr); break;
+    case VAL_INT: _p("%ld%s", v->integer, sep); break;
+    case VAL_FLOAT: _p("%f%s", v->floating, sep); break;
+    case VAL_BOOL: _p("%s%s", v->boolean ? "true" : "false", sep); break;
+    case VAL_STRING: _p("%.*s%s", v->string->len, v->string->ptr, sep); break;
     case VAL_NIL: break;
     case VAL_ELEMENT: {
       Element *el = v->element;
       _p("<%s", el->tag);
-      // TODO attributes
+
+      const char *attr_key;
+      const Value *attr_value;
+      map_foreach(attr_key, attr_value, el->attributes) {
+        _p(" %s=\"", attr_key);
+        _write_value(attr_value, "");
+        _p("\"");
+      }
+
       _p("%s", el->self_closing ? "/>" : ">");
 
       if (!el->self_closing) {
         if (el->children) {
           for (u32 i = 0; i < el->children->len; i++) {
-            _write_value(el->children->items[i]);
+            _write_value(
+              el->children->items[i],
+              i == el->children->len - 1 ? "" : " "
+            );
           }
         }
         _p("</%s>", el->tag);
@@ -66,7 +78,10 @@ static void _write_value(const Value *v) {
     }
     case VAL_LIST: {
       for (u32 i = 0; i < v->list->len; i++) {
-        _write_value(v->list->items[i]);
+        _write_value(
+          v->list->items[i],
+          i == v->list->len - 1 ? "" : " "
+        );
       }
       break;
     }
@@ -87,7 +102,7 @@ void cg_generate(u32 file_idx) {
     // cg->out_file = fopen(out_path, "w");
 
     cg->out_file = stdout;
-    _write_value(value);
+    _write_value(value, "");
     fprintf(cg->out_file, "\n");
 
     // fclose(cg->out_file);
