@@ -2,6 +2,7 @@
 #include <ast/ast.h>
 #include <ast/symbols.h>
 #include <ast/dot.h>
+#include <backend/codegen.h>
 #include <backend/eval.h>
 #include <backend/static_analysis.h>
 #include <error/error.h>
@@ -47,26 +48,27 @@ i32 main(i32 argc, char *const*argv) {
 
   // Build static (type/function) symbol tables
   for (u32 i = 0; i < cs->options.input_file_count; i++) {
-    cs->status = sa_build_static_tables(i);
-    if (cs->status != STATUS_SUCCEEDED) break;
+    sa_build_static_tables(i);
   }
   if (!err_gate()) return shutdown(cs);
 
   // Typecheck and check reference integrity
   for (u32 i = 0; i < cs->options.input_file_count; i++) {
-    cs->status = sa_build_tables_and_typecheck(i);
-    if (cs->status != STATUS_SUCCEEDED) break;
+    sa_build_tables_and_typecheck(i);
   }
   if (!err_gate()) return shutdown(cs);
 
   // Evaluate
   for (u32 i = 0; i < cs->options.input_file_count; i++) {
-    cs->status = eval_evaluate(i);
-    if (cs->status != STATUS_SUCCEEDED) break;
+    eval_evaluate(i);
   }
   if (!err_gate()) return shutdown(cs);
 
-  // TODO: codegen
+  // Evaluate
+  for (u32 i = 0; i < cs->options.input_file_count; i++) {
+    cg_generate(i);
+  }
+  if (!err_gate()) return shutdown(cs);
 
   return shutdown(cs);
 }
@@ -78,6 +80,7 @@ CompilerState *init(CompilerOptions *opts) {
     .status = STATUS_NOT_STARTED,
     .asts = new_array(Program *, opts->input_file_count),
     .symbol_data = new_array(Symbols *, opts->input_file_count),
+    .values = new_array(const Value *, opts->input_file_count),
     .logger = logger_create("Main", stdout, opts->log_level),
     .current_file = -1,
   };
@@ -89,26 +92,24 @@ CompilerState *init(CompilerOptions *opts) {
   builtins_init(cs);
   sa_init(cs);
   eval_init(cs);
+  cg_init(cs);
 
   return cs;
 }
 
 CompilationStatus shutdown(CompilerState *cs) {
-  if (cs->asts) {
-    for (u32 i = 0; i < cs->options.input_file_count; i++) {
-      ast_free_program(cs->asts[i]);
-    }
-    free(cs->asts);
+  for (u32 i = 0; i < cs->options.input_file_count; i++) {
+    ast_free_program(cs->asts[i]);
+    sa_free_symbols(cs->symbol_data[i]);
   }
-  if (cs->symbol_data) {
-    for (u32 i = 0; i < cs->options.input_file_count; i++) {
-      sa_free_symbols(cs->symbol_data[i]);
-    }
-    free(cs->symbol_data);
-  }
+  free(cs->asts);
+  free(cs->symbol_data);
+  free(cs->values);
+
   logger_free(cs->logger);
   options_free(&cs->options);
 
+  cg_shutdown();
   eval_shutdown();
   sa_shutdown();
   builtins_shutdown();

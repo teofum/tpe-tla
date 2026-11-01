@@ -45,6 +45,7 @@ if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
     src/ast/dot.c
     src/ast/symbols.c
     src/backend/builtins.c
+    src/backend/codegen.c
     src/backend/eval.c
     src/backend/scope.c
     src/backend/static_analysis.c

@@ -961,7 +961,7 @@ CompilationStatus eval_evaluate(i32 file_idx) {
   assert(sym != NULL); // If we got to this point without a symbol table we have a bug
 
   builtins_set_eval_arena(e->arena);
-  const Value *val = eval_program(sym, ast);
+  cs->values[file_idx] = eval_program(sym, ast);
   assert(st_peek(e->stack).type == SC_GLOBAL);
 
   cs->current_file = -1;

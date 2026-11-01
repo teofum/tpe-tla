@@ -2,6 +2,7 @@
 #include <libgen.h>
 #include <errno.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 
@@ -24,4 +25,15 @@ int fs_mkpath(char* file_path, mode_t mode) {
     *p = '/';
   }
   return 0;
+}
+
+char *fs_stem(const char *path) {
+  char *path2 = strdup(path);
+  char *name = basename(path2);
+  char *dot = strrchr(name, '.');
+  *dot = 0;
+
+  char *stem = strdup(name);
+  free(path2);
+  return stem;
 }

@@ -9,10 +9,3 @@
 [5; 10]
 
 "hello world"
-
-[ "foo" = 6, "bar" = 98 ]
-
-{
-  .foo = 6,
-  .bar = 98
-}

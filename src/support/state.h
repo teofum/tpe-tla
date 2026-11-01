@@ -13,6 +13,7 @@ typedef struct {
   CompilationStatus status;
   Program **asts;
   Symbols **symbol_data;
+  const Value **values;
   Logger *logger;
   i32 current_file;
   Scope global_scope;
