@@ -1,7 +1,7 @@
 html: {
   body: {
     div.test.classes: "Hello"
-    div: "World!"
+    div#myId: "World!"
     div(class = ["test", "classes"])
   }
 }

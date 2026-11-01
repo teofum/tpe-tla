@@ -469,6 +469,12 @@ compose: COMPOSE                                                    { $$ = $1; }
 function_call: IDENTIFIER arguments                                 { $$ = parse_function_call($1, $2, NULL, NULL, NULL); }
   | IDENTIFIER arguments COLON composable                           { $$ = parse_function_call($1, $2, $4, NULL, NULL); }
   | IDENTIFIER COLON composable                                     { $$ = parse_function_call($1, NULL, $3, NULL, NULL); }
+  | IDENTIFIER classlist arguments                                  { $$ = parse_function_call($1, $3, NULL, $2, NULL); }
+  | IDENTIFIER classlist arguments COLON composable                 { $$ = parse_function_call($1, $3, $5, $2, NULL); }
+  | IDENTIFIER classlist COLON composable                           { $$ = parse_function_call($1, NULL, $4, $2, NULL); }
+  | IDENTIFIER html_id arguments                                    { $$ = parse_function_call($1, $3, NULL, NULL, $2); }
+  | IDENTIFIER html_id arguments COLON composable                   { $$ = parse_function_call($1, $3, $5, NULL, $2); }
+  | IDENTIFIER html_id COLON composable                             { $$ = parse_function_call($1, NULL, $4, NULL, $2); }
   | IDENTIFIER classlist html_id arguments                          { $$ = parse_function_call($1, $4, NULL, $2, $3); }
   | IDENTIFIER classlist html_id arguments COLON composable         { $$ = parse_function_call($1, $4, $6, $2, $3); }
   | IDENTIFIER classlist html_id COLON composable                   { $$ = parse_function_call($1, NULL, $5, $2, $3); }
@@ -482,7 +488,6 @@ class: DOT IDENTIFIER                                               { $$ = $2; }
   ;
 
 html_id: HASH IDENTIFIER                                            { $$ = $2; }
-  | %empty                                                          { $$ = NULL; }
   ;
 
 arguments: PAREN_L nl expression_list nl PAREN_R                    { $$ = $3; }
