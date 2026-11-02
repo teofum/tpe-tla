@@ -139,7 +139,7 @@
   [x] For expressions
   [x] Function calls
   [ ] Import expressions
-  [ ] Env expressions
+  [x] Env expressions
   [x] Blocks
 [x] Statement evaluators
   [x] Declarations/constants
