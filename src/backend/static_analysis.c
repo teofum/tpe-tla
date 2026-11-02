@@ -210,7 +210,12 @@ static void _static_tables_expr(Symbols *s, Expr *expr) {
     case EXPR_UNARY: _static_tables_expr(s, expr->unary->expr); break;
     case EXPR_LITERAL: _static_tables_literal(s, expr->literal); break;
     case EXPR_VARIABLE: _static_tables_variable(s, expr->variable); break;
-    case EXPR_ENV: _static_tables_expr(s, expr->env->default_value); break;
+    case EXPR_ENV: {
+      if (expr->env->default_value) {
+        _static_tables_expr(s, expr->env->default_value);
+      }
+      break;
+    }
     case EXPR_FUNCTION_CALL: {
       for (u32 i = 0; i < expr->function_call->args_len; i++) {
         _static_tables_expr(s, expr->function_call->args[i]->value);

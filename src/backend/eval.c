@@ -873,6 +873,29 @@ static const Value *eval_compose(const Symbols *s, const Expr *expr) {
   return eval_get_symbol(s, _composable_id());
 }
 
+static const Value *eval_env(const Symbols *s, const EnvExpr *expr) {
+  char *name = str_to_cstring(expr->env_name->value);
+  char *value = map_get(cs->options.definitions, name);
+
+  if (value) {
+    free(name);
+    str *str_value = eval_new(str);
+    *str_value = str_from_cstring_a(eval_malloc, value);
+    return _str(str_value);
+  }
+
+  if (expr->default_value) {
+    free(name);
+    return eval_expr(s, expr->default_value);
+  }
+
+  char *message = NULL;
+  asprintf(&message, "required env variable '%s' is undefined", name);
+  err_report_key(message, &expr->meta.loc, ERR_ERROR);
+  free(name);
+  return NULL;
+}
+
 static const Value *eval_expr(const Symbols *s, const Expr *expr) {
   switch (expr->type) {
     case EXPR_LITERAL: return eval_literal(s, expr->literal);
@@ -886,6 +909,7 @@ static const Value *eval_expr(const Symbols *s, const Expr *expr) {
     case EXPR_BLOCK: return eval_block(s, expr->block);
     case EXPR_GROUP: return eval_expr(s, expr->group->inner_expr);
     case EXPR_COMPOSE: return eval_compose(s, expr);
+    case EXPR_ENV: return eval_env(s, expr->env);
   }
   assert(false); // perish
 }

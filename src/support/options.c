@@ -1,8 +1,10 @@
 #include <getopt.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <support/env.h>
+#include <support/hash_map.h>
 #include <support/logger.h>
 #include <support/types.h>
 #include <support/util.h>
@@ -10,7 +12,7 @@
 #include "options.h"
 
 static CompilerOptions _options_default() {
-  return (CompilerOptions){
+  CompilerOptions opts = {
     .task = TASK_COMPILE,
     .log_level = LOG_INFO,
 
@@ -24,7 +26,15 @@ static CompilerOptions _options_default() {
     .scanner_log_level = LOG_NONE,
     .symbols_log_level = LOG_NONE,
     .typecheck_log_level = LOG_NONE,
+
+    .definitions = new(CompilerDefinitions),
   };
+
+  map_init(opts.definitions, hash_cstring, compare_cstring);
+  map_manage_keys(opts.definitions, NULL, (void(*)(char *))free);
+  map_manage_values(opts.definitions, (void(*)(char *))free);
+
+  return opts;
 };
 
 static void _options_env(CompilerOptions *options) {
@@ -44,13 +54,14 @@ static void _options_cli_args(CompilerOptions *options, i32 argc, char *const*ar
     OPT_AST_DOT,
   };
 
-  static const char *optstr = "v::qh";
+  static const char *optstr = "v::d:qh";
   static struct option long_opts[] = {
     {"help",        no_argument,        NULL, 'h'           },
     {"verbose",     optional_argument,  NULL, 'v'           },
     {"quiet",       no_argument,        NULL, 'q'           },
     {"log",         required_argument,  NULL, OPT_LOG_LEVEL },
     {"emit-ast",    optional_argument,  NULL, OPT_AST_DOT   },
+    {"define",      required_argument,  NULL, 'd'           },
     {0,             0,                  0,    0             }
   };
 
@@ -66,6 +77,17 @@ static void _options_cli_args(CompilerOptions *options, i32 argc, char *const*ar
       case 'q':
         options->log_level = logger_str_to_level("none");
         break;
+      case 'd': {
+        char *eq = strchr(optarg, '=');
+        if (eq) {
+          char *key = strndup(optarg, eq - optarg);
+          char *value = strdup(eq + 1);
+          map_insert(options->definitions, key, value);
+        } else {
+          fprintf(stderr, "Invalid definition string '%s'\n", optarg);
+        }
+        break;
+      }
       case OPT_LOG_LEVEL:
         options->log_level = logger_str_to_level(optarg);
         break;
@@ -97,6 +119,8 @@ CompilerOptions options(i32 argc, char *const*argv) {
 }
 
 void options_free(CompilerOptions *opts) {
+  map_free(opts->definitions);
+  free(opts->definitions);
   free(opts->input_filenames);
   if (opts->ast_dot_base_path) free(opts->ast_dot_base_path);
 }

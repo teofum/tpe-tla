@@ -1,6 +1,7 @@
 #ifndef OPTIONS_HEADER
 #define OPTIONS_HEADER
 
+#include <support/hash_map.h>
 #include <support/logger.h>
 #include <support/types.h>
 
@@ -9,6 +10,7 @@ typedef enum {
   TASK_HELP,
 } CompilerTask;
 
+typedef map(char, char) CompilerDefinitions;
 typedef struct {
   CompilerTask task;
   LogLevel log_level;
@@ -23,6 +25,8 @@ typedef struct {
   LogLevel parser_log_level;
   LogLevel symbols_log_level;
   LogLevel typecheck_log_level;
+
+  CompilerDefinitions *definitions;
 } CompilerOptions;
 
 CompilerOptions options(i32 argc, char *const*argv);
