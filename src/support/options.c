@@ -20,6 +20,7 @@ static CompilerOptions _options_default() {
     .input_file_count = 0,
     .input_filenames = NULL,
     .base_path = getcwd(NULL, 0),
+    .base_url = strdup(""),
 
     .emit_ast_dot = false,
     .ast_dot_base_path = NULL,
@@ -56,15 +57,16 @@ static void _options_cli_args(CompilerOptions *options, i32 argc, char *const*ar
     OPT_AST_DOT,
   };
 
-  static const char *optstr = "v::d:b:qh";
+  static const char *optstr = "v::D:b:u:qh";
   static struct option long_opts[] = {
     {"help",        no_argument,        NULL, 'h'           },
     {"verbose",     optional_argument,  NULL, 'v'           },
     {"quiet",       no_argument,        NULL, 'q'           },
     {"log",         required_argument,  NULL, OPT_LOG_LEVEL },
     {"emit-ast",    optional_argument,  NULL, OPT_AST_DOT   },
-    {"define",      required_argument,  NULL, 'd'           },
+    {"define",      required_argument,  NULL, 'D'           },
     {"base-dir",    required_argument,  NULL, 'b'           },
+    {"base-url",    required_argument,  NULL, 'u'           },
     {0,             0,                  0,    0             }
   };
 
@@ -80,7 +82,7 @@ static void _options_cli_args(CompilerOptions *options, i32 argc, char *const*ar
       case 'q':
         options->log_level = logger_str_to_level("none");
         break;
-      case 'd': {
+      case 'D': {
         char *eq = strchr(optarg, '=');
         if (eq) {
           char *key = strndup(optarg, eq - optarg);
@@ -92,8 +94,12 @@ static void _options_cli_args(CompilerOptions *options, i32 argc, char *const*ar
         break;
       }
       case 'b': {
-        free(options->base_path);
+        if (options->base_path) free(options->base_path);
         options->base_path = realpath(optarg, NULL);
+      }
+      case 'u': {
+        if (options->base_url) free(options->base_url);
+        options->base_url = strdup(optarg);
       }
       case OPT_LOG_LEVEL:
         options->log_level = logger_str_to_level(optarg);
@@ -130,5 +136,6 @@ void options_free(CompilerOptions *opts) {
   free(opts->definitions);
   free(opts->input_filenames);
   free(opts->base_path);
+  free(opts->base_url);
   if (opts->ast_dot_base_path) free(opts->ast_dot_base_path);
 }

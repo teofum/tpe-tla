@@ -1,3 +1,4 @@
 import url "/test/accept/import.frog"
 import url "functions_compose.frog"
-import url "../reject/eval_keys.frog"
+
+import raw "../reject/eval_keys.frog"

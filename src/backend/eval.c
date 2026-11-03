@@ -933,6 +933,39 @@ static const Value *eval_import(const Symbols *s, const ImportExpr *i) {
   }
   logger_log(cs->logger, LOG_INFO, "import %s '%s'", import_type_str[i->type], import_path);
 
+  switch (i->type) {
+    case IMPORT_URL: {
+      const char *base = cs->options.base_path;
+      const char *rel_path = import_path;
+      for (; *base == *rel_path; rel_path++) base++;
+
+      str *string = eval_new(str);
+      *string = str_format_a(eval_malloc, "%s%s", cs->options.base_url, rel_path);
+      return _str(string);
+    }
+    case IMPORT_RAW: {
+      char *buf = NULL;
+      FILE *f = fopen(import_path, "rb");
+      if (!f) {
+        // TODO error
+        return _nil();
+      }
+
+      fseek(f, 0, SEEK_END);
+      i64 size = ftell(f);
+      fseek(f, 0, SEEK_SET);
+      buf = eval_malloc(size);
+      fread(buf, 1, size, f);
+      fclose(f);
+
+      str *string = eval_new(str);
+      *string = (str){ .ptr = buf, .len = size };
+      return _str(string);
+    }
+    case IMPORT_CSV: // TODO!
+    default: assert(false);
+  }
+
   return _nil();
 }
 
