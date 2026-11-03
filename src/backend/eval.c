@@ -30,8 +30,6 @@
 #include "backend/builtins.h"
 #include "error/error.h"
 
-#define PATH_MAX 4096
-
 typedef struct {
   Logger *logger;
 
@@ -899,44 +897,11 @@ static const Value *eval_env(const Symbols *s, const EnvExpr *expr) {
   return NULL;
 }
 
-static const char *_resolve_import_path(str rel_path) {
-  bool from_root = rel_path.len > 0 && rel_path.ptr[0] == '/';
-  char * base_cstr = from_root
-    ? cs->options.base_path
-    : dirname(strdup(state_current_filepath(cs)));
-
-  str base_path = str_from_cstring(base_cstr);
-  logger_log(cs->logger, LOG_DEBUG, "rel '%.*s'", (i32)rel_path.len, rel_path.ptr);
-  logger_log(cs->logger, LOG_DEBUG, "base '%.*s'", (i32)base_path.len, base_path.ptr);
-  if (!from_root) free(base_cstr);
-
-  str sep = str_from_cstring("/");
-  str full_path = str_concat(2, sep, base_path, rel_path);
-  logger_log(cs->logger, LOG_DEBUG, "full '%.*s'", (i32)full_path.len, full_path.ptr);
-  str_free(base_path);
-  str_free(sep);
-
-  char *full_path_cstr = str_to_cstring(full_path);
-  str_free(full_path);
-
-  char *full_path_eval = eval_malloc(PATH_MAX);
-  full_path_eval = realpath(full_path_cstr, full_path_eval);
-  free(full_path_cstr);
-  return full_path_eval;
-}
-
 static const Value *eval_import(const Symbols *s, const ImportExpr *i) {
-  const char *import_path = _resolve_import_path(i->path->value);
-  if (!import_path) {
-    logger_log(cs->logger, LOG_ERROR, "file '%.*s' does not exist", (i32)i->path->value.len, i->path->value.ptr);
-    assert(false);
-  }
-  logger_log(cs->logger, LOG_INFO, "import %s '%s'", import_type_str[i->type], import_path);
-
   switch (i->type) {
     case IMPORT_URL: {
       const char *base = cs->options.base_path;
-      const char *rel_path = import_path;
+      const char *rel_path = i->path;
       for (; *base == *rel_path; rel_path++) base++;
 
       str *string = eval_new(str);
@@ -945,7 +910,7 @@ static const Value *eval_import(const Symbols *s, const ImportExpr *i) {
     }
     case IMPORT_RAW: {
       char *buf = NULL;
-      FILE *f = fopen(import_path, "rb");
+      FILE *f = fopen(i->path, "rb");
       if (!f) {
         // TODO error
         return _nil();

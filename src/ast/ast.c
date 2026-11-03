@@ -468,7 +468,7 @@ FunctionCallExpr *ast_function_call(Identifier *id, ArgumentList *args, Expr *co
   return function_call;
 }
 
-ImportExpr *ast_import(ImportType type, Type *data_type, StringLiteral *path) {
+ImportExpr *ast_import(ImportType type, Type *data_type, char *path) {
   ImportExpr *import = new(ImportExpr);
   *import = (ImportExpr){
     .meta = _ast_get_metadata(),
@@ -937,7 +937,7 @@ void ast_free_import(ImportExpr *import) {
   if (!import) return;
 
   ast_free_type(import->data_type);
-  ast_free_string_literal(import->path);
+  if (import->path) free(import->path);
   free(import);
 }
 

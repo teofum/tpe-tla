@@ -375,7 +375,7 @@ struct ImportExpr {
   ASTNodeMetadata meta;
   ImportType type;
   Type *data_type;
-  StringLiteral *path;
+  char *path;
 };
 
 struct EnvExpr {
@@ -675,7 +675,7 @@ IfExpr *ast_if(Expr *condition, Expr *true_branch, Expr *false_branch);
 ForExpr *ast_for(Identifier *var, Identifier *idx, Expr *iterable, Expr *body);
 BlockExpr *ast_block(StmtList *statements);
 FunctionCallExpr *ast_function_call(Identifier *id, ArgumentList *args, Expr *composable);
-ImportExpr *ast_import(ImportType type, Type *data_type, StringLiteral *path);
+ImportExpr *ast_import(ImportType type, Type *data_type, char *path);
 EnvExpr *ast_env(StringLiteral *env_name, Expr *default_value);
 
 Type *ast_named_type(Identifier *id);

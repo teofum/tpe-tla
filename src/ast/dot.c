@@ -363,9 +363,7 @@ static void dot_import(ImportExpr *import, u64 pid) {
   }
 
   char label[256];
-  char *path = str_to_cstring(import->path->value);
-  snprintf(label, 256, "Import %s\\nFrom '%s'", import_type_str[import->type], path);
-  free(path);
+  snprintf(label, 256, "Import %s\\nFrom '%s'", import_type_str[import->type], import->path);
   _node(id, label, NODE_IMPORT);
   _edge(pid, id);
   if (import->data_type) dot_type(import->data_type, id);

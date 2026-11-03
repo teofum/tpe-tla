@@ -49,6 +49,10 @@ void fe_shutdown() {
   cs = NULL;
 }
 
+CompilerState *fe_get_state() {
+  return cs;
+}
+
 const char *TOKEN_LABEL_STR[] = {
   [PAREN_L] = "Paren_L",
   [PAREN_R] = "Paren_R",

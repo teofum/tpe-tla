@@ -1,3 +1,6 @@
+#include <assert.h>
+#include <libgen.h>
+#include <stdio.h>
 #include <string.h>
 
 #include <ast/ast.h>
@@ -10,6 +13,8 @@
 #include "bison_parser.h"
 #include "error/error.h"
 #include "support/logger.h"
+
+#define PATH_MAX 4096
 
 Stmt *parse_expr_stmt(Expr *expr) {
   fe_parser_log(LOG_DEBUG, "Expression Stmt");
@@ -107,7 +112,7 @@ PARSE_EXPR_FUNC(if, IfExpr, "If Expr")
 PARSE_EXPR_FUNC(for, ForExpr, "For Expr")
 PARSE_EXPR_FUNC(block, BlockExpr, "Block Expr (len=%u)", expr->len)
 PARSE_EXPR_FUNC(function_call, FunctionCallExpr, "Function Call Expr %s", expr->name->lexeme)
-PARSE_EXPR_FUNC(import, ImportExpr, "Import Expr %s", expr->path->token->lexeme)
+PARSE_EXPR_FUNC(import, ImportExpr, "Import Expr %s", expr->path)
 PARSE_EXPR_FUNC(env, EnvExpr, "Env Expr %s", expr->env_name->token->lexeme)
 
 Expr *parse_compose_expr() {
@@ -259,6 +264,32 @@ BlockExpr *parse_block(StmtList *statements) {
   return block;
 }
 
+static char *_resolve_import_path(str rel_path) {
+  bool from_root = rel_path.len > 0 && rel_path.ptr[0] == '/';
+  char * base_cstr = from_root
+    ? fe_get_state()->options.base_path
+    : dirname(strdup(state_current_filepath(fe_get_state())));
+
+  str base_path = str_from_cstring(base_cstr);
+  fe_parser_log(LOG_DEBUG, "rel '%.*s'", (i32)rel_path.len, rel_path.ptr);
+  fe_parser_log(LOG_DEBUG, "base '%.*s'", (i32)base_path.len, base_path.ptr);
+  if (!from_root) free(base_cstr);
+
+  str sep = str_from_cstring("/");
+  str full_path = str_concat(2, sep, base_path, rel_path);
+  fe_parser_log(LOG_DEBUG, "full '%.*s'", (i32)full_path.len, full_path.ptr);
+  str_free(base_path);
+  str_free(sep);
+
+  char *full_path_cstr = str_to_cstring(full_path);
+  str_free(full_path);
+
+  char *abs_path = malloc(PATH_MAX);
+  abs_path = realpath(full_path_cstr, abs_path);
+  free(full_path_cstr);
+  return abs_path;
+}
+
 ImportExpr *parse_import(Identifier *import_type, Type *data_type, StringLiteral *path) {
   fe_parser_log(LOG_DEBUG, "Import %s '%s'", import_type->lexeme, path->token->lexeme);
 
@@ -273,8 +304,16 @@ ImportExpr *parse_import(Identifier *import_type, Type *data_type, StringLiteral
     fe_parser_log(LOG_ERROR, "Unknown import type '%s'", import_type->lexeme);
   }
 
+  char *resolved_path = _resolve_import_path(path->value);
+  if (!resolved_path) {
+    fe_parser_log(LOG_ERROR, "File '%.*s' does not exist", path->value.len, path->value.ptr);
+    assert(false); // TODO error
+  }
+  fe_parser_log(LOG_INFO, "Resolved import %s '%s'", import_type_str[type], resolved_path);
+
   ast_free_identifier(import_type);
-  return ast_import(type, data_type, path);
+  ast_free_string_literal(path);
+  return ast_import(type, data_type, resolved_path);
 }
 
 EnvExpr *parse_env(StringLiteral *env_name, Expr *default_value) {
