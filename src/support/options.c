@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <support/env.h>
 #include <support/hash_map.h>
@@ -18,6 +19,7 @@ static CompilerOptions _options_default() {
 
     .input_file_count = 0,
     .input_filenames = NULL,
+    .base_path = getcwd(NULL, 0),
 
     .emit_ast_dot = false,
     .ast_dot_base_path = NULL,
@@ -54,7 +56,7 @@ static void _options_cli_args(CompilerOptions *options, i32 argc, char *const*ar
     OPT_AST_DOT,
   };
 
-  static const char *optstr = "v::d:qh";
+  static const char *optstr = "v::d:b:qh";
   static struct option long_opts[] = {
     {"help",        no_argument,        NULL, 'h'           },
     {"verbose",     optional_argument,  NULL, 'v'           },
@@ -62,6 +64,7 @@ static void _options_cli_args(CompilerOptions *options, i32 argc, char *const*ar
     {"log",         required_argument,  NULL, OPT_LOG_LEVEL },
     {"emit-ast",    optional_argument,  NULL, OPT_AST_DOT   },
     {"define",      required_argument,  NULL, 'd'           },
+    {"base-dir",    required_argument,  NULL, 'b'           },
     {0,             0,                  0,    0             }
   };
 
@@ -87,6 +90,10 @@ static void _options_cli_args(CompilerOptions *options, i32 argc, char *const*ar
           fprintf(stderr, "Invalid definition string '%s'\n", optarg);
         }
         break;
+      }
+      case 'b': {
+        free(options->base_path);
+        options->base_path = realpath(optarg, NULL);
       }
       case OPT_LOG_LEVEL:
         options->log_level = logger_str_to_level(optarg);
@@ -122,5 +129,6 @@ void options_free(CompilerOptions *opts) {
   map_free(opts->definitions);
   free(opts->definitions);
   free(opts->input_filenames);
+  free(opts->base_path);
   if (opts->ast_dot_base_path) free(opts->ast_dot_base_path);
 }

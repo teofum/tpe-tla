@@ -1634,6 +1634,7 @@ static Type *_import_type(Symbols *s, const ImportExpr *expr) {
 
   switch (expr->type) {
     case IMPORT_URL: return _builtin(T_STRING);
+    case IMPORT_RAW: return _builtin(T_STRING);
     case IMPORT_CSV: {
       Type *string_type = _builtin(T_STRING);
       Type *record_type = _map_of(string_type, string_type);

@@ -67,6 +67,7 @@ typedef enum {
 
 typedef enum {
   IMPORT_URL,
+  IMPORT_RAW,
   IMPORT_CSV,
   IMPORT_TYPE_COUNT,
   IMPORT_UNKNOWN,

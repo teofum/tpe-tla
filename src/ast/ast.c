@@ -9,6 +9,7 @@
 
 const char *import_type_str[] = {
   [IMPORT_URL] = "url",
+  [IMPORT_RAW] = "raw",
   [IMPORT_CSV] = "csv",
 };
 

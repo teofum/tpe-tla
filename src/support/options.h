@@ -17,6 +17,7 @@ typedef struct {
 
   u32 input_file_count;
   char **input_filenames;
+  char *base_path;
 
   bool emit_ast_dot;
   char *ast_dot_base_path;
