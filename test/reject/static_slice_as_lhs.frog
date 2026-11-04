@@ -8,3 +8,5 @@ x[..]
 
 x[2, 0] = [9, 10] // OK, actually
 x[..]
+
+x[..] = [5, 4, 3, 2, 1] // Definitely NOT OK!!!
