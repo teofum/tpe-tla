@@ -6,6 +6,7 @@
 #include <support/str.h>
 
 #include "ast.h"
+#include "support/hash_map.h"
 
 const char *import_type_str[] = {
   [IMPORT_URL] = "url",
@@ -544,10 +545,24 @@ Type *ast_map_type(Type *key_type, Type *value_type) {
   return type;
 }
 
-Type *ast_struct_type(StructFieldList *fields) {
+Type *ast_struct_type(StructFieldList *field_list) {
   StructType *struct_type = new(StructType);
-  struct_type->meta = _ast_get_metadata();
-  ast_consume_struct_field_list(fields, &struct_type->fields, &struct_type->len);
+  *struct_type = (StructType){
+    .meta = _ast_get_metadata(),
+    .fields = new(StructFieldMap),
+  };
+  map_init(struct_type->fields, hash_cstring, compare_cstring);
+  map_manage_values(struct_type->fields, ast_free_struct_field);
+
+  StructField **fields;
+  u32 field_count;
+  ast_consume_struct_field_list(field_list, &fields, &field_count);
+  for (u32 i = 0; i < field_count; i++) {
+    if (!map_insert(struct_type->fields, fields[i]->name->lexeme, fields[i])) {
+      // TODO report dupliate struct member error
+    }
+  }
+  free(fields);
 
   Type *type = new(Type);
   *type = (Type){
@@ -659,13 +674,12 @@ FunctionDef *ast_function_def(
 
 // -----------------------------------------------------------------------------
 
-StructField *ast_struct_field(Identifier *id, Type *type, Expr *default_value) {
+StructField *ast_struct_field(Identifier *id, Type *type) {
   StructField *field = new(StructField);
   *field = (StructField){
     .meta = _ast_get_metadata(),
     .name = id,
     .type = type,
-    .default_value = default_value,
   };
 
   return field;
@@ -1170,9 +1184,7 @@ void ast_free_map_type(MapType *t) {
 void ast_free_struct_type(StructType *t) {
   if (!t) return;
 
-  for (u32 i = 0; i < t->len; i++) {
-    ast_free_struct_field(t->fields[i]);
-  }
+  map_free(t->fields);
   free(t->fields);
   free(t);
 }
@@ -1233,7 +1245,6 @@ void ast_free_struct_field(StructField *f) {
 
   ast_free_identifier(f->name);
   ast_free_type(f->type);
-  ast_free_expr(f->default_value);
   free(f);
 }
 

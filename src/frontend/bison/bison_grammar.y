@@ -557,8 +557,7 @@ struct_field_list: struct_field                                     { $$ = parse
   | struct_field_list COMMA nl struct_field                         { $$ = parse_struct_field_list($4, $1); }
   ;
 
-struct_field: IDENTIFIER COLON type                                 { $$ = parse_struct_field($1, $3, NULL); }
-  | IDENTIFIER COLON type EQUAL expression                          { $$ = parse_struct_field($1, $3, $5); }
+struct_field: IDENTIFIER COLON type                                 { $$ = parse_struct_field($1, $3); }
   ;
 
 type_list: type                                                     { $$ = parse_type_list($1, NULL); }

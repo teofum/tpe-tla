@@ -86,7 +86,7 @@ StmtList *parse_stmt_list(Stmt *head, StmtList *tail);
 ExprList *parse_expr_list(Expr *head, ExprList *tail);
 ParameterList *parse_parameter_list(Parameter *head, ParameterList *tail);
 
-StructField *parse_struct_field(Identifier *id, Type *type, Expr *default_value);
+StructField *parse_struct_field(Identifier *id, Type *type);
 StructLiteralField *parse_struct_literal_field(Identifier *id, Expr *value);
 MapEntry *parse_map_entry_literal(LiteralExpr *key, Expr *value);
 MapEntry *parse_map_entry_block(BlockExpr *key, Expr *value);

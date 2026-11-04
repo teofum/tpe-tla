@@ -64,21 +64,20 @@ static void _edge(u64 id1, u64 id2) {
   _printfln("%llu -> %llu;", id1, id2);
 }
 
-static void dot_stmt(Stmt *stmt, u64 pid);
-static void dot_expr(Expr *expr, u64 pid);
-static void dot_type(Type *type, u64 pid);
+static void dot_stmt(const Stmt *stmt, u64 pid);
+static void dot_expr(const Expr *expr, u64 pid);
+static void dot_type(const Type *type, u64 pid);
 
-static void dot_struct_field(StructField *field, u64 pid) {
+static void dot_struct_field(const StructField *field, u64 pid) {
   u64 id = next_id();
   char label[256];
   snprintf(label, 256, "%s", field->name->lexeme);
   _node(id, label, NODE_BASE);
   _edge(pid, id);
   dot_type(field->type, id);
-  if (field->default_value) dot_expr(field->default_value, id);
 }
 
-static void dot_struct_literal_field(StructLiteralField *field, u64 pid) {
+static void dot_struct_literal_field(const StructLiteralField *field, u64 pid) {
   u64 id = next_id();
   char label[256];
   snprintf(label, 256, "%s", field->name->lexeme);
@@ -87,7 +86,7 @@ static void dot_struct_literal_field(StructLiteralField *field, u64 pid) {
   dot_expr(field->value, id);
 }
 
-static void dot_map_entry(MapEntry *entry, u64 pid) {
+static void dot_map_entry(const MapEntry *entry, u64 pid) {
   u64 id = next_id();
   _node(id, "Map Entry", NODE_BASE);
   _edge(pid, id);
@@ -95,7 +94,7 @@ static void dot_map_entry(MapEntry *entry, u64 pid) {
   dot_expr(entry->value, id);
 }
 
-static void dot_enum_value(Identifier *value, u64 pid) {
+static void dot_enum_value(const Identifier *value, u64 pid) {
   u64 id = next_id();
   char label[256];
   snprintf(label, 256, "%s", value->lexeme);
@@ -103,7 +102,7 @@ static void dot_enum_value(Identifier *value, u64 pid) {
   _edge(pid, id);
 }
 
-static void dot_type(Type *type, u64 pid) {
+static void dot_type(const Type *type, u64 pid) {
   u64 id = next_id();
   char label[256];
 
@@ -128,8 +127,9 @@ static void dot_type(Type *type, u64 pid) {
       break;
     case T_STRUCT:
       snprintf(label, 8, "Struct");
-      for (u32 i = 0; i < type->struct_type->len; i++) {
-        dot_struct_field(type->struct_type->fields[i], id);
+      const StructField *field;
+      map_foreach_v(field, type->struct_type->fields) {
+        dot_struct_field(field, id);
       }
       break;
     case T_UNION:
@@ -163,7 +163,7 @@ static void dot_type(Type *type, u64 pid) {
   _edge(pid, id);
 }
 
-static void dot_literal(LiteralExpr *literal, u64 pid) {
+static void dot_literal(const LiteralExpr *literal, u64 pid) {
   u64 id = next_id();
   char *label;
 
@@ -234,7 +234,7 @@ static void dot_literal(LiteralExpr *literal, u64 pid) {
   free(label);
 }
 
-static void dot_variable(VariableExpr *var, u64 pid) {
+static void dot_variable(const VariableExpr *var, u64 pid) {
   u64 id = next_id();
   char *label;
 
@@ -263,14 +263,14 @@ static void dot_variable(VariableExpr *var, u64 pid) {
   free(label);
 }
 
-static void dot_unary(UnaryExpr *unary, u64 pid) {
+static void dot_unary(const UnaryExpr *unary, u64 pid) {
   u64 id = next_id();
   _node(id, TOKEN_LEXEME[unary->op], NODE_BASE);
   _edge(pid, id);
   dot_expr(unary->expr, id);
 }
 
-static void dot_binary(BinaryExpr *binary, u64 pid) {
+static void dot_binary(const BinaryExpr *binary, u64 pid) {
   u64 id = next_id();
   _node(id, TOKEN_LEXEME[binary->op], NODE_BASE);
   _edge(pid, id);
@@ -278,14 +278,14 @@ static void dot_binary(BinaryExpr *binary, u64 pid) {
   dot_expr(binary->right, id);
 }
 
-static void dot_group(GroupExpr *group, u64 pid) {
+static void dot_group(const GroupExpr *group, u64 pid) {
   u64 id = next_id();
   _node(id, "Group", NODE_BASE);
   _edge(pid, id);
   dot_expr(group->inner_expr, id);
 }
 
-static void dot_assignment(AssignmentExpr *assign, u64 pid) {
+static void dot_assignment(const AssignmentExpr *assign, u64 pid) {
   u64 id = next_id();
   _node(id, "=", NODE_BASE);
   _edge(pid, id);
@@ -293,7 +293,7 @@ static void dot_assignment(AssignmentExpr *assign, u64 pid) {
   dot_expr(assign->right, id);
 }
 
-static void dot_if(IfExpr *if_expr, u64 pid) {
+static void dot_if(const IfExpr *if_expr, u64 pid) {
   u64 id = next_id();
   _node(id, if_expr->false_branch == NULL ? "If" : "If/Else", NODE_BASE);
   _edge(pid, id);
@@ -302,7 +302,7 @@ static void dot_if(IfExpr *if_expr, u64 pid) {
   if (if_expr->false_branch) dot_expr(if_expr->false_branch, id);
 }
 
-static void dot_for(ForExpr *for_expr, u64 pid) {
+static void dot_for(const ForExpr *for_expr, u64 pid) {
   u64 id = next_id();
   char label[256];
   if (for_expr->idx_id) {
@@ -316,7 +316,7 @@ static void dot_for(ForExpr *for_expr, u64 pid) {
   dot_expr(for_expr->body, id);
 }
 
-static void dot_block(BlockExpr *block, u64 pid) {
+static void dot_block(const BlockExpr *block, u64 pid) {
   u64 id = next_id();
   _node(id, "Block", NODE_BASE);
   _edge(pid, id);
@@ -325,7 +325,7 @@ static void dot_block(BlockExpr *block, u64 pid) {
   }
 }
 
-static void dot_argument(Argument *arg, u32 idx, u64 pid) {
+static void dot_argument(const Argument *arg, u32 idx, u64 pid) {
   u64 id = next_id();
   if (arg->value) {
     char label[256];
@@ -342,7 +342,7 @@ static void dot_argument(Argument *arg, u32 idx, u64 pid) {
   _edge(pid, id);
 }
 
-static void dot_function_call(FunctionCallExpr *function, u64 pid) {
+static void dot_function_call(const FunctionCallExpr *function, u64 pid) {
   u64 id = next_id();
   char label[256];
   snprintf(label, 256, "Function Call\\n%s", function->name->lexeme);
@@ -354,7 +354,7 @@ static void dot_function_call(FunctionCallExpr *function, u64 pid) {
   if (function->composable) dot_expr(function->composable, id);
 }
 
-static void dot_import(ImportExpr *import, u64 pid) {
+static void dot_import(const ImportExpr *import, u64 pid) {
   u64 id = next_id();
   if (import->type == IMPORT_UNKNOWN) {
     _node(id, "Import ERROR\\nUnknown type", NODE_ERROR);
@@ -369,7 +369,7 @@ static void dot_import(ImportExpr *import, u64 pid) {
   if (import->data_type) dot_type(import->data_type, id);
 }
 
-static void dot_env(EnvExpr *env, u64 pid) {
+static void dot_env(const EnvExpr *env, u64 pid) {
   u64 id = next_id();
   char label[256];
   char *name = str_to_cstring(env->env_name->value);
@@ -386,7 +386,7 @@ static void dot_compose(u64 pid) {
   _edge(pid, id);
 }
 
-static void dot_expr(Expr *expr, u64 pid) {
+static void dot_expr(const Expr *expr, u64 pid) {
   switch (expr->type) {
     case EXPR_LITERAL: return dot_literal(expr->literal, pid);
     case EXPR_VARIABLE: return dot_variable(expr->variable, pid);
@@ -404,7 +404,7 @@ static void dot_expr(Expr *expr, u64 pid) {
   }
 }
 
-static void dot_decl(DeclarationStmt *decl, u64 pid) {
+static void dot_decl(const DeclarationStmt *decl, u64 pid) {
   u64 id = next_id();
   str label = str_format("Declaration\\n%s", decl->left[0]->lexeme);
   for (u32 i = 1; i < decl->left_count; i++) str_append_temp(&label, str_format(", %s", decl->left[i]->lexeme));
@@ -417,7 +417,7 @@ static void dot_decl(DeclarationStmt *decl, u64 pid) {
   dot_expr(decl->right, id);
 }
 
-static void dot_const(ConstantStmt *constant, u64 pid) {
+static void dot_const(const ConstantStmt *constant, u64 pid) {
   u64 id = next_id();
   char *clabel;
   usize len = asprintf(&clabel, "Constant\\n%s", constant->left->lexeme);
@@ -428,7 +428,7 @@ static void dot_const(ConstantStmt *constant, u64 pid) {
   dot_expr(constant->right, id);
 }
 
-static void dot_alias(TypeAliasStmt *alias, u64 pid) {
+static void dot_alias(const TypeAliasStmt *alias, u64 pid) {
   u64 id = next_id();
   char label[256];
   snprintf(label, 256, "Type alias\\n%s", alias->alias->lexeme);
@@ -437,7 +437,7 @@ static void dot_alias(TypeAliasStmt *alias, u64 pid) {
   dot_type(alias->type, id);
 }
 
-static void dot_parameter(Parameter *param, u64 pid) {
+static void dot_parameter(const Parameter *param, u64 pid) {
   u64 id = next_id();
   char label[256];
   snprintf(label, 256, "%s", param->name->lexeme);
@@ -447,7 +447,7 @@ static void dot_parameter(Parameter *param, u64 pid) {
   if (param->default_value) dot_expr(param->default_value, id);
 }
 
-static void dot_function_def(FunctionDef *function, u64 pid) {
+static void dot_function_def(const FunctionDef *function, u64 pid) {
   u64 id = next_id();
   char label[256];
   snprintf(label, 256, "Function\\n%s", function->name->lexeme);
@@ -460,7 +460,7 @@ static void dot_function_def(FunctionDef *function, u64 pid) {
   dot_block(function->body, id);
 }
 
-static void dot_export(ExportStmt *export, u64 pid) {
+static void dot_export(const ExportStmt *export, u64 pid) {
   u64 id = next_id();
   _node(id, "Export", NODE_STMT);
   _edge(pid, id);
@@ -475,7 +475,7 @@ static void dot_error(u64 pid) {
   _edge(pid, id);
 }
 
-static void dot_stmt(Stmt *stmt, u64 pid) {
+static void dot_stmt(const Stmt *stmt, u64 pid) {
   switch (stmt->type) {
     case STMT_EXPR: return dot_expr(stmt->expr, pid);
     case STMT_DECLARATION: return dot_decl(stmt->decl, pid);

@@ -563,9 +563,9 @@ ParameterList *parse_parameter_list(Parameter *head, ParameterList *tail) {
 
 // -----------------------------------------------------------------------------
 
-StructField *parse_struct_field(Identifier *id, Type *type, Expr *default_value) {
+StructField *parse_struct_field(Identifier *id, Type *type) {
   fe_parser_log(LOG_DEBUG, "Struct Field %s", id->lexeme);
-  return ast_struct_field(id, type, default_value);
+  return ast_struct_field(id, type);
 }
 
 StructLiteralField *parse_struct_literal_field(Identifier *id, Expr *value) {

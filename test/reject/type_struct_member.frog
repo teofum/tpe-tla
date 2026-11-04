@@ -1,0 +1,14 @@
+Book is struct {
+  isbn: string,
+  title: string,
+  author: struct { name: string },
+  price: float
+}
+
+x: Book = { .isbn = "asd", .title = "asd", .author = { .name = "asd" }, .price = 5 } // OK
+y: Book = { .isbn = "asd", .title = "asd", .author = { .name = "asd" }, .price = 5, .forp = "1234" } // OK
+
+x.isbn      // OK
+y.author    // OK
+
+y.forp      // Type error: the property exists, but y is a Book

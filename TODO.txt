@@ -25,6 +25,7 @@
 [x] Leaky hashmaps in eval
 [ ] Typecheck currently accepts multi-index or slices as LHS in an assignment
 [ ] Hashing function for values is literally 4
+[ ] A lot of missing error handling around imports and codegen
 
 #=== General ==================================================================#
 
@@ -51,11 +52,13 @@
 [x] Function composition
 [x] Iterable ranges
 [ ] Decomposition statement for list composing
+[ ] Typed CSV imports
 
 [/] Remove default function values
   - Unremoved default function values (it turns out we needed those)
 [ ] Remove enums (I think we definitely do not need those)
-[ ] MAYBE: Remove list/tuple literals and replace with blocks?
+[-] MAYBE: Remove list/tuple literals and replace with blocks?
+  - Nah, waste of time. Plus list literal syntax looks nice.
 
 [ ] Add back compiler opts (disabled for debubbing)
 
@@ -129,7 +132,7 @@
 
 /--- Evaluator ----------------------------------------------------------------/
 [x] Value definitions
-[ ] Expression evaluators
+[x] Expression evaluators
   [x] Literals
   [x] Variables
   [x] Unary/binary operators
@@ -138,7 +141,11 @@
   [x] If expressions
   [x] For expressions
   [x] Function calls
-  [ ] Import expressions
+  [x] Import expressions
+    [x] URL
+    [x] Raw
+    [x] CSV
+    [ ] MAYBE: JSON
   [x] Env expressions
   [x] Blocks
 [x] Statement evaluators

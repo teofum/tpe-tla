@@ -130,6 +130,8 @@ typedef struct {
     _map_base_delete(&(m)->_map, _key);                                             \
   })
 
+#define map_size(m) ((m)->_map.size)
+
 #define map_iter(m) ((map_iterator(*(m))){&(m)->_map, _map_base_iter(&(m)->_map, NULL)})
 #define map_iter_valid(it) (_map_base_iter_valid((it)->_map, (it)->_pos))
 #define map_iter_next(it) (_map_base_iter_next((it)->_map, &(it)->_pos))
@@ -142,6 +144,13 @@ typedef struct {
   for (                                                                 \
     map_iterator(*(m)) __it = map_iter(m);                              \
     ((key) = map_iter_key(&__it)) && ((value) = map_iter_value(&__it)); \
+    map_iter_next(&__it)                                                \
+  )
+
+#define map_foreach_v(value, m)                                         \
+  for (                                                                 \
+    map_iterator(*(m)) __it = map_iter(m);                              \
+    ((value) = map_iter_value(&__it));                                  \
     map_iter_next(&__it)                                                \
   )
 

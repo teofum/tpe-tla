@@ -297,8 +297,12 @@ CompilationStatus sa_build_static_tables(i32 file_idx) {
 
 /* -- Type checking: utils -------------------------------------------------- */
 
-#define tc_new(T) (((T*)mem_dyn_arena_calloc(sa->tc_arena, 1, sizeof(T))))
-#define tc_new_array(T, n) ((T*)(mem_dyn_arena_calloc(sa->tc_arena, n, sizeof(T))))
+void *tc_calloc(usize count, usize size) {
+  return mem_dyn_arena_calloc(sa->tc_arena, count, size);
+}
+
+#define tc_new(T) (((T*)tc_calloc(1, sizeof(T))))
+#define tc_new_array(T, n) ((T*)(tc_calloc(n, sizeof(T))))
 
 // C is for Cursed macro dark arts
 #define tc_make(T, name, ...)               \
@@ -427,7 +431,7 @@ static const char *_print_type_list(
 }
 
 static const char *_print_field(const StructField *field) {
-  return _tc_asprintf("%s: %s", field->name, tc_print_type(field->type));
+  return _tc_asprintf("%s: %s", field->name->lexeme, tc_print_type(field->type));
 }
 
 static const char *tc_print_type(const Type *type) {
@@ -461,10 +465,17 @@ static const char *tc_print_type(const Type *type) {
       );
     }
     case T_STRUCT: {
-      StructField **fields = type->struct_type->fields;
-      const char *string = _tc_asprintf("struct { %s", _print_field(fields[0]));
-      for (u32 i = 1; i < type->struct_type->len; i++) {
-        string = _tc_asprintf("%s, %s", string, _print_field(fields[i]));
+      StructFieldMap *fields = type->struct_type->fields;
+      const char *string = _tc_asprintf("struct { ");
+      const StructField *value;
+      u32 i = 0;
+      map_foreach_v(value, fields) {
+        string = _tc_asprintf(
+          "%s%s%s",
+          string,
+          i++ > 0 ? ", " : "",
+          _print_field(value)
+        );
       }
       return _tc_asprintf("%s }", string);
     }
@@ -699,12 +710,16 @@ static bool _compare_map_types(Symbols *s, const MapType *a, const MapType *b) {
 }
 
 static bool _compare_struct_types(Symbols *s, const StructType *a, const StructType *b) {
-  if (a->len != b->len) return false;
-  for (u32 i = 0; i < a->len; i++) {
-    StructField *fa = a->fields[i];
-    StructField *fb = b->fields[i];
-    if (!ast_compare_identifiers(fa->name, fb->name)) return false;
-    if (!tc_compare_types(s, fa->type, fb->type)) return false;
+  if (map_size(a->fields) != map_size(b->fields)) return false;
+
+  const StructField *f;
+  map_foreach_v(f, a->fields) {
+    StructField *fb = map_get(b->fields, f->name->lexeme);
+    if (!fb || !tc_compare_types(s, f->type, fb->type)) return false;
+  }
+  map_foreach_v(f, b->fields) {
+    StructField *fa = map_get(a->fields, f->name->lexeme);
+    if (!fa || !tc_compare_types(s, f->type, fa->type)) return false;
   }
   return true;
 }
@@ -824,14 +839,31 @@ static bool _accepts_tuple_type(Symbols *s, const TupleType *a, const Type *b) {
 }
 
 static bool _accepts_map_type(Symbols *s, const MapType *a, const Type *b) {
-  if (b->type != T_MAP) return false;
-  return tc_compare_types(s, a->key_type, b->map->key_type)
-    && tc_accepts_type(s, a->value_type, b->map->value_type);
+  switch (b->type) {
+    case T_MAP: {
+      return tc_compare_types(s, a->key_type, b->map->key_type)
+        && tc_accepts_type(s, a->value_type, b->map->value_type);
+    }
+    case T_STRUCT: {
+      if (!_is_builtin(a->key_type, T_STRING)) return false;
+      const StructField *field;
+      map_foreach_v(field, b->struct_type->fields) {
+        if (!tc_accepts_type(s, a->value_type, field->type)) return false;
+      }
+      return true;
+    }
+    default: return false;
+  }
 }
 
 static bool _accepts_struct_type(Symbols *s, const StructType *a, const Type *b) {
   if (b->type != T_STRUCT) return false;
-  return _compare_struct_types(s, a, b->struct_type); // TODO
+  const StructField *field;
+  map_foreach_v(field, a->fields) {
+    const StructField *bf = map_get(b->struct_type->fields, field->name->lexeme);
+    if (!bf || !tc_accepts_type(s, field->type, bf->type)) return false;
+  }
+  return true;
 }
 
 static bool _accepts_union_type(Symbols *s, const UnionType *a, const Type *b) {
@@ -968,13 +1000,14 @@ static bool _is_valid_map_key_type(const Type *type) {
     case T_ERROR:         return false;
     case T_UNION:         return false;
     case T_MAP:           return false;
-    case T_LIST:          return false;
+    case T_LIST:          return _is_valid_map_key_type(type->list->item_type);
     case T_RANGE:         return false;
     case T_ENUM:          return true;
-    case T_VECTOR:   return _is_valid_map_key_type(type->vec->item_type);
+    case T_VECTOR:        return _is_valid_map_key_type(type->vec->item_type);
     case T_STRUCT: {
-      for (u32 i = 0; i < type->struct_type->len; i++) {
-        if (!_is_valid_map_key_type(type->struct_type->fields[i]->type)) return false;
+      const StructField *field;
+      map_foreach_v(field, type->struct_type->fields) {
+        if (!_is_valid_map_key_type(field->type)) return false;
       }
       return true;
     }
@@ -1042,24 +1075,22 @@ static Type *_struct_type(Symbols *s, StructLiteral *struct_l) {
   StructField **fields = tc_new_array(StructField *, struct_l->len);
   bool valid = true;
 
+  tc_make(StructType, st, { .fields = tc_new(StructFieldMap), .meta = {0} });
+  map_inita(st->fields, hash_cstring, compare_cstring, tc_calloc, NULL);
   for (u32 i = 0; i < struct_l->len; i++) {
     StructLiteralField *lf = struct_l->fields[i];
-    fields[i] = tc_new(StructField);
-    *fields[i] = (StructField) {
+    StructField *field = tc_new(StructField);
+    *field = (StructField) {
       .name = tc_clone_id(lf->name),
       .type = tc_check_expr(s, lf->value),
     };
-    if (_is_error(fields[i]->type)) valid = false;
+    if (_is_error(field->type)) valid = false;
+    map_insert(st->fields, field->name->lexeme, field);
   }
 
   if (!valid) return tc_error();
 
-  tc_make(StructType, struct_type, {
-    .len = struct_l->len,
-    .fields = fields,
-    .meta = {0}
-  });
-  tc_make(Type, type, { .type = T_STRUCT, .struct_type = struct_type, .meta = {0} });
+  tc_make(Type, type, { .type = T_STRUCT, .struct_type = st, .meta = {0} });
   return type;
 }
 
@@ -1102,17 +1133,15 @@ static Type *_literal_type(Symbols *s, LiteralExpr *expr) {
   }
 }
 
-static Type *_struct_member_type(const StructType *s, const Identifier *field) {
-  for (u32 i = 0; i < s->len; i++) {
-    if (strcmp(s->fields[i]->name->lexeme, field->lexeme) == 0) {
-      return s->fields[i]->type;
-    }
-  }
+static Type *_struct_member_type(const StructType *s, const Identifier *name) {
+  const StructField *field = map_get(s->fields, name->lexeme);
 
-  return tc_report_error_fmt(
-    &field->loc,
-    "struct has no member '%s'", field->lexeme
+  if (!field) return tc_report_error_fmt(
+    &name->loc,
+    "struct has no member '%s'", name->lexeme
   );
+
+  return field->type;
 }
 
 static Type *_indexed_list_item_type(Symbols *s, Type *item_type, Expr *index) {

@@ -179,6 +179,7 @@ typedef struct NamedType NamedType;
 typedef struct ListType ListType;
 typedef struct MapType MapType;
 typedef struct StructField StructField;
+typedef map(char, StructField) StructFieldMap;
 typedef struct StructType StructType;
 typedef struct UnionType UnionType;
 typedef struct TupleType TupleType;
@@ -524,8 +525,7 @@ struct MapType {
 
 struct StructType {
   ASTNodeMetadata meta;
-  u32 len;
-  StructField **fields;
+  StructFieldMap *fields;
 };
 
 struct UnionType {
@@ -556,7 +556,6 @@ struct StructField {
   ASTNodeMetadata meta;
   Identifier *name;
   Type *type;
-  Expr *default_value;
 };
 
 // -----------------------------------------------------------------------------
@@ -726,7 +725,7 @@ FunctionDef *ast_function_def(
   BlockExpr *body
 );
 
-StructField *ast_struct_field(Identifier *id, Type *type, Expr *default_value);
+StructField *ast_struct_field(Identifier *id, Type *type);
 StructLiteralField *ast_struct_literal_field(Identifier *id, Expr *value);
 MapEntry *ast_map_entry(Expr *key, Expr *value);
 Parameter *ast_parameter(Identifier *id, Type *type, Expr *default_value);
