@@ -38,7 +38,8 @@ bool flex_has_buffer(Frontend *la);
  *
  * @see https://westes.github.io/flex/manual/Start-Conditions.html
  */
-%x MULTILINE_COMMENT
+%x LEX_MULTILINE_COMMENT
+%x LEX_CSV
 
 /**
  * Reusable patterns.
@@ -46,7 +47,7 @@ bool flex_has_buffer(Frontend *la);
  * @see https://westes.github.io/flex/manual/Matching.html
  * @see https://westes.github.io/flex/manual/Patterns.html
  */
-whitespace			([[:space:]]{-}[\n])+
+whitespace      ([[:space:]]{-}[\n])+
 d               [[:digit:]]
 d_nz            [1-9]
 d_hex           [[:digit:]]
@@ -65,11 +66,19 @@ id_char         [a-zA-Z0-9_-]
 
 ^{whitespace}?"//".*\n        { return lex_ignored(); }
 "//".*\n                      { return lex_newline(); }
-"/*"								          { return lex_begin_multiline_comment(MULTILINE_COMMENT); }
-<MULTILINE_COMMENT>"*/"				{ return lex_end_multiline_comment(); }
-<MULTILINE_COMMENT>"*/"\n		  { return lex_end_multiline_comment(); }
-<MULTILINE_COMMENT>[^*]+			{ return lex_ignored(); }
-<MULTILINE_COMMENT>.				  { return lex_ignored(); }
+"/*"                          { return lex_begin_multiline_comment(LEX_MULTILINE_COMMENT); }
+<LEX_MULTILINE_COMMENT>"*/"	  { return lex_end_multiline_comment(); }
+<LEX_MULTILINE_COMMENT>"*/"\n	{ return lex_end_multiline_comment(); }
+<LEX_MULTILINE_COMMENT>[^*]+  { return lex_ignored(); }
+<LEX_MULTILINE_COMMENT>.      { return lex_ignored(); }
+
+<LEX_CSV>^{whitespace}?"//".*\n        { return lex_ignored(); }
+<LEX_CSV>","                  { return lex_csv_token(CSV_COMMA); }
+<LEX_CSV>"\""                 { return lex_csv_token(CSV_DQUOT); }
+<LEX_CSV>"\n"                 { return lex_csv_token(CSV_NEWLINE); }
+<LEX_CSV>([ !#-+\--~])+       { return lex_csv_textdata(); }
+<LEX_CSV>.                    { return lex_csv_unknown(); }
+<LEX_CSV><<EOF>>              { return lex_csv_eof(); }
 
 "("                           { return lex_operator(PAREN_L); }
 ")"                           { return lex_operator(PAREN_R); }

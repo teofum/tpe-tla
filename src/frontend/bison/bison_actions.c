@@ -3,16 +3,18 @@
 #include <stdio.h>
 #include <string.h>
 
+#define YY_HEADER_EXPORT_START_CONDITIONS
 #include <ast/ast.h>
+#include <error/error.h>
+#include <frontend/flex/flex_scanner.h>
 #include <frontend/frontend.h>
+#include <support/logger.h>
 #include <support/str.h>
 #include <support/types.h>
 #include <support/util.h>
 
 #include "bison_actions.h"
 #include "bison_parser.h"
-#include "error/error.h"
-#include "support/logger.h"
 
 #define PATH_MAX 4096
 
@@ -112,8 +114,13 @@ PARSE_EXPR_FUNC(if, IfExpr, "If Expr")
 PARSE_EXPR_FUNC(for, ForExpr, "For Expr")
 PARSE_EXPR_FUNC(block, BlockExpr, "Block Expr (len=%u)", expr->len)
 PARSE_EXPR_FUNC(function_call, FunctionCallExpr, "Function Call Expr %s", expr->name->lexeme)
-PARSE_EXPR_FUNC(import, ImportExpr, "Import Expr %s", expr->path)
 PARSE_EXPR_FUNC(env, EnvExpr, "Env Expr %s", expr->env_name->token->lexeme)
+
+Expr *parse_import_expr(ImportExpr *expr, CSVFile *csv) {
+  fe_parser_log(LOG_DEBUG, "Import Expr %s", expr->path);
+  expr->csv = csv;
+  return ast_expr_import(expr);
+}
 
 Expr *parse_compose_expr() {
   fe_parser_log(LOG_DEBUG, "Compose Expr");
@@ -313,6 +320,12 @@ ImportExpr *parse_import(Identifier *import_type, Type *data_type, StringLiteral
 
   ast_free_identifier(import_type);
   ast_free_string_literal(path);
+
+  if (type == IMPORT_CSV) {
+    fe_push_buffer(resolved_path);
+    fe_enter_context(LEX_CSV);
+  }
+
   return ast_import(type, data_type, resolved_path);
 }
 
@@ -530,6 +543,7 @@ IdentifierList *parse_identifier_list(Identifier *head, IdentifierList *tail) {
 }
 
 StmtList *parse_stmt_list(Stmt *head, StmtList *tail) {
+  if (!head) return tail;
   StmtList* list = ast_stmt_list(head, tail);
   fe_parser_log(LOG_DEBUG, "Stmt List (len=%u)", list->len);
   return list;
@@ -581,6 +595,45 @@ Program *parse_program(StmtList *statements) {
   fe_parser_log(LOG_DEBUG, "Program (len=%u)", prog->len);
   fe_set_ast(prog);
   return prog;
+}
+
+// -----------------------------------------------------------------------------
+
+CSVString *parse_csv_str_literal(const char *value) {
+  CSVString *l = new(CSVString);
+  *l = (CSVString){
+    .meta = {0},
+    .value = str_from_cstring(value),
+  };
+  return l;
+}
+
+CSVString *parse_csv_str_concat(CSVString *l, CSVString *r) {
+  str_append(&l->value, r->value);
+  ast_free_csv_string(r);
+  return l;
+}
+
+CSVStringList *parse_csv_field_list(CSVString *head, CSVStringList *tail) {
+  CSVStringList *list = ast_csv_string_list(head, tail);
+  fe_parser_log(LOG_DEBUG, "CSV Field List (len=%u)", list->len);
+  return list;
+}
+
+CSVRecord *parse_csv_record(CSVStringList *fields) {
+  fe_parser_log(LOG_DEBUG, "CSV Record");
+  return ast_csv_record(fields);
+}
+
+CSVRecordList *parse_csv_record_list(CSVRecord *head, CSVRecordList *tail) {
+  CSVRecordList *list = ast_csv_record_list(head, tail);
+  fe_parser_log(LOG_DEBUG, "CSV Record List (len=%u)", list->len);
+  return list;
+}
+
+CSVFile *parse_csv_file(CSVRecordList *records) {
+  fe_parser_log(LOG_DEBUG, "CSV File");
+  return ast_csv_file(records);
 }
 
 // -----------------------------------------------------------------------------

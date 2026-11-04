@@ -81,6 +81,8 @@ AST_LIST_IMPL(Type, type)
 AST_LIST_IMPL(Identifier, identifier)
 AST_LIST_IMPL(Parameter, parameter)
 AST_LIST_IMPL(Argument, argument)
+AST_LIST_IMPL(CSVString, csv_string)
+AST_LIST_IMPL(CSVRecord, csv_record)
 
 // -----------------------------------------------------------------------------
 
@@ -725,6 +727,68 @@ Program *ast_program(StmtList *statements) {
 
 // -----------------------------------------------------------------------------
 
+CSVString *ast_csv_string(str value) {
+  CSVString *string = new(CSVString);
+  *string = (CSVString){
+    .meta = _ast_get_metadata(),
+    .value = value,
+  };
+  return string;
+}
+
+CSVRecord *ast_csv_record(CSVStringList *fields) {
+  CSVRecord *record = new(CSVRecord);
+  record->meta = _ast_get_metadata();
+  ast_consume_csv_string_list(fields, &record->fields, &record->len);
+  return record;
+}
+
+CSVFile *ast_csv_file(CSVRecordList *record_list) {
+  u32 record_count;
+  CSVRecord **records;
+  ast_consume_csv_record_list(record_list, &records, &record_count);
+  if (record_count == 0) return NULL;
+
+  u32 columns = records[0]->len;
+  u32 rows = record_count - 1;
+  CSVString **headers = new_array(CSVString *, columns);
+  CSVString **data = new_array(CSVString *, columns * rows);
+
+  for (u32 j = 0; j < columns; j++) {
+    headers[j] = records[0]->fields[j];
+  }
+  free(records[0]->fields);
+  free(records[0]);
+  for (u32 i = 0; i < rows; i++) {
+    CSVRecord *row = records[i + 1];
+    if (row->len != columns) {
+      for (u32 k = 0; k < record_count; k++) ast_free_csv_record(records[k]);
+      free(headers);
+      free(data);
+      free(records);
+      return NULL;
+    }
+    for (u32 j = 0; j < columns; j++) {
+      data[i * columns + j] = row->fields[j];
+    }
+    free(row->fields);
+    free(row);
+  }
+
+  free(records);
+  CSVFile *file = new(CSVFile);
+  *file = (CSVFile){
+    .meta = _ast_get_metadata(),
+    .columns = columns,
+    .rows = rows,
+    .headers = headers,
+    .data = data,
+  };
+  return file;
+}
+
+// -----------------------------------------------------------------------------
+
 bool ast_compare_identifiers(const Identifier *a, const Identifier *b) {
   return a->len == b->len && strncmp(a->lexeme, b->lexeme, a->len) == 0;
 }
@@ -938,6 +1002,11 @@ void ast_free_import(ImportExpr *import) {
 
   ast_free_type(import->data_type);
   if (import->path) free(import->path);
+  switch (import->type) {
+    case IMPORT_CSV: ast_free_csv_file(import->csv); break;
+    default: break;
+  }
+
   free(import);
 }
 
@@ -1220,4 +1289,35 @@ void ast_free_program(Program *program) {
   }
   free(program->statements);
   free(program);
+}
+
+void ast_free_csv_string(CSVString *string) {
+  if (!string) return;
+
+  str_free(string->value);
+  free(string);
+}
+
+void ast_free_csv_record(CSVRecord *record) {
+  if (!record) return;
+
+  for (u32 i = 0; i < record->len; i++) {
+    ast_free_csv_string(record->fields[i]);
+  }
+  free(record->fields);
+  free(record);
+}
+
+void ast_free_csv_file(CSVFile *file) {
+  if (!file) return;
+
+  for (u32 j = 0; j < file->columns; j++) {
+    ast_free_csv_string(file->headers[j]);
+    for (u32 i = 0; i < file->rows; i++) {
+      ast_free_csv_string(file->data[i * file->columns + j]);
+    }
+  }
+  free(file->headers);
+  free(file->data);
+  free(file);
 }

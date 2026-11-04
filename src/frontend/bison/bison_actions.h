@@ -28,7 +28,7 @@ Expr *parse_if_expr(IfExpr *if_expr);
 Expr *parse_for_expr(ForExpr *for_expr);
 Expr *parse_block_expr(BlockExpr *block);
 Expr *parse_function_call_expr(FunctionCallExpr *function_call);
-Expr *parse_import_expr(ImportExpr *import);
+Expr *parse_import_expr(ImportExpr *import, CSVFile *csv);
 Expr *parse_env_expr(EnvExpr *env);
 Expr *parse_compose_expr();
 
@@ -93,6 +93,14 @@ MapEntry *parse_map_entry_block(BlockExpr *key, Expr *value);
 Parameter *parse_parameter(Identifier *id, Type *type, Expr *default_value);
 
 Program *parse_program(StmtList *statements);
+
+// CSV
+CSVString *parse_csv_str_literal(const char *value);
+CSVString *parse_csv_str_concat(CSVString *l, CSVString *r);
+CSVStringList *parse_csv_field_list(CSVString *head, CSVStringList *tail);
+CSVRecord *parse_csv_record(CSVStringList *fields);
+CSVRecordList *parse_csv_record_list(CSVRecord *head, CSVRecordList *tail);
+CSVFile *parse_csv_file(CSVRecordList *records);
 
 // Bison hooks
 void parse_error(Location *loc, const char *message);

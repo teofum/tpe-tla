@@ -26,12 +26,20 @@ typedef struct {
 } Token;
 
 typedef struct {
+  FILE *file;
+  const char *filepath;
+  usize size;
+  void *buffer;
+} InputBuffer;
+
+typedef struct {
   Location *location;
   void *parser;
   void *scanner;
   Logger *scan_logger;
   Logger *parse_logger;
   map(char, BuiltinType) builtin_types;
+  InputBuffer *buffer;
 } Frontend;
 
 void fe_init(CompilerState *compiler_state);
@@ -45,6 +53,9 @@ void fe_free_token(Token *token);
 CompilationStatus fe_push_token(Token *token);
 void fe_enter_context(FlexContext ctx);
 void fe_leave_context();
+
+void fe_push_buffer(const char *path);
+void fe_pop_buffer();
 
 void fe_set_ast(Program *ast);
 

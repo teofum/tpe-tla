@@ -22,4 +22,11 @@ CompilationStatus lex_ignored();
 CompilationStatus lex_unknown();
 CompilationStatus lex_eof();
 
+/* -- CSV ------------------------------------------------------------------- */
+
+CompilationStatus lex_csv_token(TokenLabel token);
+CompilationStatus lex_csv_textdata();
+CompilationStatus lex_csv_unknown();
+CompilationStatus lex_csv_eof();
+
 #endif

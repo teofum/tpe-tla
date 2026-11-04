@@ -927,7 +927,7 @@ static const Value *eval_import(const Symbols *s, const ImportExpr *i) {
       *string = (str){ .ptr = buf, .len = size };
       return _str(string);
     }
-    case IMPORT_CSV: // TODO!
+    case IMPORT_CSV: break; // TODO!
     default: assert(false);
   }
 

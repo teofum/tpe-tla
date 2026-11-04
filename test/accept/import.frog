@@ -2,3 +2,7 @@ import url "/test/accept/import.frog"
 import url "functions_compose.frog"
 
 import raw "../reject/eval_keys.frog"
+
+import csv "/test/data/test.csv"
+
+5

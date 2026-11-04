@@ -1,9 +1,11 @@
+#include <assert.h>
 #include <errno.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <stdio.h>
 
 #include "frontend.h"
+#include "support/options.h"
 
 #include <ast/ast.h>
 #include <error/error.h>
@@ -65,6 +67,8 @@ const char *TOKEN_LABEL_STR[] = {
   [SEMICOLON] = "Semicolon",
   [COMMA] = "Comma",
   [DOT] = "Dot",
+  [DOT_DOT] = "Dot_Dot",
+  [DOT_DOT_EQUAL] = "Dot_Dot_Equal",
   [MINUS] = "Minus",
   [PLUS] = "Plus",
   [STAR] = "Star",
@@ -79,6 +83,7 @@ const char *TOKEN_LABEL_STR[] = {
   [GREATER_EQUAL] = "Greater_Equal",
   [LESS] = "Less",
   [LESS_EQUAL] = "Less_Equal",
+  [ARROW] = "Arrow",
   [IF] = "If",
   [ELSE] = "Else",
   [FOR] = "For",
@@ -93,16 +98,25 @@ const char *TOKEN_LABEL_STR[] = {
   [UNION] = "Union",
   [ENUM] = "Enum",
   [FUNCTION] = "Function",
+  [COMPOSE] = "Compose",
   [IMPORT] = "Import",
+  [ENV] = "Env",
+  [DEFAULT] = "Default",
+  [EXPORT] = "Export",
+  [IDENTIFIER] = "Identifier",
   [INTEGER] = "Integer Literal",
   [FLOAT] = "Float Literal",
   [STRING] = "String Literal",
   [BOOL] = "Boolean Literal",
-  [IDENTIFIER] = "Identifier",
   [NL] = "Newline",
   [IGNORED] = "Ignored Lexeme",
   [UNKNOWN] = "Unknown Lexeme",
   [END] = "EOF",
+  [CSV_END] = "End CSV",
+  [CSV_COMMA] = "CSV_Comma",
+  [CSV_DQUOT] = "CSV_Dquot",
+  [CSV_NEWLINE] = "CSV_Newline",
+  [CSV_TEXTDATA] = "CSV Text Data",
 };
 
 const char *TOKEN_LEXEME[] = {
@@ -115,6 +129,8 @@ const char *TOKEN_LEXEME[] = {
   [COLON] = ":",
   [COMMA] = ",",
   [DOT] = ".",
+  [DOT_DOT] = "..",
+  [DOT_DOT_EQUAL] = "..=",
   [MINUS] = "-",
   [PLUS] = "+",
   [STAR] = "*",
@@ -143,15 +159,25 @@ const char *TOKEN_LEXEME[] = {
   [UNION] = "union",
   [ENUM] = "enum",
   [FUNCTION] = "function",
+  [COMPOSE] = "compose",
   [IMPORT] = "import",
+  [ENV] = "env",
+  [DEFAULT] = "default",
+  [EXPORT] = "export",
+  [IDENTIFIER] = "Identifier",
   [INTEGER] = "Integer Literal",
   [FLOAT] = "Float Literal",
   [STRING] = "String Literal",
   [BOOL] = "Boolean Literal",
-  [IDENTIFIER] = "Identifier",
+  [NL] = "\\n",
   [IGNORED] = "Ignored Lexeme",
   [UNKNOWN] = "Unknown Lexeme",
   [END] = "<EOF>",
+  [CSV_END] = "<End CSV>",
+  [CSV_COMMA] = ",",
+  [CSV_DQUOT] = "\"",
+  [CSV_NEWLINE] = "\\n",
+  [CSV_TEXTDATA] = "CSV Text Data",
 };
 
 static void _log_token(Token *token, LogLevel level) {
@@ -205,6 +231,45 @@ void fe_enter_context(FlexContext ctx) {
 
 void fe_leave_context() {
   flex_leave_context(f);
+}
+
+static InputBuffer *_create_buffer(const char *path) {
+  FILE *file = fopen(path, "r");
+  if (!file) {
+    // TODO error
+    return NULL;
+  }
+
+  InputBuffer *buf = new(InputBuffer);
+  *buf = (InputBuffer){
+    .size = YY_BUF_SIZE,
+    .filepath = path,
+    .file = file,
+    .buffer = yy_create_buffer(file, YY_BUF_SIZE, (yyscan_t)f->scanner),
+  };
+  return buf;
+}
+
+static void _free_buffer(InputBuffer *buffer) {
+  if (!buffer) return;
+  // Buffer is deleted by yypop_buffer_state
+  if (buffer->file) fclose(buffer->file);
+  free(buffer);
+}
+
+void fe_push_buffer(const char *path) {
+  assert(f->buffer == NULL);
+  f->buffer = _create_buffer(path);
+  fe_scanner_log(LOG_INFO, "Push buffer %s", f->buffer->filepath);
+  yypush_buffer_state((YY_BUFFER_STATE)f->buffer->buffer, (yyscan_t)f->scanner);
+}
+
+void fe_pop_buffer() {
+  assert(f->buffer != NULL);
+  fe_scanner_log(LOG_INFO, "Pop buffer");
+  yypop_buffer_state((yyscan_t)f->scanner);
+  _free_buffer(f->buffer);
+  f->buffer = NULL;
 }
 
 void fe_set_ast(Program *ast) {

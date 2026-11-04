@@ -146,3 +146,46 @@ CompilationStatus lex_eof() {
   fe_free_token(token);
   return STATUS_SUCCEEDED;
 }
+
+CompilationStatus lex_csv_token(TokenLabel label) {
+  Token *token = fe_create_token(label);
+  token->semantic_value->token = token->label;
+
+  fe_push_token(token);
+  fe_free_token(token);
+  return STATUS_IN_PROGRESS;
+}
+
+CompilationStatus lex_csv_textdata() {
+  Token *token = fe_create_token(CSV_TEXTDATA);
+  str lexeme = str_from_cstring(token->lexeme);
+  CSVString *s = new(CSVString);
+  *s = (CSVString){
+    .meta = { .id = 0, .loc = token->location },
+    .value = str_clone(str_slice(lexeme, 1, -1)),
+  };
+  token->semantic_value->csv_string = s;
+  str_free(lexeme);
+
+  fe_push_token(token);
+  fe_free_token(token);
+  return STATUS_IN_PROGRESS;
+}
+
+CompilationStatus lex_csv_unknown() {
+  Token *token = fe_create_token(UNKNOWN);
+  fe_free_token(token);
+  return STATUS_FAILED;
+}
+
+CompilationStatus lex_csv_eof() {
+  fe_pop_buffer();
+  fe_leave_context();
+
+  // Push a CSV end token, this lets the parser know we're done parsing CSV
+  Token *token = fe_create_token(CSV_END);
+  token->semantic_value->token = token->label;
+  fe_push_token(token);
+  fe_free_token(token);
+  return STATUS_IN_PROGRESS;
+}

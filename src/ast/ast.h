@@ -204,6 +204,10 @@ typedef const Value *(*BuiltinFunction)(
   const FunctionCallExpr *
 );
 
+typedef struct CSVString CSVString;
+typedef struct CSVRecord CSVRecord;
+typedef struct CSVFile CSVFile;
+
 AST_LIST(Stmt, stmt);
 AST_LIST(Expr, expr);
 AST_LIST(StructField, struct_field);
@@ -213,6 +217,8 @@ AST_LIST(Type, type);
 AST_LIST(Identifier, identifier);
 AST_LIST(Parameter, parameter);
 AST_LIST(Argument, argument);
+AST_LIST(CSVString, csv_string);
+AST_LIST(CSVRecord, csv_record);
 
 // -----------------------------------------------------------------------------
 
@@ -376,6 +382,9 @@ struct ImportExpr {
   ImportType type;
   Type *data_type;
   char *path;
+  union {
+    CSVFile *csv;
+  };
 };
 
 struct EnvExpr {
@@ -581,6 +590,27 @@ struct Program {
 
 // -----------------------------------------------------------------------------
 
+struct CSVString {
+  ASTNodeMetadata meta;
+  str value;
+};
+
+struct CSVRecord {
+  ASTNodeMetadata meta;
+  u32 len;
+  CSVString **fields;
+};
+
+struct CSVFile {
+  ASTNodeMetadata meta;
+  u32 columns;
+  u32 rows;
+  CSVString **headers;
+  CSVString **data;
+};
+
+// -----------------------------------------------------------------------------
+
 struct Value {
   ValueType type;
   union {
@@ -704,6 +734,10 @@ Argument *ast_argument(Identifier *id, Expr *value);
 
 Program *ast_program(StmtList *statements);
 
+CSVString *ast_csv_string(str value);
+CSVRecord *ast_csv_record(CSVStringList *fields);
+CSVFile *ast_csv_file(CSVRecordList *records);
+
 // -----------------------------------------------------------------------------
 
 bool ast_compare_identifiers(const Identifier *a, const Identifier *b);
@@ -768,5 +802,9 @@ void ast_free_argument(Argument *a);
 void ast_free_identifier(Identifier *id);
 void ast_free_token(TokenMeta *meta);
 void ast_free_program(Program *program);
+
+void ast_free_csv_string(CSVString *string);
+void ast_free_csv_record(CSVRecord *record);
+void ast_free_csv_file(CSVFile *file);
 
 #endif

@@ -84,6 +84,12 @@ static void yyerror(YYLTYPE *location, const char *message) {
   IdentifierList *identifier_list;
   ExprList *expression_list;
   ParameterList *parameter_list;
+
+  CSVString *csv_string;
+  CSVStringList *csv_string_list;
+  CSVRecord *csv_record;
+  CSVRecordList *csv_record_list;
+  CSVFile *csv_file;
 }
 
 /*== Destructors =====================================================================================================*/
@@ -196,6 +202,13 @@ static void yyerror(YYLTYPE *location, const char *message) {
 %token <token>    UNKNOWN           "<unknown lexeme>"
 %token <token>    END               "<EOF>"
 
+// CSV
+%token <token>        CSV_END           "csv end"
+%token <token>        CSV_COMMA         "','"
+%token <token>        CSV_DQUOT         "'\"'"
+%token <token>        CSV_NEWLINE       "<newline>"
+%token <csv_string>   CSV_TEXTDATA      "csv textdata"
+
 /*== Symbols: nonterminals ===========================================================================================*/
 
 %type <statement>                   statement
@@ -254,6 +267,16 @@ static void yyerror(YYLTYPE *location, const char *message) {
 %type <expression_list>             arguments
 %type <parameter_list>              parameter_list
 %type <parameter_list>              parameters
+
+%type <csv_file>                    csv_file
+%type <csv_record_list>             csv_record_list
+%type <csv_record>                  csv_record
+%type <csv_string_list>             csv_field_list
+%type <csv_string>                  csv_field
+%type <csv_string>                  csv_nonescaped
+%type <csv_string>                  csv_escaped
+%type <csv_string>                  csv_escaped_part_list
+%type <csv_string>                  csv_escaped_part
 
 /*== Precedence ======================================================================================================*/
 
@@ -348,7 +371,8 @@ expression: literal                                                 { $$ = parse
   | for_expr                                                        { $$ = parse_for_expr($1); }
   | block                                                           { $$ = parse_block_expr($1); }
   | function_call                                                   { $$ = parse_function_call_expr($1); }
-  | import                                                          { $$ = parse_import_expr($1); }
+  | import                                                          { $$ = parse_import_expr($1, NULL); }
+  | import csv_file CSV_END                                         { $$ = parse_import_expr($1, $2); }
   | env                                                             { $$ = parse_env_expr($1); }
   | compose                                                         { $$ = parse_compose_expr(); }
   ;
@@ -549,6 +573,43 @@ identifier_list: IDENTIFIER                                         { $$ = parse
 
 nl: NL                                                              {}
   | %empty                                                          {}
+  ;
+
+/*-- CSV -- see RFC 4180 [https://www.rfc-editor.org/info/rfc4180/] --------------------------------------------------*/
+
+csv_file: csv_record_list CSV_NEWLINE                               { $$ = parse_csv_file($1); }
+  ;
+
+csv_record_list: csv_record_list CSV_NEWLINE csv_record             { $$ = parse_csv_record_list($3, $1); }
+  | csv_record                                                      { $$ = parse_csv_record_list($1, NULL); }
+  ;
+
+csv_record: csv_field_list                                          { $$ = parse_csv_record($1); }
+  ;
+
+csv_field_list: csv_field_list CSV_COMMA csv_field                  { $$ = parse_csv_field_list($3, $1); }
+  | csv_field                                                       { $$ = parse_csv_field_list($1, NULL); }
+  ;
+
+csv_field: csv_nonescaped                                           { $$ = $1; }
+  | csv_escaped                                                     { $$ = $1; }
+  ;
+
+csv_nonescaped: CSV_TEXTDATA                                        { $$ = $1; }
+  | %empty                                                          { $$ = parse_csv_str_literal(""); }
+  ;
+
+csv_escaped: CSV_DQUOT csv_escaped_part_list CSV_DQUOT              { $$ = $2; }
+  ;
+
+csv_escaped_part_list: csv_escaped_part_list csv_escaped_part       { $$ = parse_csv_str_concat($1, $2); }
+  | %empty                                                          { $$ = parse_csv_str_literal(""); }
+  ;
+
+csv_escaped_part: CSV_TEXTDATA                                      { $$ = $1; }
+  | CSV_COMMA                                                       { $$ = parse_csv_str_literal(","); }
+  | CSV_DQUOT CSV_DQUOT                                             { $$ = parse_csv_str_literal("\""); }
+  | CSV_NEWLINE                                                     { $$ = parse_csv_str_literal("\n"); }
   ;
 
 %%
