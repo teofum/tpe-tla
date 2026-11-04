@@ -12,3 +12,5 @@ x.isbn      // OK
 y.author    // OK
 
 y.forp      // Type error: the property exists, but y is a Book
+
+y.forp = "111"

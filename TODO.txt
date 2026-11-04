@@ -23,8 +23,9 @@
 [x] Short Tuple is kind of a crappy name, rename to vector
 [ ] Type checking constness fuckery
 [x] Leaky hashmaps in eval
-[-] Typecheck currently accepts multi-index or slices as LHS in an assignment
+[x] Typecheck currently accepts multi-index or slices as LHS in an assignment
   - Actually, we're allowing multi-index here; it's useful!
+  - We still don't want to allow assigning to slices, though.
 [ ] Hashing function for values is literally 4
 [ ] A lot of missing error handling around imports and codegen
 [-] Assigning to a struct member or array modifies the referenced object...

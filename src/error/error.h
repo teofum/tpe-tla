@@ -11,12 +11,13 @@ typedef enum {
   // Static analysis errors
   ERR_REDEF,            // Symbol redefinition
   ERR_UNDEF,            // Undefined symbol reference
-  // Type errors
-  ERR_TYPE,             // Type error
+  ERR_ASSIGNMENT,       // Assignment to invalid lhs expression
   ERR_FN_ARG_COUNT,     // Function call argument count mismatch
   ERR_FN_ARG_NAME,      // Function call argument invalid name
   ERR_FN_ARG_POS,       // Function call positional argument after named
   ERR_FN_PARAM_REQ,     // Function call required parameter unset
+  // Type errors
+  ERR_TYPE,             // Type error
   ERR_COMPOSE,          // Compose expression in function with no compose type
   // Evaluation errors
   ERR_OOB,              // Index out of bounds
@@ -149,6 +150,7 @@ void err_report_oob(i64 idx, i64 array_len, const Location *loc, ErrorLevel leve
 void err_report_range(i64 start, i64 end, const Location *loc, ErrorLevel level);
 void err_report_partial_range(const Location *loc, ErrorLevel level);
 void err_report_key(char *message, const Location *loc, ErrorLevel level);
+void err_report_assignment(const Location *loc, ErrorLevel level);
 bool err_gate();
 
 void err_free_error(Error *e);

@@ -1468,6 +1468,21 @@ static Type *_binary_type(Symbols *s, BinaryExpr *expr) {
   }
 }
 
+static bool _is_assignable(Symbols *s, const VariableExpr *expr) {
+  switch (expr->type) {
+    case V_NAMED: return true;
+    case V_STRUCT_MEMBER: return _is_assignable(s, expr->struct_member->struct_expr);
+    case V_INDEX: {
+      if (!_is_assignable(s, expr->indexed->container)) return false;
+      for (u32 i = 0; i < expr->indexed->index_count; i++) {
+        const Type *index_type = tc_check_expr(s, expr->indexed->indices[i]);
+        if (index_type->type == T_RANGE) return false;
+      }
+      return true;
+    }
+  }
+}
+
 static Type *_assignment_type(Symbols *s, const AssignmentExpr *expr) {
   tc_debug_log("Assignment", &expr->meta.loc);
 
@@ -1476,6 +1491,11 @@ static Type *_assignment_type(Symbols *s, const AssignmentExpr *expr) {
 
   // Fail silently on error type; assume error has been reported upstream
   if (_is_error(lhs_type) || _is_error(rhs_type)) return tc_error();
+
+  if (!_is_assignable(s, expr->left)) {
+    err_report_assignment(&expr->left->meta.loc, ERR_ERROR);
+    return tc_error();
+  }
 
   if (tc_accepts_type(s, lhs_type, rhs_type)) return lhs_type;
   return tc_report_error_fmt(

@@ -160,6 +160,11 @@ void err_report_key(char *message, const Location *loc, ErrorLevel level) {
   da_push(e->errors, &error);
 }
 
+void err_report_assignment(const Location *loc, ErrorLevel level) {
+  Error error = _make_error(ERR_ASSIGNMENT, CS_STATIC_ANALYSIS, level, loc);
+  da_push(e->errors, &error);
+}
+
 /* -------------------------------------------------------------------------- */
 
 static void _log(Error *error, const char *const format, ...) {
@@ -367,6 +372,11 @@ static void _log_key_error(Error *error) {
   _log_error_with_loc(error_str, error);
 }
 
+static void _log_assignment_error(Error *error) {
+  str error_str = str_format("expression is not assignable");
+  _log_error_with_loc(error_str, error);
+}
+
 static void _log_error(Error *error) {
   switch (error->type) {
     case ERR_SYNTAX: _log_syntax_error(error); break;
@@ -383,6 +393,7 @@ static void _log_error(Error *error) {
     case ERR_RANGE: _log_range_error(error); break;
     case ERR_RANGE_PARTIAL: _log_partial_range_error(error); break;
     case ERR_KEY: _log_key_error(error); break;
+    case ERR_ASSIGNMENT: _log_assignment_error(error); break;
   }
 }
 
@@ -424,6 +435,7 @@ void err_free_error(Error *e) {
     case ERR_RANGE: err_free_range_error(e->range); break;
     case ERR_RANGE_PARTIAL: break;
     case ERR_KEY: err_free_key_error(e->key); break;
+    case ERR_ASSIGNMENT: break;
   }
 }
 
