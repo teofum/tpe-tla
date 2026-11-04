@@ -1,0 +1,14 @@
+x: int[] = [1, 2, 3, 4, 5]
+
+x[2]                // OK
+x[-1]               // OK (negative index counts backwards from end)
+
+x[2, -1]            // OK
+
+x[99]               // Array index out of bounds
+x[2, 99]            // Array index out of bounds
+x[-99]              // Array index out of bounds
+x[2..99]            // Array index out of bounds
+
+x[99] = 5           // Array index out of bounds
+x[2, 99] = [1, 2]   // Array index out of bounds

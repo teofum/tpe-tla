@@ -849,7 +849,6 @@ static const Value *_do_assign(
     case VAL_LIST: {
       assert(idx_v->type == VAL_INT);
       if (!_in_bounds(idx_v->integer, container_v->list, &idx->meta.loc)) {
-        // TODO error!!
         return _nil();
       }
       container_v->list->items[idx_v->integer] = rhs_v;
@@ -1040,7 +1039,9 @@ static const Value *eval_import(const Symbols *s, const ImportExpr *i) {
       char *buf = NULL;
       FILE *f = fopen(i->path, "rb");
       if (!f) {
-        // TODO error
+        char *msg = NULL;
+        asprintf(&msg, "failed to open file '%s': i/o error", i->path);
+        err_report_key(msg, &i->meta.loc, ERR_ERROR);
         return _nil();
       }
 
