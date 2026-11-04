@@ -176,6 +176,12 @@ static const Value *_list(usize len) {
   return value;
 }
 
+static const Value *_map() {
+  eval_make(Value, value, { .type = VAL_MAP, .map = eval_new(Map) });
+  map_inita(value->map, eval_hash_value, eval_compare_values, eval_calloc, NULL);
+  return value;
+}
+
 static bool _is_assignment(const Stmt *stmt) {
   return stmt->type == STMT_EXPR && stmt->expr->type == EXPR_ASSIGNMENT;
 }
@@ -927,7 +933,33 @@ static const Value *eval_import(const Symbols *s, const ImportExpr *i) {
       *string = (str){ .ptr = buf, .len = size };
       return _str(string);
     }
-    case IMPORT_CSV: break; // TODO!
+    case IMPORT_CSV: {
+      CSVFile *csv = i->csv;
+      assert(csv);
+
+      const Value *headers = _list(csv->columns);
+      for (u32 j = 0; j < csv->columns; j++) {
+        headers->list->items[j] = _str(&csv->headers[j]->value);
+      }
+
+      const Value *rows = _list(csv->rows);
+      for (u32 i = 0; i < csv->rows; i++) {
+        rows->list->items[i] = _map();
+        for (u32 j = 0; j < csv->columns; j++) {
+          map_insert(
+            rows->list->items[i]->map,
+            (Value *)headers->list->items[j],
+            (Value *)_str(&csv->data[i * csv->columns + j]->value)
+          );
+        }
+      }
+
+      const Value *value = _list(2);
+      value->list->items[0] = headers;
+      value->list->items[1] = rows;
+
+      return value;
+    }
     default: assert(false);
   }
 
