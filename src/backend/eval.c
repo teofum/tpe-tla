@@ -739,6 +739,30 @@ static const Value *eval_block(const Symbols *s, const BlockExpr *expr) {
   return value;
 }
 
+static const Value *_do_assign(
+  const Value *container_v,
+  const Expr *idx,
+  const Value *idx_v,
+  const Value *rhs_v
+) {
+  switch (container_v->type) {
+    case VAL_MAP: {
+      map_put(container_v->map, (Value *)idx_v, (Value *)rhs_v);
+      return rhs_v;
+    }
+    case VAL_LIST: {
+      assert(idx_v->type == VAL_INT);
+      if (!_in_bounds(idx_v->integer, container_v->list, &idx->meta.loc)) {
+        // TODO error!!
+        return _nil();
+      }
+      container_v->list->items[idx_v->integer] = rhs_v;
+      return rhs_v;
+    }
+    default: assert(false);
+  }
+}
+
 static const Value *eval_assignment(const Symbols *s, const AssignmentExpr *a) {
   switch (a->left->type) {
     case V_NAMED: {
@@ -751,34 +775,36 @@ static const Value *eval_assignment(const Symbols *s, const AssignmentExpr *a) {
         s,
         a->left->struct_member->struct_expr
       );
-      const Value *r_value = eval_expr(s, a->right);
+      const Value *rhs_v = eval_expr(s, a->right);
       map_put(
         struct_v->map,
         (Value *)_str_id(a->left->struct_member->name),
-        (Value *)r_value
+        (Value *)rhs_v
       );
-      return r_value;
+      return rhs_v;
     }
     case V_INDEX: {
-      assert(a->left->indexed->index_count == 1);
-      const Expr *idx = a->left->indexed->indices[0];
       const Value *container_v = eval_variable(s, a->left->indexed->container);
-      const Value *idx_v = eval_expr(s, idx);
-      const Value *r_value = eval_expr(s, a->right);
-      switch (container_v->type) {
-        case VAL_MAP: {
-          map_put(container_v->map, (Value *)idx_v, (Value *)r_value);
-          return r_value;
+      const Value *rhs_v = eval_expr(s, a->right);
+
+      if (a->left->indexed->index_count == 1) {
+        const Expr *idx = a->left->indexed->indices[0];
+        return _do_assign(container_v, idx, eval_expr(s, idx), rhs_v);
+      } else {
+        u32 idx_count = a->left->indexed->index_count;
+        assert(rhs_v->type == VAL_LIST && rhs_v->list->len == idx_count);
+
+        const Value *value = _list(idx_count);
+        for (u32 i = 0; i < idx_count; i++) {
+          const Expr *idx = a->left->indexed->indices[i];
+          value->list->items[i] = _do_assign(
+            container_v,
+            idx,
+            eval_expr(s, idx),
+            rhs_v->list->items[i]
+          );
         }
-        case VAL_LIST: {
-          assert(idx_v->type == VAL_INT);
-          if (!_in_bounds(idx_v->integer, container_v->list, &idx->meta.loc)) {
-            return NULL;
-          }
-          container_v->list->items[idx_v->integer] = r_value;
-          return r_value;
-        }
-        default: assert(false);
+        return value;
       }
     }
   }

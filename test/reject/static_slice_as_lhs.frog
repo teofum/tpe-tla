@@ -1,0 +1,10 @@
+x: int[] = [1, 2, 3, 4, 5]
+
+x[..]
+x[2]              // 3
+x[2] = 99         // OK: x[2] is an assignable reference
+x[2]              // 99
+x[..]
+
+x[2, 0] = [9, 10] // OK, actually
+x[..]
