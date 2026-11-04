@@ -169,11 +169,38 @@ static bool eval_compare_lists(const List *a, const List *b) {
 }
 
 static bool eval_compare_maps(const Map *a, const Map *b) {
-  return false; // TODO lol
+  if (map_size(a) != map_size(b)) return false;
+
+  const Value *key;
+  const Value *value;
+  map_foreach(key, value, (Map *)a) {
+    const Value *b_value = map_get(b, (Value *)key);
+    if (!b_value || !eval_compare_values(value, b_value)) return false;
+  }
+  map_foreach(key, value, (Map *)b) {
+    const Value *a_value = map_get(a, (Value *)key);
+    if (!a_value || !eval_compare_values(value, a_value)) return false;
+  }
+  return true;
 }
 
 static bool eval_compare_elements(const Element *a, const Element *b) {
-  return false; // TODO lol
+  if (strcmp(a->tag, b->tag) != 0) return false;
+  if (a->children->len != b->children->len) return false;
+  if (map_size(a->attributes) != map_size(b->attributes)) return false;
+
+  const char *key;
+  const Value *value;
+  map_foreach(key, value, a->attributes) {
+    const Value *b_value = map_get(b->attributes, (char *)key);
+    if (!b_value || !eval_compare_values(value, b_value)) return false;
+  }
+  map_foreach(key, value, b->attributes) {
+    const Value *a_value = map_get(a->attributes, (char *)key);
+    if (!a_value || !eval_compare_values(value, a_value)) return false;
+  }
+
+  return eval_compare_lists(a->children, b->children);
 }
 
 static bool eval_compare_values(const Value *a, const Value *b) {

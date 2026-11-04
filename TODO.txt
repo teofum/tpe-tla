@@ -39,6 +39,7 @@
     -- I pretend it's not a bug
     -- Want to clone explicitly? Just slice!
   - Verdict: it's a feature!
+[ ] CSV import fucks the location tracking
 
 #=== General ==================================================================#
 
