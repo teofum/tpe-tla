@@ -1269,7 +1269,10 @@ static Type *_variable_type(Symbols *s, VariableExpr *var) {
       return symbol ? symbol->type : tc_error();
     }
     case V_INDEX: {
-      Type *container = _variable_type(s, var->indexed->container);
+      const Type *container = _variable_type(s, var->indexed->container);
+      if (container->type == T_NAMED) {
+        container = tc_resolve_named_type(s, container->named);
+      }
       switch (container->type) {
         case T_LIST: return _indexed_list_type(s, container->list, var->indexed);
         case T_TUPLE: return _indexed_tuple_type(s, container->tuple, var->indexed);
@@ -1284,7 +1287,10 @@ static Type *_variable_type(Symbols *s, VariableExpr *var) {
       }
     }
     case V_STRUCT_MEMBER: {
-      Type *container = _variable_type(s, var->struct_member->struct_expr);
+      const Type *container = _variable_type(s, var->struct_member->struct_expr);
+      if (container->type == T_NAMED) {
+        container = tc_resolve_named_type(s, container->named);
+      }
       if (container->type != T_STRUCT) {
         return tc_report_error_fmt(
           &var->struct_member->meta.loc,
