@@ -185,8 +185,10 @@ bool _map_base_iter_next(const _map_base *mb, map_entry **pos);
 const void *_map_base_iter_get_key(const map_entry *pos);
 void *_map_base_iter_get_value(const map_entry *pos);
 
-usize hash_djb2(const void *bytes, usize len);
+usize hash_bytes(const void *bytes, usize len);
+usize hash_bytes_append(usize hash, const void *bytes, usize len);
 usize hash_cstring(const char *s);
+usize hash_cstring_append(usize hash, const char *s);
 
 bool compare_cstring(const char *a, const char *b);
 

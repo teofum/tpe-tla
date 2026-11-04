@@ -291,14 +291,22 @@ void *_map_base_iter_get_value(const map_entry *pos) {
   return pos->value;
 }
 
-usize hash_djb2(const void *bytes, usize len) {
-  u32 hash = 5381;
-  for (u32 i = 0; i < len; i++) hash = hash * 33 + ((const char *)bytes)[i];
+usize hash_bytes(const void *bytes, usize len) {
+  return hash_bytes_append(5381, bytes, len);
+}
+
+usize hash_bytes_append(usize hash, const void *bytes, usize len) {
+  for (usize i = 0; i < len; i++) hash = hash * 33 + ((const char *)bytes)[i];
   return hash;
 }
 
 usize hash_cstring(const char *s) {
-  return hash_djb2(s, strlen(s));
+  return hash_cstring_append(5381, s);
+}
+
+usize hash_cstring_append(usize hash, const char *s) {
+  for (; *s; s++) hash = hash * 33 + *s;
+  return hash;
 }
 
 bool compare_cstring(const char *a, const char *b) {

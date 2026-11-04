@@ -85,8 +85,77 @@ static void *eval_calloc(usize count, usize size) {
   T *name = eval_new(T);                      \
   *name = (T)__VA_ARGS__
 
+static usize eval_hash_value(const Value *value);
+
+static usize eval_hash_list(usize hash, const List *list) {
+  hash = hash_bytes_append(hash, &list->len, sizeof(list->len));
+  for (u32 i = 0; i < list->len; i++) {
+    usize value_hash = eval_hash_value(list->items[i]);
+    hash = hash_bytes_append(hash, &value_hash, sizeof(usize));
+  }
+  return hash;
+}
+
 static usize eval_hash_value(const Value *value) {
-  return 4; // xkcd 221 certified hash, emudhra approved
+  usize hash = hash_bytes(&value->type, sizeof(ValueType));
+  switch (value->type) {
+    case VAL_NIL: break;
+    case VAL_INT: {
+      hash = hash_bytes_append(hash, &value->integer, sizeof(i64));
+      break;
+    }
+    case VAL_FLOAT: {
+      hash = hash_bytes_append(hash, &value->floating, sizeof(f64));
+      break;
+    }
+    case VAL_STRING: {
+      hash = hash_bytes_append(hash, value->string->ptr, value->string->len);
+      break;
+    }
+    case VAL_BOOL: {
+      hash = hash_bytes_append(hash, &value->boolean, sizeof(bool));
+      break;
+    }
+    case VAL_ELEMENT: {
+      hash = hash_cstring_append(hash, value->element->tag);
+      const char *attr_name;
+      const Value *attr_value;
+      map_foreach(attr_name, attr_value, value->element->attributes) {
+        hash = hash_cstring_append(hash, attr_name);
+        usize value_hash = eval_hash_value(attr_value);
+        hash = hash_bytes_append(hash, &value_hash, sizeof(usize));
+      }
+      hash = eval_hash_list(hash, value->element->children);
+      break;
+    }
+    case VAL_LIST: {
+      hash = eval_hash_list(hash, value->list);
+      break;
+    }
+    case VAL_MAP: {
+      const Value *key;
+      const Value *value;
+      map_foreach(key, value, value->map) {
+        usize key_hash = eval_hash_value(key);
+        usize value_hash = eval_hash_value(value);
+        hash = hash_bytes_append(hash, &key_hash, sizeof(usize));
+        hash = hash_bytes_append(hash, &value_hash, sizeof(usize));
+      }
+      break;
+    }
+    case VAL_RANGE: {
+      hash = hash_bytes_append(hash, &value->range->has_start, sizeof(bool));
+      if (value->range->has_start) {
+        hash = hash_bytes_append(hash, &value->range->start, sizeof(i64));
+      }
+      hash = hash_bytes_append(hash, &value->range->has_end, sizeof(bool));
+      if (value->range->has_end) {
+        hash = hash_bytes_append(hash, &value->range->end, sizeof(i64));
+      }
+      break;
+    }
+  }
+  return hash;
 }
 
 static bool eval_compare_values(const Value *a, const Value *b);
