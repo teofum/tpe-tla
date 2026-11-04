@@ -953,15 +953,9 @@ static void _register_element_fn(
     _builtin(T_STRING),
     _builtin(T_NIL),
     _builtin(T_ELEMENT),
-    _list_of(_union_of(6,
-      _builtin(T_INT),
-      _builtin(T_FLOAT),
-      _builtin(T_BOOL),
-      _builtin(T_STRING),
-      _builtin(T_NIL),
-      _builtin(T_ELEMENT)
-    ))
+    _list_of(NULL)
   );
+  children_type->union_type->types[6]->list->item_type = children_type;
 
   FunctionDef *def = b_new(FunctionDef);
   *def = (FunctionDef){

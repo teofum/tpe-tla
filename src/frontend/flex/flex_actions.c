@@ -158,14 +158,12 @@ CompilationStatus lex_csv_token(TokenLabel label) {
 
 CompilationStatus lex_csv_textdata() {
   Token *token = fe_create_token(CSV_TEXTDATA);
-  str lexeme = str_from_cstring(token->lexeme);
   CSVString *s = new(CSVString);
   *s = (CSVString){
     .meta = { .id = 0, .loc = token->location },
-    .value = str_clone(str_slice(lexeme, 1, -1)),
+    .value = str_from_cstring(token->lexeme),
   };
   token->semantic_value->csv_string = s;
-  str_free(lexeme);
 
   fe_push_token(token);
   fe_free_token(token);

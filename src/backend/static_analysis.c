@@ -1641,7 +1641,7 @@ static Type *_import_type(Symbols *s, const ImportExpr *expr) {
 
       Type *row_type = or_default(expr->data_type, record_type);
       Type **types = tc_new_array(Type *, 2);
-      types[0] = record_type;
+      types[0] = _list_of(string_type);
       types[1] = _list_of(row_type);
       return _tuple_of(types, 2);
     }

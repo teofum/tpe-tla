@@ -1,8 +1,36 @@
-import url "/test/ignore/import.frog"
-import url "../accept/functions_compose.frog"
+headers, data := import csv "/test/data/test.csv"
 
-import raw "../reject/eval_keys.frog"
+csv_table is function(headers: string[], data: string[string][]) -> element {
+  table: {
+    thead: {
+      tr.font-bold: {
+        for header in headers {
+          th: { header }
+        }
+      }
+    }
+    tbody: {
+      for item in data {
+        tr: {
+          th.font-semibold: { item[headers[0]] }
+          for field in headers[1..] {
+            td: { item[field] }
+          }
+        }
+      }
+    }
+  }
+}
 
-import csv "/test/data/test.csv"
+title := "CSV table demo"
 
-5
+html: {
+  head: {
+    meta(charset = "utf-8")
+    title: { title }
+  }
+  body: {
+    h1: { title }
+    csv_table(headers, data)
+  }
+}

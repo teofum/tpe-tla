@@ -28,7 +28,7 @@ void cg_init(CompilerState *compiler_state) {
 
   cg = new(Codegen);
   cg->pretty = true;
-  cg->indent_size = 2;
+  cg->indent_size = 4;
 }
 
 void cg_shutdown() {
@@ -51,7 +51,7 @@ static void _indent(i32 level) {
 /* -- Codegen: generation --------------------------------------------------- */
 
 static void _write_value(const Value *v, const char *sep, i32 indent) {
-  if (cg->pretty) _indent(indent);
+  if (cg->pretty && v->type != VAL_LIST) _indent(indent);
   switch (v->type) {
     case VAL_INT: _p("%ld%s", v->integer, sep); break;
     case VAL_FLOAT: _p("%f%s", v->floating, sep); break;
@@ -98,8 +98,26 @@ static void _write_value(const Value *v, const char *sep, i32 indent) {
       }
       break;
     }
-    case VAL_MAP: assert(false); // TODO error
-    case VAL_RANGE: assert(false); // TODO error
+    case VAL_MAP: {
+      _p("[");
+      const Value *key;
+      const Value *value;
+      u32 i = 0;
+      map_foreach(key, value, v->map) {
+        if (i++ > 0) _p(", ");
+        _p("key = val"); // TODO stringify
+      }
+      _p("]");
+      break;
+    }
+    case VAL_RANGE: {
+      _p("Range{");
+      if (v->range->has_start) _p("%ld", v->range->start);
+      _p("..");
+      if (v->range->has_end) _p("%ld}", v->range->end);
+      _p("}");
+      break;
+    }
   }
   if (cg->pretty && indent >= 0 && v->type != VAL_LIST) _p("\n");
 }
