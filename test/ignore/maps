@@ -1,4 +1,0 @@
-foo := ["foo" = 5, "bar" = 7, "xyz" = 99]
-bar: bool[int] = [7 = true]
-
-bar = [7 = true, {foo["foo"] + foo["bar"]} = false]

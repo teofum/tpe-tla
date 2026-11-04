@@ -1,9 +1,0 @@
-KeyType is union { int, string, float, bool }
-
-MaybeInt is union { int, nil }
-
-MaybeInt2 is int?
-
-foo: int? = 5
-bar: int[]? = nil
-bar: int?[] = [nil, 5]

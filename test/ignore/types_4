@@ -1,5 +1,0 @@
-MyTuple is [int, int[], string?]
-
-ListingState is enum {Active, Sold, PendingTransaction, Canceled}
-
-foo: [int, int] = [5, 7]
