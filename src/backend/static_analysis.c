@@ -506,7 +506,7 @@ static const Identifier *_composable_id() {
 
 /* -- Type checking: variables ---------------------------------------------- */
 
-static const Type *tc_resolve_named_type(Symbols *s, const NamedType *named) {
+static Type *tc_resolve_named_type(Symbols *s, const NamedType *named) {
   const TypeAliasStmt *alias = NULL;
   StackEntry *st = st_current(sa->stack);
   while (!alias && st) {
@@ -1684,6 +1684,143 @@ static Type *_function_call_type(Symbols *s, const FunctionCallExpr *expr) {
   return valid ? def->return_type : tc_error();
 }
 
+static BuiltinType _validate_csv_field_type(Symbols *s, Type *t) {
+  switch (t->type) {
+    case T_NAMED: {
+      return _validate_csv_field_type(s, tc_resolve_named_type(s, t->named));
+    }
+    case T_BUILTIN: {
+      switch (t->builtin) {
+        case T_STRING: case T_INT: case T_FLOAT: case T_BOOL: return t->builtin;
+        default: return T_VOID;
+      }
+    }
+    case T_UNION: {
+      BuiltinType bt = T_VOID;
+      for (u32 i = 0; i < t->union_type->len; i++) {
+        bt = _validate_csv_field_type(s, t->union_type->types[i]);
+        if (bt == T_STRING) return bt;
+      }
+      return bt;
+    }
+    default: return T_VOID;
+  }
+}
+
+static Type *_validate_csv_type(
+  Symbols *s,
+  Type *t,
+  const ImportExpr *expr,
+  bool report_errors
+) {
+  CSVFile *csv = expr->csv;
+  csv->coercion_hints = new_array(BuiltinType, csv->columns);
+  switch (t->type) {
+    case T_VECTOR: {
+      if (t->vec->len != csv->columns) {
+        if (!report_errors) return NULL;
+        tc_report_error_fmt(&expr->data_type->meta.loc,
+          "%s is not compatible with imported CSV data:"
+          " field count mismatch (type: %u, data: %u)",
+          tc_print_type(t), t->vec->len, csv->columns
+        );
+        return tc_error();
+      }
+      BuiltinType vt = _validate_csv_field_type(s, t->vec->item_type);
+      if (vt == T_VOID) return NULL;
+
+      csv->row_vtype_hint = VAL_LIST;
+      for (u32 i = 0; i < csv->columns; i++) csv->coercion_hints[i] = vt;
+      return t;
+    }
+    case T_TUPLE: {
+      if (t->tuple->len != csv->columns) {
+        if (!report_errors) return NULL;
+        tc_report_error_fmt(&expr->data_type->meta.loc,
+          "%s is not compatible with imported CSV data:"
+          " field count mismatch (type: %u, data: %u)",
+          tc_print_type(t), t->tuple->len, csv->columns
+        );
+        return tc_error();
+      }
+      for (u32 i = 0; i < t->tuple->len; i++) {
+        BuiltinType vt = _validate_csv_field_type(s, t->tuple->types[i]);
+        if (vt == T_VOID) return NULL;
+        csv->coercion_hints[i] = vt;
+      }
+      csv->row_vtype_hint = VAL_LIST;
+      return t;
+    }
+    case T_LIST: {
+      BuiltinType vt = _validate_csv_field_type(s, t->list->item_type);
+      if (vt == T_VOID) return NULL;
+
+      csv->row_vtype_hint = VAL_LIST;
+      for (u32 i = 0; i < csv->columns; i++) csv->coercion_hints[i] = vt;
+      return t;
+    }
+    case T_MAP: {
+      if(!_is_builtin(t->map->key_type, T_STRING)) return NULL;
+      BuiltinType vt = _validate_csv_field_type(s, t->map->value_type);
+      if (vt == T_VOID) return NULL;
+
+      csv->row_vtype_hint = VAL_MAP;
+      for (u32 i = 0; i < csv->columns; i++) csv->coercion_hints[i] = vt;
+      return t;
+    }
+    case T_STRUCT: {
+      u32 size = map_size(t->struct_type->fields);
+      if (size != csv->columns) {
+        if (!report_errors) return NULL;
+        tc_report_error_fmt(&expr->data_type->meta.loc,
+          "%s is not compatible with imported CSV data:"
+          " field count mismatch (type: %u, data: %u)",
+          tc_print_type(t), size, csv->columns
+        );
+        return tc_error();
+      };
+
+      const StructField *field;
+      map_foreach_v(field, t->struct_type->fields) {
+        i32 col_idx = -1;
+        for (u32 i = 0; i < csv->columns; i++) {
+          str header = csv->headers[i]->value;
+          if (strncmp(field->name->lexeme, header.ptr, header.len) == 0) {
+            col_idx = i;
+          }
+        }
+        if (col_idx == -1) {
+          if (!report_errors) return NULL;
+          tc_report_error_fmt(&expr->data_type->meta.loc,
+            "%s is not compatible with imported CSV data:"
+            " field '%s' has no corresponding column",
+            tc_print_type(t), field->name->lexeme
+          );
+          return tc_error();
+        }
+        BuiltinType vt = _validate_csv_field_type(s, field->type);
+        if (vt == T_VOID) return NULL;
+        csv->coercion_hints[col_idx] = vt;
+      }
+      csv->row_vtype_hint = VAL_MAP;
+      return t;
+    }
+    case T_UNION: {
+      for (u32 i = 0; i < t->union_type->len; i++) {
+        if (_validate_csv_type(s, t->union_type->types[i], expr, false)) {
+          return t->union_type->types[i];
+        };
+      }
+      return NULL;
+    }
+    case T_BUILTIN: return NULL;
+    case T_RANGE: return NULL;
+    case T_ENUM: assert(false); // Slated for removal
+    case T_NAMED: assert(false); // Unreachable
+    case T_ERROR: assert(false); // Unreachable
+  }
+}
+
 static Type *_import_type(Symbols *s, const ImportExpr *expr) {
   tc_debug_log("Import", &expr->meta.loc);
 
@@ -1694,7 +1831,24 @@ static Type *_import_type(Symbols *s, const ImportExpr *expr) {
       Type *string_type = _builtin(T_STRING);
       Type *record_type = _map_of(string_type, string_type);
 
-      Type *row_type = or_default(expr->data_type, record_type);
+      Type *row_type = record_type;
+      if (expr->data_type) {
+        row_type = expr->data_type;
+        if (row_type->type == T_NAMED) {
+          row_type = tc_resolve_named_type(s, row_type->named);
+        }
+        if (
+          !_is_error(row_type)
+          && !_validate_csv_type(s, row_type, expr, true)
+        ) {
+          tc_report_error_fmt(&expr->data_type->meta.loc,
+            "%s is not a CSV record compatible type",
+            tc_print_type(row_type)
+          );
+          row_type = tc_error();
+        }
+      }
+
       Type **types = tc_new_array(Type *, 2);
       types[0] = _list_of(string_type);
       types[1] = _list_of(row_type);

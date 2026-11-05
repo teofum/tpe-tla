@@ -1,10 +1,43 @@
 // Type is undefined
 import csv of UndefinedType "/test/data/test.csv"
 
-Book is struct {
-  isbn: string,
-  title: string
+// Type is not CSV compatible
+import csv of int "/test/data/test.csv"
+
+Person is struct {
+  first_name: string,
+  last_name: string
 }
 
-// CSV doesn't fit type
+Book is struct {
+  isbn: string,
+  title: string,
+  author: Person
+}
+
+Book2 is struct {
+  isbn: string,
+  title: string,
+  author_name: string
+}
+
+// CSV doesn't fit type: wrong number of columns
+import csv of Person "/test/data/test.csv"
+
+// Type is not CSV compatible: non-primitive field
 import csv of Book "/test/data/test.csv"
+
+// CSV doesn't fit type: column names don't match
+import csv of Book2 "/test/data/test.csv"
+
+// CSV doesn't fit type: wrong number of columns
+import csv of [string; 5] "/test/data/test.csv"
+
+// CSV doesn't fit type: wrong number of columns
+import csv of [int, bool] "/test/data/test.csv"
+
+// OK
+import csv of [int, bool, string] "/test/data/test.csv"
+
+// OK
+import csv of string[] "/test/data/test.csv"

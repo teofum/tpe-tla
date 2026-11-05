@@ -1344,6 +1344,7 @@ void ast_free_csv_file(CSVFile *file) {
       ast_free_csv_string(file->data[i * file->columns + j]);
     }
   }
+  if (file->coercion_hints) free(file->coercion_hints);
   free(file->headers);
   free(file->data);
   free(file);

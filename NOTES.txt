@@ -1,7 +1,27 @@
 This file has implementation notes worth keeping in mind for the final report.
 
-Default parameter eval is inefficient, we could cache them since they are by
-definition the same each time the function is called. Too bad!
+- Default parameter eval is inefficient, we could cache them since they are by
+  definition the same each time the function is called. Too bad!
+
+- Typed CSV imports: to keep things reasonably simple, typecheck only checks the
+  specified type is CSV-compatible, i.e., there exists some CSV that could
+  fit the row type with coercion. It doesn't actually look through all the rows
+  and attempt to coerce. This is done during eval, and produces an error there
+  if it fails.
+
+- Typed CSV imports: if the specified type is a union, the type checker picks
+  the first CSV-compatible type and uses it for coercion hinting. This can cause
+  a union that would accept the CSV to fail on eval, for example:
+
+  import csv of union { int[string], string[string] } "records.csv"
+
+  Because the first type int[string] is CSV compatible (as long as the fields
+  can all be parsed to integers) it will be picked and eval will try to coerce
+  the CSV to it; if it has non-integer fields it will fail.
+
+  Ideally, we would use the *least restrictive* type in a union instead, but
+  this is fairly hard to determine and we only have so much time on this earth.
+  And, uh, until the deadline.
 
 #=== Overall architecture plan ================================================#
 

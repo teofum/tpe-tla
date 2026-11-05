@@ -602,6 +602,8 @@ struct CSVFile {
   u32 rows;
   CSVString **headers;
   CSVString **data;
+  ValueType row_vtype_hint;
+  BuiltinType *coercion_hints;
 };
 
 // -----------------------------------------------------------------------------
