@@ -17,6 +17,7 @@
 #include <backend/scope.h>
 #include <frontend/bison/bison_parser.h>
 #include <string.h>
+#include <support/coerce.h>
 #include <support/dyn_array.h>
 #include <support/hash_map.h>
 #include <support/logger.h>
@@ -402,7 +403,7 @@ static const Value *eval_map(const Symbols *s, const MapLiteral *map) {
         "duplicate map literal key '%.*s'",
         (i32)key_str.len, key_str.ptr
       );
-      err_report_key(msg, &map->entries[i]->key->meta.loc, ERR_ERROR);
+      err_report_eval(msg, &map->entries[i]->key->meta.loc, ERR_ERROR);
       return _nil();
     }
   }
@@ -424,7 +425,7 @@ static const Value *eval_struct(const Symbols *s, const StructLiteral *struct_l)
         "duplicate struct literal field '%s'",
         struct_l->fields[i]->name->lexeme
       );
-      err_report_key(msg, &struct_l->fields[i]->name->loc, ERR_ERROR);
+      err_report_eval(msg, &struct_l->fields[i]->name->loc, ERR_ERROR);
       return _nil();
     }
   }
@@ -1017,11 +1018,87 @@ static const Value *eval_env(const Symbols *s, const EnvExpr *expr) {
     return eval_expr(s, expr->default_value);
   }
 
-  char *message = NULL;
-  asprintf(&message, "required env variable '%s' is undefined", name);
-  err_report_key(message, &expr->meta.loc, ERR_ERROR);
+  char *msg = NULL;
+  asprintf(&msg, "required env variable '%s' is undefined", name);
+  err_report_eval(msg, &expr->meta.loc, ERR_ERROR);
   free(name);
   return NULL;
+}
+
+static const Value *_csv_field(const CSVString *field, BuiltinType hint) {
+  switch (hint) {
+    case T_STRING: return _str(&field->value);
+    case T_INT: {
+      bool ok;
+      i64 int_value = str_to_i64(field->value, 10, &ok);
+      if (!ok) return _nil();
+      return _int(int_value);
+    }
+    case T_FLOAT: {
+      bool ok;
+      f64 float_value = str_to_f64(field->value, &ok);
+      if (!ok) return _nil();
+      return _float(float_value);
+    }
+    case T_BOOL: {
+      bool ok;
+      bool bool_value = str_to_bool(field->value, &ok);
+      if (!ok) return _nil();
+      return _bool(bool_value);
+    }
+    default: assert(false); // Unreachable
+  }
+}
+
+static const Value *_csv_row(
+  const CSVFile *csv,
+  const Value *headers,
+  u32 i,
+  const Location *loc
+) {
+  CSVString **row = &csv->data[i * csv->columns];
+
+  switch (csv->row_vtype_hint) {
+    case VAL_MAP: {
+      const Value *row_value = _map();
+      for (u32 j = 0; j < csv->columns; j++) {
+        const Value *field_value = _csv_field(row[j], csv->coercion_hints[j]);
+        if (field_value->type == VAL_NIL) {
+          char *msg = NULL;
+          asprintf(&msg,
+            "failed to parse CSV field: '%.*s' cannot be coerced to %s",
+            (i32)row[j]->value.len, row[j]->value.ptr,
+            builtin_type_str[csv->coercion_hints[j]]
+          );
+          err_report_eval(msg, loc, ERR_ERROR);
+        }
+        map_insert(
+          row_value->map,
+          (Value *)headers->list->items[j],
+          (Value *)field_value
+        );
+      }
+      return row_value;
+    }
+    case VAL_LIST: {
+      const Value *row_value = _list(csv->columns);
+      for (u32 j = 0; j < csv->columns; j++) {
+        const Value *field_value = _csv_field(row[j], csv->coercion_hints[j]);
+        if (field_value->type == VAL_NIL) {
+          char *msg = NULL;
+          asprintf(&msg,
+            "failed to parse CSV field: '%.*s' cannot be coerced to %s",
+            (i32)row[j]->value.len, row[j]->value.ptr,
+            builtin_type_str[csv->coercion_hints[j]]
+          );
+          err_report_eval(msg, loc, ERR_ERROR);
+        }
+        row_value->list->items[j] = field_value;
+      }
+      return row_value;
+    }
+    default: assert(false); // Unreachable
+  }
 }
 
 static const Value *eval_import(const Symbols *s, const ImportExpr *i) {
@@ -1041,7 +1118,7 @@ static const Value *eval_import(const Symbols *s, const ImportExpr *i) {
       if (!f) {
         char *msg = NULL;
         asprintf(&msg, "failed to open file '%s': i/o error", i->path);
-        err_report_key(msg, &i->meta.loc, ERR_ERROR);
+        err_report_eval(msg, &i->meta.loc, ERR_ERROR);
         return _nil();
       }
 
@@ -1066,16 +1143,8 @@ static const Value *eval_import(const Symbols *s, const ImportExpr *i) {
       }
 
       const Value *rows = _list(csv->rows);
-      for (u32 i = 0; i < csv->rows; i++) {
-        // TODO use type coercion hints
-        rows->list->items[i] = _map();
-        for (u32 j = 0; j < csv->columns; j++) {
-          map_insert(
-            rows->list->items[i]->map,
-            (Value *)headers->list->items[j],
-            (Value *)_str(&csv->data[i * csv->columns + j]->value)
-          );
-        }
+      for (u32 j = 0; j < csv->rows; j++) {
+        rows->list->items[j] = _csv_row(csv, headers, j, &i->data_type->meta.loc);
       }
 
       const Value *value = _list(2);
@@ -1121,7 +1190,7 @@ static const Value *eval_decl(const Symbols *s, const DeclarationStmt *decl) {
         "declaration symbol count mismatch: expected %lu, got %u",
         r_value->list->len, decl->left_count
       );
-      err_report_key(msg, &decl->meta.loc, ERR_ERROR);
+      err_report_eval(msg, &decl->meta.loc, ERR_ERROR);
     }
     for (u32 i = 0; i < decl->left_count; i++) {
       eval_update_symbol(s, decl->left[i], r_value->list->items[i]);

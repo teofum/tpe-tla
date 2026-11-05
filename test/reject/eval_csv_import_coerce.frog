@@ -1,0 +1,14 @@
+Row is struct {
+  aaa: string,
+  bbb: int,
+  ccc: float
+}
+
+// OK
+headers, data := import csv of Row "/test/data/test.csv"
+
+// OK
+headers2, data2 := import csv of [int; 3] "/test/data/test.csv"
+
+// Error: can't coerce to bool
+headers3, data3 := import csv of [bool; 3] "/test/data/test.csv"

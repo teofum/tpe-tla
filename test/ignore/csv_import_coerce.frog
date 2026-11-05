@@ -1,0 +1,14 @@
+Row is struct {
+  aaa: string,
+  bbb: int,
+  ccc: float
+}
+
+// OK
+headers, data := import csv of Row "/test/data/test.csv"
+
+data[0].aaa
+data[0].bbb
+data[0].ccc
+
+import csv of [int; 3] "/test/data/test.csv"

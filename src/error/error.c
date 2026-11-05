@@ -181,9 +181,9 @@ void err_report_partial_range(const Location *loc, ErrorLevel level) {
   da_push(e->errors, &error);
 }
 
-void err_report_key(char *message, const Location *loc, ErrorLevel level) {
-  Error error = _make_error(ERR_KEY, CS_EVAL, level, loc);
-  error.key = new(KeyError);
+void err_report_eval(char *message, const Location *loc, ErrorLevel level) {
+  Error error = _make_error(ERR_EVAL, CS_EVAL, level, loc);
+  error.key = new(EvalError);
   error.key->message = message;
   da_push(e->errors, &error);
 }
@@ -419,8 +419,8 @@ static void _log_partial_range_error(Error *error) {
   _log_error_with_loc(error_str, error);
 }
 
-static void _log_key_error(Error *error) {
-  KeyError *k = error->key;
+static void _log_eval_error(Error *error) {
+  EvalError *k = error->key;
 
   str error_str = str_from_cstring(k->message);
   _log_error_with_loc(error_str, error);
@@ -450,7 +450,7 @@ static void _log_error(Error *error) {
     case ERR_OOB: _log_bounds_error(error); break;
     case ERR_RANGE: _log_range_error(error); break;
     case ERR_RANGE_PARTIAL: _log_partial_range_error(error); break;
-    case ERR_KEY: _log_key_error(error); break;
+    case ERR_EVAL: _log_eval_error(error); break;
     case ERR_ASSIGNMENT: _log_assignment_error(error); break;
   }
 }
@@ -496,7 +496,7 @@ void err_free_error(Error *e) {
     case ERR_OOB: err_free_bounds_error(e->bounds); break;
     case ERR_RANGE: err_free_range_error(e->range); break;
     case ERR_RANGE_PARTIAL: break;
-    case ERR_KEY: err_free_key_error(e->key); break;
+    case ERR_EVAL: err_free_eval_error(e->key); break;
     case ERR_ASSIGNMENT: break;
   }
 }
@@ -569,7 +569,7 @@ void err_free_range_error(RangeError *e) {
   free(e);
 }
 
-void err_free_key_error(KeyError *e) {
+void err_free_eval_error(EvalError *e) {
   free(e->message);
   free(e);
 }

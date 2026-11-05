@@ -55,6 +55,7 @@ if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
     src/frontend/flex/flex_actions.c
     src/frontend/flex/flex_scanner.c
     src/frontend/frontend.c
+    src/support/coerce.c
     src/support/dyn_array.c
     src/support/env.c
     src/support/fs.c

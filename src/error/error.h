@@ -27,7 +27,7 @@ typedef enum {
   ERR_OOB,              // Index out of bounds
   ERR_RANGE,            // Invalid range
   ERR_RANGE_PARTIAL,    // Partial range where full range is required
-  ERR_KEY,              // Invalid/duplicate key
+  ERR_EVAL,             // Generic evaluation error
 } ErrorType;
 
 typedef enum {
@@ -57,7 +57,7 @@ typedef struct FnArgPosError FnArgPosError;
 typedef struct FnParamReqError FnParamReqError;
 typedef struct BoundsError BoundsError;
 typedef struct RangeError RangeError;
-typedef struct KeyError KeyError;
+typedef struct EvalError EvalError;
 
 typedef struct {
   ErrorType type;
@@ -81,7 +81,7 @@ typedef struct {
     FnParamReqError *fn_param_req;
     BoundsError *bounds;
     RangeError *range;
-    KeyError *key;
+    EvalError *key;
   };
 } Error;
 
@@ -152,7 +152,7 @@ struct RangeError {
   i64 end;
 };
 
-struct KeyError {
+struct EvalError {
   char *message;
 };
 
@@ -176,7 +176,7 @@ void err_report_compose(const Location *loc, ErrorLevel level);
 void err_report_oob(i64 idx, i64 array_len, const Location *loc, ErrorLevel level);
 void err_report_range(i64 start, i64 end, const Location *loc, ErrorLevel level);
 void err_report_partial_range(const Location *loc, ErrorLevel level);
-void err_report_key(char *message, const Location *loc, ErrorLevel level);
+void err_report_eval(char *message, const Location *loc, ErrorLevel level);
 void err_report_assignment(const Location *loc, ErrorLevel level);
 bool err_gate();
 
@@ -195,6 +195,6 @@ void err_free_fn_arg_pos_error(FnArgPosError *e);
 void err_free_fn_param_req_error(FnParamReqError *e);
 void err_free_bounds_error(BoundsError *e);
 void err_free_range_error(RangeError *e);
-void err_free_key_error(KeyError *e);
+void err_free_eval_error(EvalError *e);
 
 #endif
