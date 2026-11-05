@@ -259,6 +259,8 @@ static void _free_buffer(InputBuffer *buffer) {
 
 void fe_push_buffer(const char *path) {
   assert(f->buffer == NULL);
+  f->stored_loc = *f->location;
+  *f->location = (Location){1, 1, 1, 1};
   f->buffer = _create_buffer(path);
   fe_scanner_log(LOG_INFO, "Push buffer %s", f->buffer->filepath);
   yypush_buffer_state((YY_BUFFER_STATE)f->buffer->buffer, (yyscan_t)f->scanner);
@@ -269,6 +271,7 @@ void fe_pop_buffer() {
   fe_scanner_log(LOG_INFO, "Pop buffer");
   yypop_buffer_state((yyscan_t)f->scanner);
   _free_buffer(f->buffer);
+  *f->location = f->stored_loc;
   f->buffer = NULL;
 }
 

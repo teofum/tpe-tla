@@ -21,7 +21,6 @@
   - Better to make them implicitly castable down the line to keep most specific
     typing
 [x] Short Tuple is kind of a crappy name, rename to vector
-[ ] Type checking constness fuckery
 [x] Leaky hashmaps in eval
 [x] Typecheck currently accepts multi-index or slices as LHS in an assignment
   - Actually, we're allowing multi-index here; it's useful!
@@ -39,7 +38,7 @@
     -- I pretend it's not a bug
     -- Want to clone explicitly? Just slice!
   - Verdict: it's a feature!
-[ ] CSV import fucks the location tracking
+[x] CSV import fucks the location tracking
 
 #=== General ==================================================================#
 

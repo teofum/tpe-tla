@@ -40,6 +40,7 @@ typedef struct {
   Logger *parse_logger;
   map(char, BuiltinType) builtin_types;
   InputBuffer *buffer;
+  Location stored_loc;
 } Frontend;
 
 void fe_init(CompilerState *compiler_state);
