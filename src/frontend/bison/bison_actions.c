@@ -179,11 +179,6 @@ LiteralExpr *parse_struct_literal(StructLiteralFieldList *fields) {
   return literal;
 }
 
-LiteralExpr *parse_enum_literal(Identifier *id, Identifier *typename) {
-  fe_parser_log(LOG_DEBUG, "Enum Literal .%s", id->lexeme);
-  return ast_enum_literal(map_or_null(typename, ast_named_type), id);
-}
-
 LiteralExpr *parse_range_literal(Expr *start, Expr *end, bool inclusive) {
   fe_parser_log(LOG_DEBUG, "Range Literal");
   return ast_range_literal(start, end, inclusive);
@@ -395,11 +390,6 @@ Type *parse_vector_type(Type *type, IntegerLiteral *count) {
   Type *tuple = ast_vector_type(type, (u32)count->value);
   ast_free_int_literal(count);
   return tuple;
-}
-
-Type *parse_enum_type(IdentifierList *values) {
-  fe_parser_log(LOG_DEBUG, "Enum");
-  return ast_enum_type(values);
 }
 
 Type *parse_nil_type() {

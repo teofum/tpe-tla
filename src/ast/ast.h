@@ -55,7 +55,6 @@ typedef enum {
   L_VECTOR,
   L_MAP,
   L_STRUCT,
-  L_ENUM,
   L_RANGE,
 } LiteralType;
 
@@ -83,7 +82,6 @@ typedef enum {
   T_MAP,
   T_TUPLE,
   T_VECTOR,
-  T_ENUM,
   T_RANGE,
   T_ERROR,    // Error type. Accessing any property of this type is undefined!!
 } TypeType;
@@ -167,7 +165,6 @@ typedef struct MapLiteral MapLiteral;
 typedef struct MapEntry MapEntry;
 typedef struct StructLiteral StructLiteral;
 typedef struct StructLiteralField StructLiteralField;
-typedef struct EnumLiteral EnumLiteral;
 typedef struct RangeLiteral RangeLiteral;
 
 typedef struct NamedVariable NamedVariable;
@@ -184,7 +181,6 @@ typedef struct StructType StructType;
 typedef struct UnionType UnionType;
 typedef struct TupleType TupleType;
 typedef struct VectorType VectorType;
-typedef struct EnumType EnumType;
 
 typedef struct FunctionDef FunctionDef;
 typedef struct Parameter Parameter;
@@ -303,7 +299,6 @@ struct LiteralExpr {
     VectorLiteral *vec;
     MapLiteral *map;
     StructLiteral *struct_literal;
-    EnumLiteral *enum_literal;
     RangeLiteral *range;
   };
 };
@@ -452,12 +447,6 @@ struct StructLiteralField {
   Expr *value;
 };
 
-struct EnumLiteral {
-  ASTNodeMetadata meta;
-  Type *type;
-  Identifier *value;
-};
-
 struct RangeLiteral {
   ASTNodeMetadata meta;
   Expr *start;
@@ -499,7 +488,6 @@ struct Type {
     UnionType *union_type;
     TupleType *tuple;
     VectorType *vec;
-    EnumType *enum_type;
   };
 };
 
@@ -540,12 +528,6 @@ struct VectorType {
   ASTNodeMetadata meta;
   Type *item_type;
   u32 len;
-};
-
-struct EnumType {
-  ASTNodeMetadata meta;
-  u32 len;
-  Identifier **values;
 };
 
 struct StructField {
@@ -686,7 +668,6 @@ LiteralExpr *ast_list_literal(ExprList *exprs);
 LiteralExpr *ast_vector_literal(Expr *value, u32 count);
 LiteralExpr *ast_map_literal(MapEntryList *entries);
 LiteralExpr *ast_struct_literal(StructLiteralFieldList *fields);
-LiteralExpr *ast_enum_literal(Type *type, Identifier *id);
 LiteralExpr *ast_range_literal(Expr *start, Expr *end, bool inclusive);
 LiteralExpr *ast_nil_literal();
 
@@ -712,7 +693,6 @@ Type *ast_struct_type(StructFieldList *fields);
 Type *ast_union_type(TypeList *types);
 Type *ast_tuple_type(TypeList *types);
 Type *ast_vector_type(Type *type, u32 count);
-Type *ast_enum_type(IdentifierList *values);
 Type *ast_builtin_type(BuiltinType builtin_type);
 
 FunctionDef *ast_function_def(
@@ -771,7 +751,6 @@ void ast_free_list_literal(ListLiteral *l);
 void ast_free_vector_literal(VectorLiteral *l);
 void ast_free_map_literal(MapLiteral *l);
 void ast_free_struct_literal(StructLiteral *l);
-void ast_free_enum_literal(EnumLiteral *l);
 void ast_free_range_literal(RangeLiteral *l);
 
 void ast_free_named_variable(NamedVariable *v);
@@ -786,7 +765,6 @@ void ast_free_struct_type(StructType *t);
 void ast_free_union_type(UnionType *t);
 void ast_free_tuple_type(TupleType *t);
 void ast_free_vector_type(VectorType *t);
-void ast_free_enum_type(EnumType *t);
 
 void ast_free_function_def(FunctionDef *f);
 

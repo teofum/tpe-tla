@@ -479,14 +479,6 @@ static const char *tc_print_type(const Type *type) {
       }
       return _tc_asprintf("%s }", string);
     }
-    case T_ENUM: {
-      Identifier **variants = type->enum_type->values;
-      const char *string = _tc_asprintf("enum { %s", variants[0]->lexeme);
-      for (u32 i = 1; i < type->enum_type->len; i++) {
-        string = _tc_asprintf("%s, %s", string, variants[i]->lexeme);
-      }
-      return _tc_asprintf("%s }", string);
-    }
   }
 }
 
@@ -732,14 +724,6 @@ static bool _compare_union_types(Symbols *s, const UnionType *a, const UnionType
   return true;
 }
 
-static bool _compare_enum_types(const EnumType *a, const EnumType *b) {
-  if (a->len != b->len) return false;
-  for (u32 i = 0; i < a->len; i++) {
-    if (!ast_compare_identifiers(a->values[i], b->values[i])) return false;
-  }
-  return true;
-}
-
 static bool _compare_named_types(Symbols *s, const NamedType *a, const NamedType *b) {
   if (ast_compare_identifiers(a->name, b->name)) return true;
   return tc_compare_types(
@@ -771,7 +755,6 @@ static bool tc_compare_types(Symbols *s, const Type *a, const Type *b) {
     case T_MAP: return _compare_map_types(s, a->map, b->map);
     case T_STRUCT: return _compare_struct_types(s, a->struct_type, b->struct_type);
     case T_UNION: return _compare_union_types(s, a->union_type, b->union_type);
-    case T_ENUM: return _compare_enum_types(a->enum_type, b->enum_type);
     case T_RANGE: return true; // Ranges are only one type
     case T_NAMED: assert(false);
     case T_ERROR: assert(false);
@@ -901,7 +884,6 @@ static bool tc_accepts_type(Symbols *s, const Type *a, const Type *b) {
     case T_MAP: return _accepts_map_type(s, a->map, b);
     case T_STRUCT: return _accepts_struct_type(s, a->struct_type, b);
     case T_UNION: return _accepts_union_type(s, a->union_type, b);
-    case T_ENUM: return tc_compare_types(s, a, b);
     case T_RANGE: return b->type == T_RANGE;
     case T_NAMED: assert(false);
     case T_ERROR: assert(false);
@@ -1002,7 +984,6 @@ static bool _is_valid_map_key_type(const Type *type) {
     case T_MAP:           return false;
     case T_LIST:          return _is_valid_map_key_type(type->list->item_type);
     case T_RANGE:         return false;
-    case T_ENUM:          return true;
     case T_VECTOR:        return _is_valid_map_key_type(type->vec->item_type);
     case T_STRUCT: {
       const StructField *field;
@@ -1094,10 +1075,6 @@ static Type *_struct_type(Symbols *s, StructLiteral *struct_l) {
   return type;
 }
 
-static Type *_enum_type(EnumLiteral *enum_l) {
-  return enum_l->type;
-}
-
 static Type *_range_type(Symbols *s, RangeLiteral *range) {
   bool start_valid = !range->start
     || _is_builtin(tc_check_expr(s, range->start), T_INT);
@@ -1128,7 +1105,6 @@ static Type *_literal_type(Symbols *s, LiteralExpr *expr) {
     case L_VECTOR:      return _vector_type(s, expr->vec);
     case L_MAP:         return _map_type(s, expr->map);
     case L_STRUCT:      return _struct_type(s, expr->struct_literal);
-    case L_ENUM:        return _enum_type(expr->enum_literal);
     case L_RANGE:       return _range_type(s, expr->range);
   }
 }
@@ -1815,7 +1791,6 @@ static Type *_validate_csv_type(
     }
     case T_BUILTIN: return NULL;
     case T_RANGE: return NULL;
-    case T_ENUM: assert(false); // Slated for removal
     case T_NAMED: assert(false); // Unreachable
     case T_ERROR: assert(false); // Unreachable
   }

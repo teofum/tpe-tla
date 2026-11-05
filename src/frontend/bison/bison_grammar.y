@@ -177,7 +177,6 @@ static void yyerror(YYLTYPE *location, const char *message) {
 %token <token>    NOT               "'not'"
 %token <token>    STRUCT            "'struct'"
 %token <token>    UNION             "'union'"
-%token <token>    ENUM              "'enum'"
 %token <token>    FUNCTION          "'function'"
 %token <token>    COMPOSE           "'compose'"
 %token <token>    IMPORT            "'import'"
@@ -226,7 +225,6 @@ static void yyerror(YYLTYPE *location, const char *message) {
 %type <literal>                     struct_literal
 %type <literal>                     list_literal
 %type <literal>                     map_literal
-%type <literal>                     enum_literal
 %type <literal>                     range_literal
 %type <variable>                    variable
 %type <variable>                    indexed_variable
@@ -381,7 +379,6 @@ literal: simple_literal
   | struct_literal
   | list_literal
   | map_literal
-  | enum_literal
   | range_literal
   ;
 
@@ -420,10 +417,6 @@ map_entry_list: map_entry                                           { $$ = parse
 
 map_entry: literal EQUAL expression                                 { $$ = parse_map_entry_literal($1, $3); }
   | block EQUAL expression                                          { $$ = parse_map_entry_block($1, $3); }
-  ;
-
-enum_literal: IDENTIFIER COLON_COLON IDENTIFIER                     { $$ = parse_enum_literal($3, $1); }
-  | COLON_COLON IDENTIFIER                                          { $$ = parse_enum_literal($2, NULL); }
   ;
 
 range_literal: range_value DOT_DOT range_value                      { $$ = parse_range_literal($1, $3, false); }
@@ -548,7 +541,6 @@ type: IDENTIFIER                                                    { $$ = parse
   | SQUARE_L nl type SEMICOLON INTEGER nl SQUARE_R                  { $$ = parse_vector_type($3, $5); }
   | STRUCT CURLY_L nl struct_field_list nl CURLY_R                  { $$ = parse_struct_type($4); }
   | UNION CURLY_L nl type_list nl CURLY_R                           { $$ = parse_union_type($4); }
-  | ENUM CURLY_L nl identifier_list nl CURLY_R                      { $$ = parse_enum_type($4); }
   | type QUESTION_MARK                                              { $$ = parse_optional_type($1); }
   | NIL                                                             { $$ = parse_nil_type(); }
   ;

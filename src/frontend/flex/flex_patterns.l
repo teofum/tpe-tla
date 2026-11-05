@@ -121,7 +121,6 @@ id_char         [a-zA-Z0-9_-]
 "not"                         { return lex_keyword(NOT); }
 "struct"                      { return lex_keyword(STRUCT); }
 "union"                       { return lex_keyword(UNION); }
-"enum"                        { return lex_keyword(ENUM); }
 "function"                    { return lex_keyword(FUNCTION); }
 "compose"                     { return lex_keyword(COMPOSE); }
 "import"                      { return lex_keyword(IMPORT); }

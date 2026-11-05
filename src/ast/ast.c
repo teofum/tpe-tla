@@ -292,23 +292,6 @@ LiteralExpr *ast_struct_literal(StructLiteralFieldList *fields) {
   return literal;
 }
 
-LiteralExpr *ast_enum_literal(Type *type, Identifier *id) {
-  EnumLiteral *enum_literal = new(EnumLiteral);
-  *enum_literal = (EnumLiteral){
-    .meta = _ast_get_metadata(),
-    .type = type,
-    .value = id
-  };
-
-  LiteralExpr *literal = new(LiteralExpr);
-  *literal = (LiteralExpr){
-    .meta = _ast_get_metadata(),
-    .type = L_ENUM,
-    .enum_literal = enum_literal
-  };
-  return literal;
-}
-
 LiteralExpr *ast_range_literal(Expr *start, Expr *end, bool inclusive) {
   RangeLiteral *range = new(RangeLiteral);
   *range = (RangeLiteral){
@@ -631,21 +614,6 @@ Type *ast_vector_type(Type *inner_type, u32 count) {
   return type;
 }
 
-Type *ast_enum_type(IdentifierList *values) {
-  EnumType *enum_type = new(EnumType);
-  enum_type->meta = _ast_get_metadata();
-  ast_consume_identifier_list(values, &enum_type->values, &enum_type->len);
-
-  Type *type = new(Type);
-  *type = (Type){
-    .meta = _ast_get_metadata(),
-    .type = T_ENUM,
-    .enum_type = enum_type
-  };
-
-  return type;
-}
-
 Type *ast_builtin_type(BuiltinType builtin_type) {
   Type *type = new(Type);
   *type = (Type){
@@ -938,7 +906,6 @@ void ast_free_literal(LiteralExpr *literal) {
     case L_VECTOR: ast_free_vector_literal(literal->vec); break;
     case L_MAP: ast_free_map_literal(literal->map); break;
     case L_STRUCT: ast_free_struct_literal(literal->struct_literal); break;
-    case L_ENUM: ast_free_enum_literal(literal->enum_literal); break;
     case L_RANGE: ast_free_range_literal(literal->range); break;
     case L_NIL: break;
   }
@@ -1114,14 +1081,6 @@ void ast_free_struct_literal(StructLiteral *l) {
   free(l);
 }
 
-void ast_free_enum_literal(EnumLiteral *l) {
-  if (!l) return;
-
-  ast_free_type(l->type);
-  ast_free_identifier(l->value);
-  free(l);
-}
-
 void ast_free_range_literal(RangeLiteral *l) {
   if (!l) return;
 
@@ -1167,7 +1126,6 @@ void ast_free_type(Type *t) {
     case T_UNION: ast_free_union_type(t->union_type); break;
     case T_TUPLE: ast_free_tuple_type(t->tuple); break;
     case T_VECTOR: ast_free_vector_type(t->vec); break;
-    case T_ENUM: ast_free_enum_type(t->enum_type); break;
     case T_BUILTIN: break;
     case T_RANGE: break;
     case T_ERROR: break;
@@ -1229,16 +1187,6 @@ void ast_free_vector_type(VectorType *t) {
   if (!t) return;
 
   ast_free_type(t->item_type);
-  free(t);
-}
-
-void ast_free_enum_type(EnumType *t) {
-  if (!t) return;
-
-  for (u32 i = 0; i < t->len; i++) {
-    ast_free_identifier(t->values[i]);
-  }
-  free(t->values);
   free(t);
 }
 

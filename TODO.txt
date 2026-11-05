@@ -71,7 +71,7 @@
 
 [/] Remove default function values
   - Unremoved default function values (it turns out we needed those)
-[ ] Remove enums (I think we definitely do not need those)
+[x] Remove enums (I think we definitely do not need those)
 [-] MAYBE: Remove list/tuple literals and replace with blocks?
   - Nah, waste of time. Plus list literal syntax looks nice.
 

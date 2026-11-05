@@ -23,6 +23,9 @@ This file has implementation notes worth keeping in mind for the final report.
   this is fairly hard to determine and we only have so much time on this earth.
   And, uh, until the deadline.
 
+- Enums: removed from the spec, difficult to implement with structural typing
+  and generally not very useful.
+
 #=== Overall architecture plan ================================================#
 
 The compiler will follow a sequence of steps; at the end of each an error gate

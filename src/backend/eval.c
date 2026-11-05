@@ -446,7 +446,6 @@ static const Value *eval_literal(const Symbols *s, const LiteralExpr *expr) {
     case L_VECTOR: return eval_vector(s, expr->vec);
     case L_MAP: return eval_map(s, expr->map);
     case L_STRUCT: return eval_struct(s, expr->struct_literal);
-    case L_ENUM: assert(false); // TODO
   }
 }
 

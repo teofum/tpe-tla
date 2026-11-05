@@ -94,14 +94,6 @@ static void dot_map_entry(const MapEntry *entry, u64 pid) {
   dot_expr(entry->value, id);
 }
 
-static void dot_enum_value(const Identifier *value, u64 pid) {
-  u64 id = next_id();
-  char label[256];
-  snprintf(label, 256, "%s", value->lexeme);
-  _node(id, label, NODE_BASE);
-  _edge(pid, id);
-}
-
 static void dot_type(const Type *type, u64 pid) {
   u64 id = next_id();
   char label[256];
@@ -147,12 +139,6 @@ static void dot_type(const Type *type, u64 pid) {
     case T_VECTOR:
       snprintf(label, 256, "Tuple Shorthand [%u]", type->vec->len);
       dot_type(type->vec->item_type, id);
-      break;
-    case T_ENUM:
-      snprintf(label, 8, "Enum");
-      for (u32 i = 0; i < type->enum_type->len; i++) {
-        dot_enum_value(type->enum_type->values[i], id);
-      }
       break;
     case T_RANGE:
       snprintf(label, 8, "Range");
@@ -208,11 +194,6 @@ static void dot_literal(const LiteralExpr *literal, u64 pid) {
       for (u32 i = 0; i < literal->map->len; i++) {
         dot_map_entry(literal->map->entries[i], id);
       }
-      break;
-    case L_ENUM:
-      label = new_array(char, 256);
-      snprintf(label, 256, "Enum .%s", literal->enum_literal->value->lexeme);
-      if (literal->enum_literal->type) dot_type(literal->enum_literal->type, id);
       break;
     case L_STRUCT:
       label = new_array(char, 7);
@@ -465,7 +446,7 @@ static void dot_export(const ExportStmt *export, u64 pid) {
   _node(id, "Export", NODE_STMT);
   _edge(pid, id);
   for (u32 i = 0; i < export->len; i++) {
-    dot_enum_value(export->ids[i], id);
+    // TODO
   }
 }
 

@@ -41,7 +41,6 @@ LiteralExpr *parse_list_literal(ExprList *exprs);
 LiteralExpr *parse_vector_literal(Expr *value, IntegerLiteral *count);
 LiteralExpr *parse_map_literal(MapEntryList *entries);
 LiteralExpr *parse_struct_literal(StructLiteralFieldList *fields);
-LiteralExpr *parse_enum_literal(Identifier *id, Identifier *typename);
 LiteralExpr *parse_range_literal(Expr *start, Expr *end, bool inclusive);
 
 Expr *parse_range_value_int(IntegerLiteral *i);
@@ -71,7 +70,6 @@ Type *parse_union_type(TypeList *types);
 Type *parse_optional_type(Type *type);
 Type *parse_tuple_type(TypeList *types);
 Type *parse_vector_type(Type *type, IntegerLiteral *count);
-Type *parse_enum_type(IdentifierList *values);
 Type *parse_nil_type();
 
 FunctionDef *parse_function_def(Identifier *id, ParameterList *params, Type *compose_type, Type *return_type, BlockExpr *body);
