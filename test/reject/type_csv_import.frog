@@ -1,0 +1,10 @@
+// Type is undefined
+import csv of UndefinedType "/test/data/test.csv"
+
+Book is struct {
+  isbn: string,
+  title: string
+}
+
+// CSV doesn't fit type
+import csv of Book "/test/data/test.csv"

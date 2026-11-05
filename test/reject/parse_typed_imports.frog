@@ -1,0 +1,5 @@
+// URL imports can't be typed
+import url of Book "/test/data/test.csv"
+
+// Neither can raw imports
+import raw of Book "/test/data/test.csv"

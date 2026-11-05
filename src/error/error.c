@@ -82,6 +82,12 @@ void err_report_import(ImportError *i, const Location *loc, ErrorLevel level) {
   da_push(e->errors, &error);
 }
 
+void err_report_typed_import(ImportError *i, const Location *loc, ErrorLevel level) {
+  Error error = _make_error(ERR_TYPED_IMPORT, CS_PARSE, level, loc);
+  error.import_type = i;
+  da_push(e->errors, &error);
+}
+
 void err_report_import_file(char *path, const Location *loc, ErrorLevel level) {
   Error error = _make_error(ERR_IMPORT_FILE, CS_PARSE, level, loc);
   error.import_file = new(ImportFileError);
@@ -272,7 +278,7 @@ static void _log_syntax_error(Error *error) {
 
 static void _log_import_type_error(Error *error) {
   ImportError *it = error->import_type;
-  str error_str = str_format("unrecognized import type '%s':", it->type);
+  str error_str = str_format("unrecognized import type '%s'", it->type);
   _log_error_with_loc(error_str, error);
 
   str accepted = str_format("'%s'", import_type_str[0]);
@@ -282,6 +288,12 @@ static void _log_import_type_error(Error *error) {
 
   logger_log(e->logger, LOG_INFO, "\t\tAccepted import types are: %.*s", accepted.len, accepted.ptr);
   str_free(accepted);
+}
+
+static void _log_typed_import_error(Error *error) {
+  ImportError *it = error->import_type;
+  str error_str = str_format("import type '%s' cannot be typed", it->type);
+  _log_error_with_loc(error_str, error);
 }
 
 static void _log_import_file_error(Error *error) {
@@ -423,6 +435,7 @@ static void _log_error(Error *error) {
   switch (error->type) {
     case ERR_SYNTAX: _log_syntax_error(error); break;
     case ERR_IMPORT: _log_import_type_error(error); break;
+    case ERR_TYPED_IMPORT: _log_typed_import_error(error); break;
     case ERR_IMPORT_FILE: _log_import_file_error(error); break;
     case ERR_IMPORT_CSV: _log_import_csv_error(error); break;
     case ERR_STRUCT_FIELD: _log_struct_field_error(error); break;
@@ -467,6 +480,7 @@ bool err_gate() {
 void err_free_error(Error *e) {
   switch (e->type) {
     case ERR_SYNTAX: err_free_syntax_error(e->syntax); break;
+    case ERR_TYPED_IMPORT:
     case ERR_IMPORT: err_free_import_error(e->import_type); break;
     case ERR_IMPORT_FILE: err_free_import_file_error(e->import_file); break;
     case ERR_IMPORT_CSV: err_free_import_csv_error(e->import_csv); break;

@@ -312,6 +312,11 @@ ImportExpr *parse_import(Identifier *import_type, Type *data_type, StringLiteral
     error->type = strdup(import_type->lexeme);
     err_report_import(error, &import_type->loc, ERR_ERROR);
     fe_parser_log(LOG_ERROR, "Unknown import type '%s'", import_type->lexeme);
+  } else if (type != IMPORT_CSV && data_type != NULL) {
+    ImportError *error = new(ImportError);
+    error->type = strdup(import_type->lexeme);
+    err_report_typed_import(error, &data_type->meta.loc, ERR_ERROR);
+    fe_parser_log(LOG_ERROR, "Import type '%s' does not support type annotations", import_type->lexeme);
   } else {
     resolved_path = _resolve_import_path(path->value);
     if (!resolved_path) {
