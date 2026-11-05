@@ -66,6 +66,8 @@
 [x] Iterable ranges
 [ ] Decomposition statement for list composing
 [ ] Typed CSV imports
+  [x] Typecheck + coercion hinting
+  [ ] Eval coercion
 
 [/] Remove default function values
   - Unremoved default function values (it turns out we needed those)

@@ -1067,6 +1067,7 @@ static const Value *eval_import(const Symbols *s, const ImportExpr *i) {
 
       const Value *rows = _list(csv->rows);
       for (u32 i = 0; i < csv->rows; i++) {
+        // TODO use type coercion hints
         rows->list->items[i] = _map();
         for (u32 j = 0; j < csv->columns; j++) {
           map_insert(
