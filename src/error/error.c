@@ -82,6 +82,28 @@ void err_report_import(ImportError *i, const Location *loc, ErrorLevel level) {
   da_push(e->errors, &error);
 }
 
+void err_report_import_file(char *path, const Location *loc, ErrorLevel level) {
+  Error error = _make_error(ERR_IMPORT_FILE, CS_PARSE, level, loc);
+  error.import_file = new(ImportFileError);
+  error.import_file->path = path;
+  da_push(e->errors, &error);
+}
+
+void err_report_import_csv(char *message, const Location *loc, ErrorLevel level) {
+  Error error = _make_error(ERR_IMPORT_CSV, CS_PARSE, level, loc);
+  error.import_csv = new(ImportCSVError);
+  error.import_csv->message = message;
+  da_push(e->errors, &error);
+}
+
+void err_report_struct_field(char *name, const Location *prev_loc, const Location *loc, ErrorLevel level) {
+  Error error = _make_error(ERR_STRUCT_FIELD, CS_PARSE, level, loc);
+  error.struct_field = new(StructFieldError);
+  error.struct_field->name = name;
+  error.struct_field->previous_definition = *prev_loc;
+  da_push(e->errors, &error);
+}
+
 void err_report_redef(RedefError *r, const Location *loc, ErrorLevel level) {
   Error error = _make_error(ERR_REDEF, CS_STATIC_ANALYSIS, level, loc);
   error.redefinition = r;
@@ -250,19 +272,39 @@ static void _log_syntax_error(Error *error) {
 
 static void _log_import_type_error(Error *error) {
   ImportError *it = error->import_type;
+  str error_str = str_format("unrecognized import type '%s':", it->type);
+  _log_error_with_loc(error_str, error);
 
   str accepted = str_format("'%s'", import_type_str[0]);
   for (u32 i = 1; i < IMPORT_TYPE_COUNT; i++) {
     str_append_temp(&accepted, str_format(", '%s'", import_type_str[i]));
   }
 
-  _log(error,
-    FMT_LOCATION "unrecognized import type '%s'"
-      INDENTED_NL "Accepted import types are: %.*s",
-    error->filepath, error->loc.first_line, error->loc.first_column,
-    it->type, accepted.len, accepted.ptr
-  );
+  logger_log(e->logger, LOG_INFO, "\t\tAccepted import types are: %.*s", accepted.len, accepted.ptr);
   str_free(accepted);
+}
+
+static void _log_import_file_error(Error *error) {
+  ImportFileError *i = error->import_file;
+  str error_str = str_format("imported file '%s' does not exist:", i->path);
+  _log_error_with_loc(error_str, error);
+}
+
+static void _log_import_csv_error(Error *error) {
+  ImportCSVError *ic = error->import_csv;
+  _log(error, "In imported csv: %s", ic->message);
+}
+
+static void _log_struct_field_error(Error *error) {
+  StructFieldError *s = error->struct_field;
+  str error_str = str_format("redefinition of struct member '%s'", s->name);
+  _log_error_with_loc(error_str, error);
+
+  str prev_str = str_format("'%s' previously defined here:", s->name);
+  str prev_with_loc = _error_loc(prev_str, error->filepath, &s->previous_definition, B);
+
+  logger_log(e->logger, LOG_INFO, "%.*s", prev_with_loc.len, prev_with_loc.ptr);
+  str_free(prev_with_loc);
 }
 
 static void _log_redefinition_error(Error *error) {
@@ -381,6 +423,9 @@ static void _log_error(Error *error) {
   switch (error->type) {
     case ERR_SYNTAX: _log_syntax_error(error); break;
     case ERR_IMPORT: _log_import_type_error(error); break;
+    case ERR_IMPORT_FILE: _log_import_file_error(error); break;
+    case ERR_IMPORT_CSV: _log_import_csv_error(error); break;
+    case ERR_STRUCT_FIELD: _log_struct_field_error(error); break;
     case ERR_REDEF: _log_redefinition_error(error); break;
     case ERR_UNDEF: _log_undef_symbol_error(error); break;
     case ERR_TYPE: _log_type_error(error); break;
@@ -423,6 +468,9 @@ void err_free_error(Error *e) {
   switch (e->type) {
     case ERR_SYNTAX: err_free_syntax_error(e->syntax); break;
     case ERR_IMPORT: err_free_import_error(e->import_type); break;
+    case ERR_IMPORT_FILE: err_free_import_file_error(e->import_file); break;
+    case ERR_IMPORT_CSV: err_free_import_csv_error(e->import_csv); break;
+    case ERR_STRUCT_FIELD: err_free_struct_field_error(e->struct_field); break;
     case ERR_REDEF: err_free_redef_error(e->redefinition); break;
     case ERR_UNDEF: err_free_undef_error(e->undef_symbol); break;
     case ERR_TYPE: err_free_type_error(e->type_error); break;
@@ -450,6 +498,21 @@ void err_free_syntax_error(SyntaxError *e) {
 
 void err_free_import_error(ImportError *e) {
   free(e->type);
+  free(e);
+}
+
+void err_free_import_file_error(ImportFileError *e) {
+  free(e->path);
+  free(e);
+}
+
+void err_free_import_csv_error(ImportCSVError *e) {
+  free(e->message);
+  free(e);
+}
+
+void err_free_struct_field_error(StructFieldError *e) {
+  free(e->name);
   free(e);
 }
 

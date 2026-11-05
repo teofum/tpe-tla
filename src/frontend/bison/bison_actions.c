@@ -1,6 +1,6 @@
-#include <assert.h>
 #include <libgen.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define YY_HEADER_EXPORT_START_CONDITIONS
@@ -292,9 +292,10 @@ static char *_resolve_import_path(str rel_path) {
   str_free(full_path);
 
   char *abs_path = malloc(PATH_MAX);
-  abs_path = realpath(full_path_cstr, abs_path);
+  char *real_path = realpath(full_path_cstr, abs_path);
   free(full_path_cstr);
-  return abs_path;
+  if (!real_path) free(abs_path);
+  return real_path;
 }
 
 ImportExpr *parse_import(Identifier *import_type, Type *data_type, StringLiteral *path) {
@@ -304,19 +305,22 @@ ImportExpr *parse_import(Identifier *import_type, Type *data_type, StringLiteral
   for (u32 i = 0; i < IMPORT_TYPE_COUNT; i++) {
     if (strcmp(import_type->lexeme, import_type_str[i]) == 0) type = (ImportType)i;
   }
+
+  char *resolved_path = NULL;
   if (type == IMPORT_UNKNOWN) {
     ImportError *error = new(ImportError);
     error->type = strdup(import_type->lexeme);
     err_report_import(error, &import_type->loc, ERR_ERROR);
     fe_parser_log(LOG_ERROR, "Unknown import type '%s'", import_type->lexeme);
+  } else {
+    resolved_path = _resolve_import_path(path->value);
+    if (!resolved_path) {
+      fe_parser_log(LOG_ERROR, "File '%.*s' does not exist", path->value.len, path->value.ptr);
+      err_report_import_file(str_to_cstring(path->value), &path->token->loc, ERR_ERROR);
+    } else {
+      fe_parser_log(LOG_INFO, "Resolved import %s '%s'", import_type_str[type], resolved_path);
+    }
   }
-
-  char *resolved_path = _resolve_import_path(path->value);
-  if (!resolved_path) {
-    fe_parser_log(LOG_ERROR, "File '%.*s' does not exist", path->value.len, path->value.ptr);
-    assert(false); // TODO error
-  }
-  fe_parser_log(LOG_INFO, "Resolved import %s '%s'", import_type_str[type], resolved_path);
 
   ast_free_identifier(import_type);
   ast_free_string_literal(path);

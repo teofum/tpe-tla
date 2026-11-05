@@ -6,6 +6,7 @@
 #include <support/str.h>
 
 #include "ast.h"
+#include "error/error.h"
 #include "support/hash_map.h"
 
 const char *import_type_str[] = {
@@ -558,8 +559,16 @@ Type *ast_struct_type(StructFieldList *field_list) {
   u32 field_count;
   ast_consume_struct_field_list(field_list, &fields, &field_count);
   for (u32 i = 0; i < field_count; i++) {
-    if (!map_insert(struct_type->fields, fields[i]->name->lexeme, fields[i])) {
-      // TODO report dupliate struct member error
+    char *name = fields[i]->name->lexeme;
+    if (!map_insert(struct_type->fields, name, fields[i])) {
+      const StructField *prev = map_get(struct_type->fields, name);
+      err_report_struct_field(
+        strdup(name),
+        &prev->name->loc,
+        &fields[i]->name->loc,
+        ERR_ERROR
+      );
+      ast_free_struct_field(fields[i]);
     }
   }
   free(fields);
@@ -761,7 +770,11 @@ CSVFile *ast_csv_file(CSVRecordList *record_list) {
   u32 record_count;
   CSVRecord **records;
   ast_consume_csv_record_list(record_list, &records, &record_count);
-  if (record_count == 0) return NULL;
+  if (record_count == 0) {
+    char *msg = strdup("file is empty");
+    err_report_import_csv(msg, &record_list->meta.loc, ERR_ERROR);
+    return NULL;
+  }
 
   u32 columns = records[0]->len;
   u32 rows = record_count - 1;
@@ -776,17 +789,20 @@ CSVFile *ast_csv_file(CSVRecordList *record_list) {
   for (u32 i = 0; i < rows; i++) {
     CSVRecord *row = records[i + 1];
     if (row->len != columns) {
-      for (u32 k = 0; k < record_count; k++) ast_free_csv_record(records[k]);
-      free(headers);
-      free(data);
-      free(records);
-      return NULL;
+      char *msg = NULL;
+      asprintf(&msg,
+        "column count mismatch at row %u: expected %u, got %u",
+        i + 1, columns, row->len
+      );
+      err_report_import_csv(msg, &row->meta.loc, ERR_ERROR);
+      ast_free_csv_record(row);
+    } else {
+      for (u32 j = 0; j < columns; j++) {
+        data[i * columns + j] = row->fields[j];
+      }
+      free(row->fields);
+      free(row);
     }
-    for (u32 j = 0; j < columns; j++) {
-      data[i * columns + j] = row->fields[j];
-    }
-    free(row->fields);
-    free(row);
   }
 
   free(records);

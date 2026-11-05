@@ -27,7 +27,7 @@
   - Actually, we're allowing multi-index here; it's useful!
   - We still don't want to allow assigning to slices, though.
 [x] Hashing function for values is literally 4
-[ ] A lot of missing error handling around imports and codegen
+[x] A lot of missing error handling around imports and codegen
 [-] Assigning to a struct member or array modifies the referenced object...
   - Option 1: create a new copy every time
     -- Inefficient

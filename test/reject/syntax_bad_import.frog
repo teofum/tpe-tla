@@ -1,1 +1,14 @@
+// Unsupported import type
 foo := import file "/my/unsupported/file.doc"
+
+// Non existent file
+bar := import url "/does/not/exist.txt"
+
+// Empty CSV file
+csv_1 := import csv "../data/empty.csv"
+
+// Empty CSV file (newline only)
+csv_2 := import csv "../data/empty2.csv"
+
+// Bad CSV file
+csv_3 := import csv "../data/bad.csv"

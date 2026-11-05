@@ -1,0 +1,5 @@
+Book is struct {
+  isbn: string,
+  title: string,
+  isbn: int
+}

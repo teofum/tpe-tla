@@ -7,7 +7,10 @@
 typedef enum {
   // Parser errors
   ERR_SYNTAX,           // Syntax error
+  ERR_STRUCT_FIELD,     // Duplicate struct field name
   ERR_IMPORT,           // Invalid import type
+  ERR_IMPORT_FILE,      // Imported file doesn't exist
+  ERR_IMPORT_CSV,       // CSV import error
   // Static analysis errors
   ERR_REDEF,            // Symbol redefinition
   ERR_UNDEF,            // Undefined symbol reference
@@ -40,7 +43,10 @@ typedef enum {
 } CompilationStage;
 
 typedef struct SyntaxError SyntaxError;
+typedef struct StructFieldError StructFieldError;
 typedef struct ImportError ImportError;
+typedef struct ImportFileError ImportFileError;
+typedef struct ImportCSVError ImportCSVError;
 typedef struct RedefError RedefError;
 typedef struct UndefError UndefError;
 typedef struct TypeError TypeError;
@@ -61,7 +67,10 @@ typedef struct {
 
   union {
     SyntaxError *syntax;
+    StructFieldError *struct_field;
     ImportError *import_type;
+    ImportFileError *import_file;
+    ImportCSVError *import_csv;
     RedefError *redefinition;
     UndefError *undef_symbol;
     TypeError *type_error;
@@ -81,8 +90,21 @@ struct SyntaxError {
   char *found;
 };
 
+struct StructFieldError {
+  char *name;
+  Location previous_definition;
+};
+
 struct ImportError {
   char *type;
+};
+
+struct ImportFileError {
+  char *path;
+};
+
+struct ImportCSVError {
+  char *message;
 };
 
 struct RedefError {
@@ -137,7 +159,10 @@ void err_init(CompilerState *compiler_state);
 void err_shutdown();
 
 void err_report_syntax(SyntaxError *error, const Location *loc, ErrorLevel level);
+void err_report_struct_field(char *name, const Location *prev_loc, const Location *loc, ErrorLevel level);
 void err_report_import(ImportError *error, const Location *loc, ErrorLevel level);
+void err_report_import_file(char *path, const Location *loc, ErrorLevel level);
+void err_report_import_csv(char *message, const Location *loc, ErrorLevel level);
 void err_report_redef(RedefError *error, const Location *loc, ErrorLevel level);
 void err_report_undef(UndefError *error, const Location *loc, ErrorLevel level);
 void err_report_type(TypeError *error, const Location *loc, ErrorLevel level);
@@ -155,7 +180,10 @@ bool err_gate();
 
 void err_free_error(Error *e);
 void err_free_syntax_error(SyntaxError *e);
+void err_free_struct_field_error(StructFieldError *e);
 void err_free_import_error(ImportError *e);
+void err_free_import_file_error(ImportFileError *e);
+void err_free_import_csv_error(ImportCSVError *e);
 void err_free_redef_error(RedefError *e);
 void err_free_undef_error(UndefError *e);
 void err_free_type_error(TypeError *e);

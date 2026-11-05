@@ -397,25 +397,21 @@ struct EnvExpr {
 // -----------------------------------------------------------------------------
 
 struct IntegerLiteral {
-  ASTNodeMetadata meta;
   i64 value;
   TokenMeta *token;
 };
 
 struct FloatLiteral {
-  ASTNodeMetadata meta;
   f64 value;
   TokenMeta *token;
 };
 
 struct StringLiteral {
-  ASTNodeMetadata meta;
   str value;
   TokenMeta *token;
 };
 
 struct BooleanLiteral {
-  ASTNodeMetadata meta;
   bool value;
   TokenMeta *token;
 };
