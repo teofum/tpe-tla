@@ -1174,7 +1174,6 @@ static const Value *eval_expr(const Symbols *s, const Expr *expr) {
     case EXPR_ENV: return eval_env(s, expr->env);
     case EXPR_IMPORT: return eval_import(s, expr->import);
   }
-  assert(false); // perish
 }
 
 static const Value *eval_decl(const Symbols *s, const DeclarationStmt *decl) {
@@ -1212,6 +1211,7 @@ static const Value *eval_stmt(const Symbols *s, const Stmt *stmt) {
     case STMT_TYPE_ALIAS: return NULL;
     case STMT_EXPORT: return NULL;
     case STMT_FUNCTION_DEF: return NULL;
+    case STMT_DIRECTIVE: return NULL;
     case STMT_PARSE_ERROR: assert(false); // Unreachable
   }
 }

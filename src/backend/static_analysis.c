@@ -2093,6 +2093,7 @@ static Type *tc_check_stmt(Symbols *s, const Stmt *stmt) {
     case STMT_FUNCTION_DEF: _check_function_def(s, stmt->function_def); return NULL;
     case STMT_EXPORT: _check_export(s, stmt->export); return NULL;
     case STMT_TYPE_ALIAS: return NULL;
+    case STMT_DIRECTIVE: return NULL;
     case STMT_PARSE_ERROR: assert(false); // Unreachable
   }
 }
