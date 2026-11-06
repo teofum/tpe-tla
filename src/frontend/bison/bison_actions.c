@@ -48,6 +48,11 @@ Stmt *parse_export_stmt(ExportStmt *export) {
   return ast_stmt_export(export);
 }
 
+Stmt *parse_directive(Directive *directive) {
+  fe_parser_log(LOG_DEBUG, "Directive %s", directive->lexeme);
+  return ast_stmt_directive(directive);
+}
+
 Stmt *parse_error_stmt() {
   fe_parser_log(LOG_DEBUG, "ERROR Stmt");
   return ast_stmt_error();

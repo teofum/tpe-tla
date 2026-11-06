@@ -26,6 +26,7 @@ typedef enum {
   STMT_TYPE_ALIAS,
   STMT_FUNCTION_DEF,
   STMT_EXPORT,
+  STMT_DIRECTIVE,
   STMT_PARSE_ERROR, // Shouldn't exist in any valid AST; only used for debug output
 } StmtType;
 
@@ -132,6 +133,7 @@ typedef struct {
 } ASTNodeMetadata;
 
 typedef TokenMeta Identifier;
+typedef TokenMeta Directive;
 
 typedef struct Stmt Stmt;
 typedef struct DeclarationStmt DeclarationStmt;
@@ -229,6 +231,7 @@ struct Stmt {
     TypeAliasStmt *type_alias;
     FunctionDef *function_def;
     ExportStmt *export;
+    Directive *directive;
   };
 };
 
@@ -639,6 +642,7 @@ Stmt *ast_stmt_constant(ConstantStmt *constant);
 Stmt *ast_stmt_alias(TypeAliasStmt *alias);
 Stmt *ast_stmt_function_def(FunctionDef *function);
 Stmt *ast_stmt_export(ExportStmt *export);
+Stmt *ast_stmt_directive(Directive *directive);
 Stmt *ast_stmt_error();
 
 PartialDeclarationStmt *ast_declaration(IdentifierList *ids, Type *type, Expr *expr);
@@ -775,6 +779,7 @@ void ast_free_parameter(Parameter *p);
 void ast_free_argument(Argument *a);
 
 void ast_free_identifier(Identifier *id);
+void ast_free_directive(Directive *dir);
 void ast_free_token(TokenMeta *meta);
 void ast_free_program(Program *program);
 

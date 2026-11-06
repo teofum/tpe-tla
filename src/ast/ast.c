@@ -104,6 +104,7 @@ AST_STMT_FUNC(ast_stmt_alias, TypeAliasStmt, STMT_TYPE_ALIAS, type_alias)
 AST_STMT_FUNC(ast_stmt_function_def, FunctionDef, STMT_FUNCTION_DEF, function_def)
 AST_STMT_FUNC(ast_stmt_constant, ConstantStmt, STMT_CONSTANT, constant)
 AST_STMT_FUNC(ast_stmt_export, ExportStmt, STMT_EXPORT, export)
+AST_STMT_FUNC(ast_stmt_directive, Directive, STMT_DIRECTIVE, directive)
 
 Stmt *ast_stmt_decl(PartialDeclarationStmt *pdecl) {
   DeclarationStmt *decl = new(DeclarationStmt);
@@ -817,6 +818,7 @@ void ast_free_stmt(Stmt *stmt) {
     case STMT_TYPE_ALIAS: ast_free_alias(stmt->type_alias); break;
     case STMT_FUNCTION_DEF: ast_free_function_def(stmt->function_def); break;
     case STMT_EXPORT: ast_free_export(stmt->export); break;
+    case STMT_DIRECTIVE: ast_free_directive(stmt->directive); break;
     case STMT_PARSE_ERROR: break;
   }
 
@@ -1247,6 +1249,10 @@ void ast_free_argument(Argument *a) {
 
 void ast_free_identifier(Identifier *id) {
   ast_free_token(id);
+}
+
+void ast_free_directive(Directive *dir) {
+  ast_free_token(dir);
 }
 
 void ast_free_token(TokenMeta *meta) {

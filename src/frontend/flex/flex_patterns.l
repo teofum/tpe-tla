@@ -135,6 +135,7 @@ id_char         [a-zA-Z0-9_-]
 "true"|"false"                { return lex_boolean_literal(); }
 
 ({alpha}|_){id_char}*         { return lex_identifier(); }
+@({alpha}|_){id_char}*        { return lex_directive(); }
 
 ^{whitespace}?\n              { return lex_ignored(); }
 \n                            { return lex_newline(); }

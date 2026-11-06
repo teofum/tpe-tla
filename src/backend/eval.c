@@ -11,12 +11,14 @@
 #include <assert.h>
 #include <libgen.h>
 #include <stdio.h>
+#include <string.h>
 
 #include <ast/ast.h>
 #include <ast/symbols.h>
+#include <backend/builtins.h>
 #include <backend/scope.h>
+#include <error/error.h>
 #include <frontend/bison/bison_parser.h>
-#include <string.h>
 #include <support/coerce.h>
 #include <support/dyn_array.h>
 #include <support/hash_map.h>
@@ -28,8 +30,6 @@
 #include <support/util.h>
 
 #include "eval.h"
-#include "backend/builtins.h"
-#include "error/error.h"
 
 typedef struct {
   Logger *logger;

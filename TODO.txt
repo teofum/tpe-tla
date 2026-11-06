@@ -69,6 +69,8 @@
   [x] Typecheck + coercion hinting
   [x] Eval coercion
 
+[ ] Import/Export symbols
+
 [/] Remove default function values
   - Unremoved default function values (it turns out we needed those)
 [x] Remove enums (I think we definitely do not need those)

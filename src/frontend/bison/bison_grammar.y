@@ -74,6 +74,7 @@ static void yyerror(YYLTYPE *location, const char *message) {
   FunctionDef *function_def;
   Parameter *parameter;
 
+  Directive *directive;
   Program *program;
 
   StmtList *statement_list;
@@ -131,6 +132,7 @@ static void yyerror(YYLTYPE *location, const char *message) {
 %destructor { ast_free_type_list($$, true); } <type_list>
 %destructor { ast_free_identifier_list($$, true); } <identifier_list>
 %destructor { ast_free_expr_list($$, true); } <expression_list>
+%destructor { ast_free_directive($$); } <directive>
 
 /*== Symbols: terminals ==============================================================================================*/
 
@@ -200,6 +202,7 @@ static void yyerror(YYLTYPE *location, const char *message) {
 %token <token>    IGNORED
 %token <token>    UNKNOWN           "<unknown lexeme>"
 %token <token>    END               "<EOF>"
+%token <directive> DIRECTIVE        "directive"
 
 // CSV
 %token <token>        CSV_END           "csv end"
@@ -211,6 +214,7 @@ static void yyerror(YYLTYPE *location, const char *message) {
 /*== Symbols: nonterminals ===========================================================================================*/
 
 %type <statement>                   statement
+%type <statement>                   statement_or_directive
 %type <declaration>                 declaration
 %type <constant>                    constant
 %type <type_alias>                  type_alias
@@ -256,6 +260,7 @@ static void yyerror(YYLTYPE *location, const char *message) {
 
 %type <program>                     program
 %type <statement_list>              statement_list
+%type <statement_list>              statement_or_directive_list
 %type <struct_field_list>           struct_field_list
 %type <struct_literal_field_list>   struct_literal_field_list
 %type <map_entry_list>              map_entry_list
@@ -306,7 +311,15 @@ static void yyerror(YYLTYPE *location, const char *message) {
 
 /*-- Program and statements ------------------------------------------------------------------------------------------*/
 
-program: statement_list NL END                                      { $$ = parse_program($1); }
+program: statement_or_directive_list NL END                         { $$ = parse_program($1); }
+  ;
+
+statement_or_directive_list: statement_or_directive                 { $$ = parse_stmt_list($1, NULL); }
+  | statement_or_directive_list NL statement_or_directive           { $$ = parse_stmt_list($3, $1); }
+  ;
+
+statement_or_directive: statement                                   { $$ = $1; }
+  | DIRECTIVE                                                       { $$ = parse_directive($1); }
   ;
 
 statement_list: statement                                           { $$ = parse_stmt_list($1, NULL); }

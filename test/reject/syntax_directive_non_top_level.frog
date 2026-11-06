@@ -1,0 +1,5 @@
+@directive // OK
+
+{
+  @directive // Error: directives only allowed in file scope
+}

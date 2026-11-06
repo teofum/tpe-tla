@@ -10,6 +10,7 @@ Stmt *parse_constant_stmt(ConstantStmt *constant);
 Stmt *parse_type_alias_stmt(TypeAliasStmt *alias);
 Stmt *parse_function_def_stmt(FunctionDef *function);
 Stmt *parse_export_stmt(ExportStmt *export);
+Stmt *parse_directive(Directive *directive);
 Stmt *parse_error_stmt();
 
 PartialDeclarationStmt *parse_declaration(Identifier *left, Type *type, Expr *right);
