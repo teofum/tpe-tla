@@ -39,8 +39,12 @@
     -- Want to clone explicitly? Just slice!
   - Verdict: it's a feature!
 [x] CSV import fucks the location tracking
-[ ] Imported symbol references blow up on eval if they reference other symbols
+[x] Imported symbol references blow up on eval if they reference other symbols
     from the foreign scope that weren't themselves imported
+  - Made transitive imports work, at least for functions
+[ ] Check transitive imports for a few cases:
+  [ ] Type in type
+  [ ] Function return type
 
 #=== General ==================================================================#
 
