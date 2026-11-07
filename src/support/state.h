@@ -21,8 +21,8 @@ typedef struct {
   Program **asts;
   const Value **values;
 
-  Scope global_scope;
-  Scope *file_scopes;
+  Scope *global_scope;
+  Scope **file_scopes;
   SymbolTable *symbols;
 } CompilerState;
 

@@ -1,64 +1,68 @@
 #include <assert.h>
 #include <stdlib.h>
 
+#include <support/mem.h>
+#include <support/state.h>
 #include <support/util.h>
 
 #include "scope.h"
 
-struct StackEntry {
-  Scope scope;
-  StackEntry *parent;
-};
-struct Stack {
-  StackEntry *current;
+struct Scope {
+  u32 id;
+  ScopeType type;
+  Scope *parent;
 };
 
 static u32 _next_scope_id = 0;
+static dyn_arena *scope_arena = NULL;
 
-Scope sc_new(ScopeType type) {
-  return (Scope){ .id = _next_scope_id++, .type = type };
+void st_init() {
+  scope_arena = mem_dyn_arena_create(MEM_SIZE_AUTO);
+  cs()->global_scope = sc_new(SC_GLOBAL);
 }
 
-Stack *st_begin() {
-  return new(Stack);
+void st_shutdown() {
+  mem_dyn_arena_destroy(scope_arena);
+  scope_arena = NULL;
 }
 
-void st_end(Stack *st) {
-  assert(st->current == NULL);
-  free(st);
+void *st_calloc(usize count, usize size) {
+  return mem_dyn_arena_calloc(scope_arena, count, size);
 }
 
-Scope st_push(Stack *st, Scope scope) {
-  StackEntry *entry = new(StackEntry);
-  *entry = (StackEntry){ .scope = scope, .parent = st->current };
-  st->current = entry;
+#define st_new(T) ((T*)(st_calloc(1, sizeof(T))))
+#define st_new_array(T, n) ((T*)(st_calloc(n, sizeof(T))))
+
+Scope *sc_new(ScopeType type) {
+  Scope *scope = st_new(Scope);
+  *scope = (Scope){ .id = _next_scope_id++, .type = type };
   return scope;
 }
 
-Scope st_pop(Stack *st) {
-  assert(st->current != NULL);
+u32 sc_id(const Scope *scope) {
+  return scope->id;
+}
 
-  StackEntry *current = st->current;
-  st->current = current->parent;
-  Scope scope = current->scope;
-  free(current);
+// Scope *st_begin() {
+//   return new(Stack);
+// }
+//
+// void st_end(Stack *st) {
+//   assert(st->current == NULL);
+//   free(st);
+// }
+
+Scope *st_push(Scope *stack, Scope *scope) {
+  scope->parent = stack;
   return scope;
 }
 
-Scope st_peek(Stack *st) {
-  return st->current->scope;
+Scope *st_pop(Scope *stack) {
+  return stack->parent;
 }
 
-StackEntry *st_current(Stack *st) {
-  return st->current;
-}
-
-StackEntry *st_next(StackEntry *st, bool variable) {
+Scope *st_next(const Scope *stack, bool variable) {
   // Cut off symbol lookup at function scope
-  if (variable && st->scope.type == SC_FUNCTION) return NULL;
-  return st->parent;
-}
-
-Scope st_scope(StackEntry *st) {
-  return st->scope;
+  if (variable && stack->type == SC_FUNCTION) return NULL;
+  return stack->parent;
 }

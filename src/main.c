@@ -1,9 +1,10 @@
-#include "backend/builtins.h"
 #include <ast/ast.h>
 #include <ast/symbols.h>
 #include <ast/dot.h>
+#include <backend/builtins.h>
 #include <backend/codegen.h>
 #include <backend/eval.h>
+#include <backend/scope.h>
 #include <backend/static_analysis.h>
 #include <error/error.h>
 #include <frontend/frontend.h>
@@ -95,6 +96,7 @@ CompilerState *init(CompilerOptions *opts) {
 
   err_init();
   fe_init();
+  st_init();
   builtins_init();
   sa_init();
   eval_init();
@@ -108,6 +110,7 @@ CompilationStatus shutdown() {
   eval_shutdown();
   sa_shutdown();
   builtins_shutdown();
+  st_shutdown();
   fe_shutdown();
   err_shutdown();
 

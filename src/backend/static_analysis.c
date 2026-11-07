@@ -24,7 +24,7 @@ typedef struct {
   Logger *sym_logger;
   Logger *tc_logger;
 
-  Stack *stack;
+  Scope *stack;
   dyn_arena *tc_arena;
 } StaticAnalyzer;
 
@@ -41,10 +41,7 @@ void sa_init() {
     cs()->options.typecheck_log_level
   );
   sa->tc_arena = mem_dyn_arena_create(MEM_SIZE_AUTO);
-
-  cs()->global_scope = sc_new(SC_GLOBAL);
-  sa->stack = st_begin();
-  st_push(sa->stack, cs()->global_scope);
+  sa->stack = cs()->global_scope;
 }
 
 void sa_shutdown() {
@@ -53,10 +50,6 @@ void sa_shutdown() {
   if (sa->sym_logger) logger_free(sa->sym_logger);
   if (sa->tc_logger) logger_free(sa->tc_logger);
   if (sa->tc_arena) mem_dyn_arena_destroy(sa->tc_arena);
-  if (sa->stack) {
-    st_pop(sa->stack);
-    st_end(sa->stack);
-  }
   free(sa);
 
   sa = NULL;
@@ -78,7 +71,7 @@ static void _static_tables_literal(SymbolTable *s, LiteralExpr *literal);
 static void _static_tables_variable(SymbolTable *s, VariableExpr *var);
 
 static SymbolKey _sym_key(char *name) {
-  return (SymbolKey){ .name = name, .scope = st_peek(sa->stack).id };
+  return (SymbolKey){ .name = name, .scope = sc_id(sa->stack) };
 }
 
 static void _static_tables_add_type(SymbolTable *s, const TypeAliasStmt *type_alias) {
@@ -250,10 +243,10 @@ static void _static_tables_expr(SymbolTable *s, Expr *expr) {
 }
 
 static void _static_tables_import(SymbolTable *s, const ImportDirective *import) {
-  Scope foreign_scope = cs()->file_scopes[import->file_idx];
+  Scope *foreign_scope = cs()->file_scopes[import->file_idx];
 
   for (u32 i = 0; i < import->len; i++) {
-    SymbolKey key = { .name = import->ids[i]->lexeme, .scope = foreign_scope.id };
+    SymbolKey key = { .name = import->ids[i]->lexeme, .scope = sc_id(foreign_scope) };
     Symbol *sym = map_get(s, &key);
     if (!sym || !sym->export) {
       assert(false); // TODO symbol is not exported error
@@ -292,15 +285,15 @@ static void _static_tables_stmt(SymbolTable *s, Stmt *stmt) {
 }
 
 static void _build_static_tables_ast(SymbolTable *s, Program *ast) {
-  Scope file_scope = sc_new(SC_FILE);
+  Scope *file_scope = sc_new(SC_FILE);
   cs()->file_scopes[cs()->current_file] = file_scope;
-  ast->scope = st_push(sa->stack, file_scope);
-  logger_log(sa->sym_logger, LOG_DEBUG, ">>> Scope %u", ast->scope);
+  ast->scope = sa->stack = st_push(sa->stack, file_scope);
+  logger_log(sa->sym_logger, LOG_DEBUG, ">>> Scope %u", sc_id(ast->scope));
   for (u32 i = 0; i < ast->len; i++) {
     _static_tables_stmt(s, ast->statements[i]);
   }
-  logger_log(sa->sym_logger, LOG_DEBUG, "<<< Scope %u", ast->scope);
-  st_pop(sa->stack);
+  logger_log(sa->sym_logger, LOG_DEBUG, "<<< Scope %u", sc_id(ast->scope));
+  sa->stack = st_pop(sa->stack);
 }
 
 CompilationStatus sa_build_static_tables(i32 file_idx) {
@@ -310,7 +303,7 @@ CompilationStatus sa_build_static_tables(i32 file_idx) {
   assert(ast != NULL); // If we got to this point without an AST we have a bug
 
   _build_static_tables_ast(cs()->symbols, ast);
-  assert(st_peek(sa->stack).type == SC_GLOBAL);
+  assert(sa->stack == cs()->global_scope);
 
   cs()->current_file = -1;
   return STATUS_SUCCEEDED;
@@ -521,18 +514,18 @@ static const Identifier *_composable_id() {
 
 static Type *tc_resolve_named_type(SymbolTable *s, const NamedType *named) {
   const TypeAliasStmt *alias = NULL;
-  StackEntry *st = st_current(sa->stack);
-  while (!alias && st) {
-    SymbolKey key = { .name = named->name->lexeme, .scope = st_scope(st).id };
+  Scope *sc = sa->stack;
+  while (!alias && sc) {
+    SymbolKey key = { .name = named->name->lexeme, .scope = sc_id(sc) };
     const Symbol *sym = map_get(s, &key);
     if (sym && sym->type == SYM_TYPE) alias = sym->type_alias;
-    st = st_next(st, false);
+    sc = st_next(sc, false);
   }
 
   if (!alias) {
     logger_log(sa->tc_logger, LOG_ERROR,
       "Scope %u: Type %s is undefined",
-      st_peek(sa->stack).id, named->name->lexeme
+      sc_id(sa->stack), named->name->lexeme
     );
 
     UndefError *error = new(UndefError);
@@ -549,18 +542,18 @@ static Type *tc_resolve_named_type(SymbolTable *s, const NamedType *named) {
 
 static const FunctionDef *tc_resolve_function(SymbolTable *s, const Identifier *name) {
   const FunctionDef *function = NULL;
-  StackEntry *st = st_current(sa->stack);
-  while (!function && st) {
-    SymbolKey key = { .name = name->lexeme, .scope = st_scope(st).id };
+  Scope *sc = sa->stack;
+  while (!function && sc) {
+    SymbolKey key = { .name = name->lexeme, .scope = sc_id(sc) };
     const Symbol *sym = map_get(s, &key);
     if (sym && sym->type == SYM_FUNCTION) function = sym->function;
-    st = st_next(st, false);
+    sc = st_next(sc, false);
   }
 
   if (!function) {
     logger_log(sa->tc_logger, LOG_ERROR,
       "Scope %u: Function %s is undefined",
-      st_peek(sa->stack).id, name->lexeme
+      sc_id(sa->stack), name->lexeme
     );
 
     UndefError *error = new(UndefError);
@@ -577,18 +570,18 @@ static const FunctionDef *tc_resolve_function(SymbolTable *s, const Identifier *
 
 static const VariableSymbol *tc_resolve_symbol(SymbolTable *s, const Identifier *name) {
   const VariableSymbol *var = NULL;
-  StackEntry *st = st_current(sa->stack);
-  while (!var && st) {
-    SymbolKey key = { .name = name->lexeme, .scope = st_scope(st).id };
+  Scope *sc = sa->stack;
+  while (!var && sc) {
+    SymbolKey key = { .name = name->lexeme, .scope = sc_id(sc) };
     const Symbol *sym = map_get(s, &key);
     if (sym && sym->type == SYM_VAR) var = sym->var;
-    st = st_next(st, true);
+    sc = st_next(sc, true);
   }
 
   if (!var) {
     logger_log(sa->tc_logger, LOG_ERROR,
       "Scope %u: Variable %s is undefined",
-      st_peek(sa->stack).id, name->lexeme
+      sc_id(sa->stack), name->lexeme
     );
 
     UndefError *error = new(UndefError);
@@ -605,12 +598,12 @@ static const VariableSymbol *tc_resolve_symbol(SymbolTable *s, const Identifier 
 
 static const VariableSymbol *tc_resolve_composable(SymbolTable *s) {
   const VariableSymbol *var = NULL;
-  StackEntry *st = st_current(sa->stack);
-  while (!var && st) {
-    SymbolKey key = { .name = _composable.lexeme, .scope = st_scope(st).id };
+  Scope *sc = sa->stack;
+  while (!var && sc) {
+    SymbolKey key = { .name = _composable.lexeme, .scope = sc_id(sc) };
     const Symbol *sym = map_get(s, &key);
     if (sym && sym->type == SYM_VAR) var = sym->var;
-    st = st_next(st, true);
+    sc = st_next(sc, true);
   }
 
   return var;
@@ -1549,7 +1542,8 @@ static Type *_for_expr_type(SymbolTable *s, const ForExpr *expr) {
       ? iterable_type->list->item_type
       : iterable_type->vec->item_type;
 
-  st_push(sa->stack, expr->body->block->scope);
+  Scope *enclosing = sa->stack;
+  sa->stack = expr->body->block->scope;
   VariableSymbol *iterator = _symbol_of(iterator_type, true);
   tc_define_symbol(s, expr->var_id, iterator);
   if (expr->idx_id) {
@@ -1557,7 +1551,7 @@ static Type *_for_expr_type(SymbolTable *s, const ForExpr *expr) {
     tc_define_symbol(s, expr->idx_id, idx_iterator);
   }
   Type *body_type = tc_check_block(s, expr->body->block);
-  st_pop(sa->stack);
+  sa->stack = enclosing;
 
   switch (iterable_type->type) {
     case T_LIST:
@@ -1910,9 +1904,10 @@ static Type *tc_check_block(SymbolTable *s, const BlockExpr *expr) {
 }
 
 static Type *_block_type(SymbolTable *s, const BlockExpr *expr) {
-  st_push(sa->stack, expr->scope);
+  Scope *enclosing = sa->stack;
+  sa->stack = expr->scope;
   Type *type = tc_check_block(s, expr);
-  st_pop(sa->stack);
+  sa->stack = enclosing;
   return type;
 }
 
@@ -2066,7 +2061,8 @@ static void _check_constant(SymbolTable *s, const ConstantStmt *constant) {
 }
 
 static void _check_function_def(SymbolTable *s, const FunctionDef *def) {
-  st_push(sa->stack, def->body->scope);
+  Scope *enclosing = sa->stack;
+  sa->stack = def->body->scope;
 
   for (u32 i = 0; i < def->params_len; i++) {
     if (def->params[i]->default_value) {
@@ -2099,7 +2095,7 @@ static void _check_function_def(SymbolTable *s, const FunctionDef *def) {
     );
   }
 
-  st_pop(sa->stack);
+  sa->stack = enclosing;
 }
 
 static void _check_export(SymbolTable *s, const ExportDirective *export) {
@@ -2124,7 +2120,8 @@ static Type *tc_check_stmt(SymbolTable *s, const Stmt *stmt) {
 }
 
 static Type *tc_check_ast(SymbolTable *s, const Program *ast) {
-  st_push(sa->stack, ast->scope);
+  Scope *global = sa->stack;
+  sa->stack = ast->scope;
 
   Type **types = tc_new_array(Type *, ast->len);
   u32 type_count = 0;
@@ -2140,7 +2137,7 @@ static Type *tc_check_ast(SymbolTable *s, const Program *ast) {
     }
   }
 
-  st_pop(sa->stack);
+  sa->stack = global;
 
   if (type_count == 0) {
     return _builtin(T_VOID);
@@ -2164,7 +2161,7 @@ CompilationStatus sa_build_tables_and_typecheck(i32 file_idx) {
 
   mem_dyn_arena_free_all(sa->tc_arena);
   tc_check_ast(sym, ast);
-  assert(st_peek(sa->stack).type == SC_GLOBAL);
+  assert(sa->stack == cs()->global_scope);
 
   cs()->current_file = -1;
   return STATUS_SUCCEEDED;

@@ -364,7 +364,7 @@ struct ForExpr {
 
 struct BlockExpr {
   ASTNodeMetadata meta;
-  Scope scope;
+  Scope *scope;
   u32 len;
   Stmt **statements;
 };
@@ -570,7 +570,7 @@ struct Parameter {
 
 struct Program {
   ASTNodeMetadata meta;
-  Scope scope;
+  Scope *scope;
   u32 len;
   Stmt **statements;
 };

@@ -11,6 +11,7 @@
 #include <support/util.h>
 
 #include "builtins.h"
+#include "backend/scope.h"
 #include "support/str.h"
 #include "support/types.h"
 
@@ -746,7 +747,7 @@ static Type *_union_of(u32 n, ...) {
 
 
 static SymbolKey _sym_key(const char *name) {
-  return (SymbolKey){ .name = (char *)name, .scope = cs()->global_scope.id };
+  return (SymbolKey){ .name = (char *)name, .scope = sc_id(cs()->global_scope) };
 }
 
 static Identifier *static_id(const char *name) {

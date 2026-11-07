@@ -22,7 +22,7 @@ CompilerState *cs_init(CompilerOptions *options) {
     .current_file = -1,
     .asts = new_array(Program *, options->input_file_count),
     .values = new_array(const Value *, options->input_file_count),
-    .file_scopes = new_array(Scope, options->input_file_count),
+    .file_scopes = new_array(Scope *, options->input_file_count),
     .symbols = new(SymbolTable),
   };
   logger_set_flags(_cs->logger, LOGGER_LOG_NAME, false);

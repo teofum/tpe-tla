@@ -10,25 +10,20 @@ typedef enum {
   SC_FUNCTION,
 } ScopeType;
 
-typedef struct {
-  u32 id;
-  ScopeType type;
-} Scope;
+typedef struct Scope Scope;
 
-typedef struct StackEntry StackEntry;
-typedef struct Stack Stack;
+Scope *sc_new(ScopeType type);
+u32 sc_id(const Scope *scope);
 
-Scope sc_new(ScopeType type);
+void st_init();
+void st_shutdown();
 
-Stack *st_begin();
-void st_end(Stack *st);
+// Scope *st_begin();
+// void st_end(Scope *st);
 
-Scope st_push(Stack *st, Scope scope);
-Scope st_pop(Stack *st);
-Scope st_peek(Stack *st);
+Scope *st_push(Scope *stack, Scope *scope);
+Scope *st_pop(Scope *stack);
 
-StackEntry *st_current(Stack *st);
-StackEntry *st_next(StackEntry *st, bool variable);
-Scope st_scope(StackEntry *st);
+Scope *st_next(const Scope *stack, bool variable);
 
 #endif

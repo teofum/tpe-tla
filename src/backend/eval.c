@@ -34,7 +34,7 @@
 typedef struct {
   Logger *logger;
 
-  Stack *stack;
+  Scope *stack;
   dyn_arena *arena;
 } Evaluator;
 
@@ -46,9 +46,7 @@ void eval_init() {
   e = new(Evaluator);
   e->logger = logger_create("Eval", stderr, LOG_DEBUG);
   e->arena = mem_dyn_arena_create(MEM_SIZE_AUTO);
-
-  e->stack = st_begin();
-  st_push(e->stack, cs()->global_scope);
+  e->stack = cs()->global_scope;
 }
 
 void eval_shutdown() {
@@ -56,10 +54,6 @@ void eval_shutdown() {
 
   if (e->logger) logger_free(e->logger);
   if (e->arena) mem_dyn_arena_destroy(e->arena);
-  if (e->stack) {
-    st_pop(e->stack);
-    st_end(e->stack);
-  }
   free(e);
 
   e = NULL;
@@ -303,12 +297,12 @@ static const FunctionDef *_resolve_function(
   const Identifier *name
 ) {
   const FunctionDef *function = NULL;
-  StackEntry *st = st_current(e->stack);
-  while (!function && st) {
-    SymbolKey key = { .name = name->lexeme, .scope = st_scope(st).id };
+  Scope *sc = e->stack;
+  while (!function && sc) {
+    SymbolKey key = { .name = name->lexeme, .scope = sc_id(sc) };
     const Symbol *sym = map_get(s, &key);
     if (sym && sym->type == SYM_FUNCTION) function = sym->function;
-    st = st_next(st, false);
+    sc = st_next(sc, false);
   }
 
   assert(function != NULL);
@@ -318,12 +312,12 @@ static const FunctionDef *_resolve_function(
 
 static VariableSymbol *_resolve_symbol(const SymbolTable *s, const Identifier *name) {
   VariableSymbol *var = NULL;
-  StackEntry *st = st_current(e->stack);
-  while (!var && st) {
-    SymbolKey key = { .name = name->lexeme, .scope = st_scope(st).id };
+  Scope *sc = e->stack;
+  while (!var && sc) {
+    SymbolKey key = { .name = name->lexeme, .scope = sc_id(sc) };
     const Symbol *sym = map_get(s, &key);
     if (sym && sym->type == SYM_VAR) var = (VariableSymbol *)sym->var;
-    st = st_next(st, true);
+    sc = st_next(sc, false);
   }
 
   assert(var != NULL); // Undefined variable
@@ -827,9 +821,10 @@ static const Value *_block(const SymbolTable *s, const BlockExpr *expr) {
 }
 
 static const Value *eval_block(const SymbolTable *s, const BlockExpr *expr) {
-  st_push(e->stack, expr->scope);
+  Scope *enclosing = e->stack;
+  e->stack = expr->scope;
   const Value *value = _block(s, expr);
-  st_pop(e->stack);
+  e->stack = enclosing;
   return value;
 }
 
@@ -914,7 +909,8 @@ static const Value *eval_if(const SymbolTable *s, const IfExpr *expr) {
 static const Value *eval_for(const SymbolTable *s, const ForExpr *expr) {
   const Value *iterable_v = eval_expr(s, expr->iterable);
 
-  st_push(e->stack, expr->body->block->scope);
+  Scope *enclosing = e->stack;
+  e->stack = expr->body->block->scope;
 
   const Value *value = NULL;
   switch (iterable_v->type) {
@@ -950,7 +946,7 @@ static const Value *eval_for(const SymbolTable *s, const ForExpr *expr) {
     default: assert(false);
   }
 
-  st_pop(e->stack);
+  e->stack = enclosing;
   return value;
 }
 
@@ -973,7 +969,8 @@ static const Value *eval_call(const SymbolTable *s, const FunctionCallExpr *call
     return def->builtin(arg_values, composable_v, def, call);
   }
 
-  st_push(e->stack, def->body->scope);
+  Scope *enclosing = e->stack;
+  e->stack = def->body->scope;
 
   for (u32 i = 0; i < def->params_len; i++) {
     // Skip evaluating the default value if it's overriden by a positional argument
@@ -991,7 +988,7 @@ static const Value *eval_call(const SymbolTable *s, const FunctionCallExpr *call
   }
   const Value *value = _block(s, def->body);
 
-  st_pop(e->stack);
+  e->stack = enclosing;
   return value;
 }
 
@@ -1215,7 +1212,8 @@ static const Value *eval_stmt(const SymbolTable *s, const Stmt *stmt) {
 }
 
 static const Value *eval_program(const SymbolTable *s, const Program *program) {
-  st_push(e->stack, program->scope);
+  Scope *global = e->stack;
+  e->stack = program->scope;
 
   const Value *value = NULL;
   if (program->len == 1) {
@@ -1241,7 +1239,7 @@ static const Value *eval_program(const SymbolTable *s, const Program *program) {
     if (item_count > 1) value->list->len = item_count;
   }
 
-  st_pop(e->stack);
+  e->stack = global;
   return value;
 }
 
@@ -1256,7 +1254,7 @@ CompilationStatus eval_evaluate(i32 file_idx) {
 
   builtins_set_eval_arena(e->arena);
   cs()->values[file_idx] = eval_program(sym, ast);
-  assert(st_peek(e->stack).type == SC_GLOBAL);
+  assert(e->stack == cs()->global_scope);
 
   cs()->current_file = -1;
   return STATUS_SUCCEEDED;
