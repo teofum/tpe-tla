@@ -21,25 +21,28 @@ CompilerState *cs_init(CompilerOptions *options) {
     .status = STATUS_NOT_STARTED,
     .current_file = -1,
     .asts = new_array(Program *, options->input_file_count),
-    .symbol_data = new_array(SymbolTable *, options->input_file_count),
     .values = new_array(const Value *, options->input_file_count),
     .file_scopes = new_array(Scope, options->input_file_count),
+    .symbols = new(SymbolTable),
   };
   logger_set_flags(_cs->logger, LOGGER_LOG_NAME, false);
   for (u32 i = 0; i < _cs->options.input_file_count; i++) {
     _cs->file_dependencies[i] = new_array(bool, options->input_file_count);
   }
+
+  map_init(_cs->symbols, sk_hash, sk_compare);
+  map_manage_keys(_cs->symbols, sk_clone, sk_free);
+  map_manage_values(_cs->symbols, (void(*)(Symbol *))free);
   return _cs;
 }
 
 CompilationStatus cs_shutdown() {
   for (u32 i = 0; i < _cs->options.input_file_count; i++) {
     ast_free_program(_cs->asts[i]);
-    sa_free_symbols(_cs->symbol_data[i]);
     free(_cs->file_dependencies[i]);
   }
   free(_cs->asts);
-  free(_cs->symbol_data);
+  sa_free_symbols(_cs->symbols);
   free(_cs->values);
   free(_cs->file_dependencies);
   free(_cs->file_order);

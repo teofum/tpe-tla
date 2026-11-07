@@ -777,6 +777,8 @@ static const Value *_to_list(const Value *val) {
 
 /* -- Module init/shutdown -------------------------------------------------- */
 
+static void _register_fns(SymbolTable *s);
+
 void builtins_init() {
   builtins_arena = mem_dyn_arena_create(MEM_SIZE_AUTO);
 
@@ -807,6 +809,8 @@ void builtins_init() {
   for (HTMLElementName el = 0; el < HTML_ELEM_COUNT; el++) {
     map_insert(&_elements_by_name, (char *)_elements[el].tag, &_elements[el]);
   }
+
+  _register_fns(cs()->symbols);
 }
 
 void builtins_shutdown() {
@@ -968,15 +972,15 @@ static void _register_element_fn(
   assert(inserted );
 }
 
-/* -- Builtins: API --------------------------------------------------------- */
-
-void builtins_register_fns(SymbolTable *s) {
+static void _register_fns(SymbolTable *s) {
   _register_rand_fn(s);
 
   for (HTMLElementName el = 0; el < HTML_ELEM_COUNT; el++) {
     _register_element_fn(s, el);
   }
 }
+
+/* -- Builtins: API --------------------------------------------------------- */
 
 void builtins_set_eval_arena(dyn_arena *a) {
   eval_arena = a;

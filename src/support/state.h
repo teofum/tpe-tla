@@ -19,11 +19,11 @@ typedef struct {
   i32 current_file;
 
   Program **asts;
-  SymbolTable **symbol_data;
   const Value **values;
 
   Scope global_scope;
   Scope *file_scopes;
+  SymbolTable *symbols;
 } CompilerState;
 
 CompilerState *cs_init(CompilerOptions *options);

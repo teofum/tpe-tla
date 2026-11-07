@@ -250,12 +250,11 @@ static void _static_tables_expr(SymbolTable *s, Expr *expr) {
 }
 
 static void _static_tables_import(SymbolTable *s, const ImportDirective *import) {
-  SymbolTable *foreign_st = cs()->symbol_data[import->file_idx];
   Scope foreign_scope = cs()->file_scopes[import->file_idx];
 
   for (u32 i = 0; i < import->len; i++) {
     SymbolKey key = { .name = import->ids[i]->lexeme, .scope = foreign_scope.id };
-    Symbol *sym = map_get(foreign_st, &key);
+    Symbol *sym = map_get(s, &key);
     if (!sym || !sym->export) {
       assert(false); // TODO symbol is not exported error
     }
@@ -310,14 +309,7 @@ CompilationStatus sa_build_static_tables(i32 file_idx) {
   Program *ast = cs()->asts[file_idx];
   assert(ast != NULL); // If we got to this point without an AST we have a bug
 
-  SymbolTable *sym = new(SymbolTable);
-  map_init(sym, sk_hash, sk_compare);
-  map_manage_keys(sym, sk_clone, sk_free);
-  map_manage_values(sym, (void(*)(Symbol *))free);
-  cs()->symbol_data[file_idx] = sym;
-  builtins_register_fns(sym);
-
-  _build_static_tables_ast(sym, ast);
+  _build_static_tables_ast(cs()->symbols, ast);
   assert(st_peek(sa->stack).type == SC_GLOBAL);
 
   cs()->current_file = -1;
@@ -2167,7 +2159,7 @@ CompilationStatus sa_build_tables_and_typecheck(i32 file_idx) {
   Program *ast = cs()->asts[file_idx];
   assert(ast != NULL); // If we got to this point without an AST we have a bug
 
-  SymbolTable *sym = cs()->symbol_data[file_idx];
+  SymbolTable *sym = cs()->symbols;
   assert(sym != NULL); // If we got to this point without a symbol table we have a bug
 
   mem_dyn_arena_free_all(sa->tc_arena);

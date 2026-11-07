@@ -1251,7 +1251,7 @@ CompilationStatus eval_evaluate(i32 file_idx) {
   Program *ast = cs()->asts[file_idx];
   assert(ast != NULL); // If we got to this point without an AST we have a bug
 
-  SymbolTable *sym = cs()->symbol_data[file_idx];
+  SymbolTable *sym = cs()->symbols;
   assert(sym != NULL); // If we got to this point without a symbol table we have a bug
 
   builtins_set_eval_arena(e->arena);
