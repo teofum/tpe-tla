@@ -1,13 +1,16 @@
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include <support/types.h>
 #include <support/util.h>
+#include <support/state.h>
 #include <support/str.h>
 
 #include "ast.h"
 #include "error/error.h"
 #include "support/hash_map.h"
+#include "support/options.h"
 
 const char *import_type_str[] = {
   [IMPORT_URL] = "url",
@@ -103,8 +106,45 @@ AST_STMT_FUNC(ast_stmt_expr, Expr, STMT_EXPR, expr)
 AST_STMT_FUNC(ast_stmt_alias, TypeAliasStmt, STMT_TYPE_ALIAS, type_alias)
 AST_STMT_FUNC(ast_stmt_function_def, FunctionDef, STMT_FUNCTION_DEF, function_def)
 AST_STMT_FUNC(ast_stmt_constant, ConstantStmt, STMT_CONSTANT, constant)
-AST_STMT_FUNC(ast_stmt_export, ExportStmt, STMT_EXPORT, export)
-AST_STMT_FUNC(ast_stmt_directive, Directive, STMT_DIRECTIVE, directive)
+
+Stmt *ast_stmt_export(IdentifierList *ids) {
+  Stmt *stmt = new(Stmt);
+  *stmt = (Stmt) {
+    .meta = _ast_get_metadata(),
+    .type = STMT_EXPORT,
+    .export = new(ExportDirective),
+  };
+  stmt->export->meta = _ast_get_metadata();
+  ast_consume_identifier_list(ids, &stmt->export->ids, &stmt->export->len);
+  return stmt;
+}
+
+Stmt *ast_stmt_import(IdentifierList *ids, StringLiteral *from) {
+  Stmt *stmt = new(Stmt);
+  *stmt = (Stmt) {
+    .meta = _ast_get_metadata(),
+    .type = STMT_IMPORT,
+    .import = new(ImportDirective),
+  };
+  stmt->import->meta = _ast_get_metadata();
+  ast_consume_identifier_list(ids, &stmt->import->ids, &stmt->import->len);
+
+  bool found = false;
+  CompilerOptions *o = &cs()->options;
+  for (u32 i = 0; i < o->input_file_count && !found; i++) {
+    if (strncmp(o->input_filenames[i], from->value.ptr, from->value.len) == 0) {
+      stmt->import->file_idx = i;
+      cs()->file_dependencies[cs()->current_file][i] = true;
+      found = true;
+    }
+  }
+  if (!found) {
+    assert(false); // TODO error
+  }
+
+  ast_free_string_literal(from);
+  return stmt;
+}
 
 Stmt *ast_stmt_decl(PartialDeclarationStmt *pdecl) {
   DeclarationStmt *decl = new(DeclarationStmt);
@@ -167,14 +207,6 @@ TypeAliasStmt *ast_type_alias(Identifier *id, Type *type) {
   };
 
   return alias;
-}
-
-ExportStmt *ast_export(IdentifierList *identifiers) {
-  ExportStmt *export = new(ExportStmt);
-  export->meta = _ast_get_metadata();
-  ast_consume_identifier_list(identifiers, &export->ids, &export->len);
-
-  return export;
 }
 
 // -----------------------------------------------------------------------------
@@ -817,8 +849,8 @@ void ast_free_stmt(Stmt *stmt) {
     case STMT_CONSTANT: ast_free_constant(stmt->constant); break;
     case STMT_TYPE_ALIAS: ast_free_alias(stmt->type_alias); break;
     case STMT_FUNCTION_DEF: ast_free_function_def(stmt->function_def); break;
-    case STMT_EXPORT: ast_free_export(stmt->export); break;
-    case STMT_DIRECTIVE: ast_free_directive(stmt->directive); break;
+    case STMT_EXPORT: ast_free_export_directive(stmt->export); break;
+    case STMT_IMPORT: ast_free_import_directive(stmt->import); break;
     case STMT_PARSE_ERROR: break;
   }
 
@@ -864,7 +896,7 @@ void ast_free_alias(TypeAliasStmt *alias) {
   free(alias);
 }
 
-void ast_free_export(ExportStmt *e) {
+void ast_free_export_directive(ExportDirective *e) {
   if (!e) return;
 
   for (u32 i = 0; i < e->len; i++) {
@@ -872,6 +904,16 @@ void ast_free_export(ExportStmt *e) {
   }
   free(e->ids);
   free(e);
+}
+
+void ast_free_import_directive(ImportDirective *im) {
+  if (!im) return;
+
+  for (u32 i = 0; i < im->len; i++) {
+    ast_free_identifier(im->ids[i]);
+  }
+  free(im->ids);
+  free(im);
 }
 
 void ast_free_expr(Expr *expr) {
@@ -1249,10 +1291,6 @@ void ast_free_argument(Argument *a) {
 
 void ast_free_identifier(Identifier *id) {
   ast_free_token(id);
-}
-
-void ast_free_directive(Directive *dir) {
-  ast_free_token(dir);
 }
 
 void ast_free_token(TokenMeta *meta) {

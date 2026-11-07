@@ -4,7 +4,7 @@
 #include <ast/ast.h>
 #include <support/state.h>
 
-void builtins_init(CompilerState *cs);
+void builtins_init();
 void builtins_shutdown();
 
 void builtins_register_fns(Symbols *s);

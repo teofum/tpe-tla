@@ -1,5 +1,5 @@
-@directive // OK
+@export A // OK
 
 {
-  @directive // Error: directives only allowed in file scope
+  @export A // Error: directives only allowed in file scope
 }

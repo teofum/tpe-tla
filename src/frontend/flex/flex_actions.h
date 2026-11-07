@@ -13,7 +13,6 @@ CompilationStatus lex_string_literal();
 CompilationStatus lex_boolean_literal();
 
 CompilationStatus lex_identifier();
-CompilationStatus lex_directive();
 
 CompilationStatus lex_begin_multiline_comment(FlexContext ctx);
 CompilationStatus lex_end_multiline_comment();

@@ -26,7 +26,7 @@ typedef enum {
   STMT_TYPE_ALIAS,
   STMT_FUNCTION_DEF,
   STMT_EXPORT,
-  STMT_DIRECTIVE,
+  STMT_IMPORT,
   STMT_PARSE_ERROR, // Shouldn't exist in any valid AST; only used for debug output
 } StmtType;
 
@@ -133,14 +133,14 @@ typedef struct {
 } ASTNodeMetadata;
 
 typedef TokenMeta Identifier;
-typedef TokenMeta Directive;
 
 typedef struct Stmt Stmt;
 typedef struct DeclarationStmt DeclarationStmt;
 typedef struct ConstantStmt ConstantStmt;
 typedef struct PartialDeclarationStmt PartialDeclarationStmt;
 typedef struct TypeAliasStmt TypeAliasStmt;
-typedef struct ExportStmt ExportStmt;
+typedef struct ExportDirective ExportDirective;
+typedef struct ImportDirective ImportDirective;
 
 typedef struct Expr Expr;
 typedef struct LiteralExpr LiteralExpr;
@@ -230,8 +230,8 @@ struct Stmt {
     ConstantStmt *constant;
     TypeAliasStmt *type_alias;
     FunctionDef *function_def;
-    ExportStmt *export;
-    Directive *directive;
+    ExportDirective *export;
+    ImportDirective *import;
   };
 };
 
@@ -263,8 +263,15 @@ struct TypeAliasStmt {
   Type *type;
 };
 
-struct ExportStmt {
+struct ExportDirective {
   ASTNodeMetadata meta;
+  u32 len;
+  Identifier **ids;
+};
+
+struct ImportDirective {
+  ASTNodeMetadata meta;
+  u32 file_idx;
   u32 len;
   Identifier **ids;
 };
@@ -641,14 +648,14 @@ Stmt *ast_stmt_decl(PartialDeclarationStmt *decl);
 Stmt *ast_stmt_constant(ConstantStmt *constant);
 Stmt *ast_stmt_alias(TypeAliasStmt *alias);
 Stmt *ast_stmt_function_def(FunctionDef *function);
-Stmt *ast_stmt_export(ExportStmt *export);
-Stmt *ast_stmt_directive(Directive *directive);
+Stmt *ast_stmt_export(IdentifierList *ids);
+Stmt *ast_stmt_import(IdentifierList *ids, StringLiteral *from);
 Stmt *ast_stmt_error();
 
 PartialDeclarationStmt *ast_declaration(IdentifierList *ids, Type *type, Expr *expr);
 ConstantStmt *ast_constant(Identifier *id, Type *type, Expr *expr);
 TypeAliasStmt *ast_type_alias(Identifier *id, Type *type);
-ExportStmt *ast_export(IdentifierList *ids);
+ExportDirective *ast_export(IdentifierList *ids);
 
 Expr *ast_expr_literal(LiteralExpr *literal);
 Expr *ast_expr_variable(VariableExpr *var);
@@ -731,7 +738,8 @@ void ast_free_decl(DeclarationStmt *decl);
 void ast_free_partial_decl(PartialDeclarationStmt *decl);
 void ast_free_constant(ConstantStmt *constant);
 void ast_free_alias(TypeAliasStmt *alias);
-void ast_free_export(ExportStmt *export);
+void ast_free_export_directive(ExportDirective *export);
+void ast_free_import_directive(ImportDirective *import);
 
 void ast_free_expr(Expr *expr);
 void ast_free_literal(LiteralExpr *literal);
@@ -779,7 +787,6 @@ void ast_free_parameter(Parameter *p);
 void ast_free_argument(Argument *a);
 
 void ast_free_identifier(Identifier *id);
-void ast_free_directive(Directive *dir);
 void ast_free_token(TokenMeta *meta);
 void ast_free_program(Program *program);
 

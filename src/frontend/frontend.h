@@ -43,10 +43,8 @@ typedef struct {
   Location stored_loc;
 } Frontend;
 
-void fe_init(CompilerState *compiler_state);
+void fe_init();
 void fe_shutdown();
-
-CompilerState *fe_get_state();
 
 Token *fe_create_token(TokenLabel label);
 void fe_free_token(Token *token);

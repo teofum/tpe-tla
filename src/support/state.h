@@ -10,15 +10,26 @@
 
 typedef struct {
   CompilerOptions options;
+  Logger *logger;
+
+  bool **file_dependencies;
+  u32 *file_order;
+
   CompilationStatus status;
+  i32 current_file;
+
   Program **asts;
   Symbols **symbol_data;
   const Value **values;
-  Logger *logger;
-  i32 current_file;
+
   Scope global_scope;
 } CompilerState;
 
-const char *state_current_filepath(CompilerState *cs);
+CompilerState *cs_init(CompilerOptions *options);
+CompilationStatus cs_shutdown();
+
+CompilerState *cs();
+
+const char *cs_current_filepath();
 
 #endif

@@ -1,0 +1,5 @@
+foo is function() -> int {
+  4
+}
+
+@export foo

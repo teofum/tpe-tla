@@ -8,7 +8,7 @@
 
 /* -------------------------------------------------------------------------- */
 
-void eval_init(CompilerState *cs);
+void eval_init();
 void eval_shutdown();
 
 CompilationStatus eval_evaluate(i32 file_idx);

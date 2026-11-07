@@ -38,20 +38,17 @@ typedef struct {
   dyn_arena *arena;
 } Evaluator;
 
-static CompilerState *cs = NULL;
 static Evaluator *e = NULL;
 
 /* -- Module init/shutdown -------------------------------------------------- */
 
-void eval_init(CompilerState *compiler_state) {
-  cs = compiler_state;
-
+void eval_init() {
   e = new(Evaluator);
   e->logger = logger_create("Eval", stderr, LOG_DEBUG);
   e->arena = mem_dyn_arena_create(MEM_SIZE_AUTO);
 
   e->stack = st_begin();
-  st_push(e->stack, cs->global_scope);
+  st_push(e->stack, cs()->global_scope);
 }
 
 void eval_shutdown() {
@@ -66,7 +63,6 @@ void eval_shutdown() {
   free(e);
 
   e = NULL;
-  cs = NULL;
 }
 
 /* -- Evaluation: utils ----------------------------------------------------- */
@@ -1003,7 +999,7 @@ static const Value *eval_compose(const Symbols *s, const Expr *expr) {
 
 static const Value *eval_env(const Symbols *s, const EnvExpr *expr) {
   char *name = str_to_cstring(expr->env_name->value);
-  char *value = map_get(cs->options.definitions, name);
+  char *value = map_get(cs()->options.definitions, name);
 
   if (value) {
     free(name);
@@ -1103,12 +1099,12 @@ static const Value *_csv_row(
 static const Value *eval_import(const Symbols *s, const ImportExpr *i) {
   switch (i->type) {
     case IMPORT_URL: {
-      const char *base = cs->options.base_path;
+      const char *base = cs()->options.base_path;
       const char *rel_path = i->path;
       for (; *base == *rel_path; rel_path++) base++;
 
       str *string = eval_new(str);
-      *string = str_format_a(eval_malloc, "%s%s", cs->options.base_url, rel_path);
+      *string = str_format_a(eval_malloc, "%s%s", cs()->options.base_url, rel_path);
       return _str(string);
     }
     case IMPORT_RAW: {
@@ -1211,7 +1207,7 @@ static const Value *eval_stmt(const Symbols *s, const Stmt *stmt) {
     case STMT_TYPE_ALIAS: return NULL;
     case STMT_EXPORT: return NULL;
     case STMT_FUNCTION_DEF: return NULL;
-    case STMT_DIRECTIVE: return NULL;
+    case STMT_IMPORT: return NULL;
     case STMT_PARSE_ERROR: assert(false); // Unreachable
   }
 }
@@ -1248,18 +1244,18 @@ static const Value *eval_program(const Symbols *s, const Program *program) {
 }
 
 CompilationStatus eval_evaluate(i32 file_idx) {
-  cs->current_file = file_idx;
+  cs()->current_file = file_idx;
 
-  Program *ast = cs->asts[file_idx];
+  Program *ast = cs()->asts[file_idx];
   assert(ast != NULL); // If we got to this point without an AST we have a bug
 
-  Symbols *sym = cs->symbol_data[file_idx];
+  Symbols *sym = cs()->symbol_data[file_idx];
   assert(sym != NULL); // If we got to this point without a symbol table we have a bug
 
   builtins_set_eval_arena(e->arena);
-  cs->values[file_idx] = eval_program(sym, ast);
+  cs()->values[file_idx] = eval_program(sym, ast);
   assert(st_peek(e->stack).type == SC_GLOBAL);
 
-  cs->current_file = -1;
+  cs()->current_file = -1;
   return STATUS_SUCCEEDED;
 }

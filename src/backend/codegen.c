@@ -18,21 +18,17 @@ typedef struct {
   u32 indent_size;
 } Codegen;
 
-CompilerState *cs = NULL;
 Codegen *cg = NULL;
 
 /* -- Module init/shutdown -------------------------------------------------- */
 
-void cg_init(CompilerState *compiler_state) {
-  cs = compiler_state;
-
+void cg_init() {
   cg = new(Codegen);
   cg->pretty = true;
   cg->indent_size = 4;
 }
 
 void cg_shutdown() {
-  cs = NULL;
 }
 
 /* -- Codegen: utils -------------------------------------------------------- */
@@ -123,11 +119,11 @@ static void _write_value(const Value *v, const char *sep, i32 indent) {
 }
 
 void cg_generate(u32 file_idx) {
-  cs->current_file = file_idx;
+  cs()->current_file = file_idx;
 
-  const Value *value = cs->values[file_idx];
+  const Value *value = cs()->values[file_idx];
   if (value != NULL) {
-    // char *stem = fs_stem(state_current_filepath(cs));
+    // char *stem = fs_stem(state_current_filepath(cs()));
     // char *out_path = NULL;
     // asprintf(&out_path, "out/%s.html", stem);
     // free(stem);
@@ -141,5 +137,5 @@ void cg_generate(u32 file_idx) {
     // free(out_path);
   }
 
-  cs->current_file = -1;
+  cs()->current_file = -1;
 }

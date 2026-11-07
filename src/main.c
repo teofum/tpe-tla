@@ -24,7 +24,7 @@ static const char *frog =
   ">____)/_\\---/_\\(____<";
 
 CompilerState *init(CompilerOptions *opts);
-CompilationStatus shutdown(CompilerState *cs);
+CompilationStatus shutdown();
 
 i32 main(i32 argc, char *const*argv) {
   CompilerOptions opts = options(argc, argv);
@@ -44,71 +44,58 @@ i32 main(i32 argc, char *const*argv) {
     // AST graphviz output for debugging
     if (cs->options.emit_ast_dot) ast_generate_dot(cs, i);
   }
-  if (!err_gate()) return shutdown(cs);
+  if (!err_gate()) return shutdown();
+
+  for (u32 i = 0; i < cs->options.input_file_count; i++) {
+    logger_log(cs->logger, LOG_DEBUG, "%s depends on:", cs->options.input_filenames[i]);
+    for (u32 j = 0; j < cs->options.input_file_count; j++) {
+      if (cs->file_dependencies[i][j]) {
+        logger_log(cs->logger, LOG_DEBUG, "\t%s", cs->options.input_filenames[j]);
+      }
+    }
+  }
 
   // Build static (type/function) symbol tables
   for (u32 i = 0; i < cs->options.input_file_count; i++) {
     sa_build_static_tables(i);
   }
-  if (!err_gate()) return shutdown(cs);
+  if (!err_gate()) return shutdown();
 
   // Typecheck and check reference integrity
   for (u32 i = 0; i < cs->options.input_file_count; i++) {
     sa_build_tables_and_typecheck(i);
   }
-  if (!err_gate()) return shutdown(cs);
+  if (!err_gate()) return shutdown();
 
   // Evaluate
   for (u32 i = 0; i < cs->options.input_file_count; i++) {
     eval_evaluate(i);
   }
-  if (!err_gate()) return shutdown(cs);
+  if (!err_gate()) return shutdown();
 
   // Evaluate
   for (u32 i = 0; i < cs->options.input_file_count; i++) {
     cg_generate(i);
   }
-  if (!err_gate()) return shutdown(cs);
+  if (!err_gate()) return shutdown();
 
-  return shutdown(cs);
+  return shutdown();
 }
 
 CompilerState *init(CompilerOptions *opts) {
-  CompilerState *cs = new(CompilerState);
-  *cs = (CompilerState){
-    .options = *opts,
-    .status = STATUS_NOT_STARTED,
-    .asts = new_array(Program *, opts->input_file_count),
-    .symbol_data = new_array(Symbols *, opts->input_file_count),
-    .values = new_array(const Value *, opts->input_file_count),
-    .logger = logger_create("Main", stdout, opts->log_level),
-    .current_file = -1,
-  };
-  logger_set_flags(cs->logger, LOGGER_LOG_NAME, false);
+  CompilerState *cs = cs_init(opts);
 
-  // Initialize compiler
-  err_init(cs);
-  fe_init(cs);
-  builtins_init(cs);
-  sa_init(cs);
-  eval_init(cs);
-  cg_init(cs);
+  err_init();
+  fe_init();
+  builtins_init();
+  sa_init();
+  eval_init();
+  cg_init();
 
   return cs;
 }
 
-CompilationStatus shutdown(CompilerState *cs) {
-  for (u32 i = 0; i < cs->options.input_file_count; i++) {
-    ast_free_program(cs->asts[i]);
-    sa_free_symbols(cs->symbol_data[i]);
-  }
-  free(cs->asts);
-  free(cs->symbol_data);
-  free(cs->values);
-
-  logger_free(cs->logger);
-  options_free(&cs->options);
-
+CompilationStatus shutdown() {
   cg_shutdown();
   eval_shutdown();
   sa_shutdown();
@@ -116,7 +103,5 @@ CompilationStatus shutdown(CompilerState *cs) {
   fe_shutdown();
   err_shutdown();
 
-  CompilationStatus status = cs->status;
-  free(cs);
-  return status;
+  return cs_shutdown();
 }

@@ -25,7 +25,6 @@ typedef struct {
 } ErrorState;
 
 static ErrorState *e;
-static CompilerState *cs = NULL;
 
 static LogLevel _error_to_log_level[] = {
   [ERR_ERROR] = LOG_ERROR,
@@ -34,14 +33,12 @@ static LogLevel _error_to_log_level[] = {
 
 /* -------------------------------------------------------------------------- */
 
-void err_init(CompilerState *compiler_state) {
-  cs = compiler_state;
-
+void err_init() {
   e = new(ErrorState);
   e->errors = new(ErrorList);
   da_init(e->errors);
   da_manage(e->errors, err_free_error);
-  e->logger = cs->logger;
+  e->logger = cs()->logger;
 }
 
 void err_shutdown() {
@@ -50,7 +47,6 @@ void err_shutdown() {
   free(e);
 
   e = NULL;
-  cs = NULL;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -66,7 +62,7 @@ static Error _make_error(
     .stage = stage,
     .level = level,
     .loc = *loc,
-    .filepath = state_current_filepath(cs),
+    .filepath = cs_current_filepath(),
   };
 }
 
@@ -471,7 +467,7 @@ bool err_gate() {
   }
 
   da_clear(e->errors);
-  if (errors > 0) cs->status = STATUS_FAILED;
+  if (errors > 0) cs()->status = STATUS_FAILED;
   return errors == 0;
 }
 

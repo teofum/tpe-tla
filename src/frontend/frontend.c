@@ -19,14 +19,11 @@
 #include <support/util.h>
 
 static Frontend *f = NULL;
-static CompilerState *cs = NULL;
 
-void fe_init(CompilerState *compiler_state) {
-  cs = compiler_state;
-
+void fe_init() {
   f = new(Frontend);
-  f->scan_logger = logger_create("Scanner", stderr, cs->options.scanner_log_level);
-  f->parse_logger = logger_create("Parser", stderr, cs->options.parser_log_level);
+  f->scan_logger = logger_create("Scanner", stderr, cs()->options.scanner_log_level);
+  f->parse_logger = logger_create("Parser", stderr, cs()->options.parser_log_level);
   map_init(&f->builtin_types, hash_cstring, compare_cstring);
   map_manage_values(&f->builtin_types, (void(*)(BuiltinType *))free);
   for (BuiltinType b = 0; b < BUILTIN_TYPE_COUNT; b++) {
@@ -48,11 +45,6 @@ void fe_shutdown() {
   free(f);
 
   f = NULL;
-  cs = NULL;
-}
-
-CompilerState *fe_get_state() {
-  return cs;
 }
 
 const char *TOKEN_LABEL_STR[] = {
@@ -101,7 +93,8 @@ const char *TOKEN_LABEL_STR[] = {
   [IMPORT] = "Import",
   [ENV] = "Env",
   [DEFAULT] = "Default",
-  [EXPORT] = "Export",
+  [DIR_EXPORT] = "Export Directive",
+  [DIR_IMPORT] = "Import Directive",
   [IDENTIFIER] = "Identifier",
   [INTEGER] = "Integer Literal",
   [FLOAT] = "Float Literal",
@@ -161,7 +154,8 @@ const char *TOKEN_LEXEME[] = {
   [IMPORT] = "import",
   [ENV] = "env",
   [DEFAULT] = "default",
-  [EXPORT] = "export",
+  [DIR_EXPORT] = "@export",
+  [DIR_IMPORT] = "@import",
   [IDENTIFIER] = "Identifier",
   [INTEGER] = "Integer Literal",
   [FLOAT] = "Float Literal",
@@ -274,7 +268,7 @@ void fe_pop_buffer() {
 }
 
 void fe_set_ast(Program *ast) {
-  cs->asts[cs->current_file] = ast;
+  cs()->asts[cs()->current_file] = ast;
 }
 
 static FlexContext _ctx() {
@@ -287,22 +281,22 @@ static CompilationStatus _next() {
 
 // TODO move error handling to the error module
 CompilationStatus fe_parse(i32 file_idx) {
-  const char *filepath = cs->options.input_filenames[file_idx];
+  const char *filepath = cs()->options.input_filenames[file_idx];
 
   if (!filepath) {
-    logger_log(cs->logger, LOG_FATAL, "No input file");
+    logger_log(cs()->logger, LOG_FATAL, "No input file");
     return STATUS_FAILED;
   }
 
-  logger_log(cs->logger, LOG_VERBOSE, "%s", filepath);
+  logger_log(cs()->logger, LOG_VERBOSE, "%s", filepath);
   FILE *file = fopen(filepath, "r");
   if (!file) {
     switch (errno) {
       case EACCES:
-        logger_log(cs->logger, LOG_FATAL, "Unable to open %s: permission denied", filepath);
+        logger_log(cs()->logger, LOG_FATAL, "Unable to open %s: permission denied", filepath);
         break;
       case ENOENT: case ENOTDIR:
-        logger_log(cs->logger, LOG_FATAL, "Unable to open %s: file not found", filepath);
+        logger_log(cs()->logger, LOG_FATAL, "Unable to open %s: file not found", filepath);
         break;
       default:
         break;
@@ -317,7 +311,7 @@ CompilationStatus fe_parse(i32 file_idx) {
   f->location = new(Location);
   *f->location = (Location){1, 1, 1, 1};
 
-  cs->current_file = file_idx;
+  cs()->current_file = file_idx;
   yyset_in(file, f->scanner);
 
   CompilationStatus status = STATUS_IN_PROGRESS;
@@ -327,7 +321,7 @@ CompilationStatus fe_parse(i32 file_idx) {
   if (f->parser) yypstate_delete(f->parser);
   if (f->location) free(f->location);
 
-  cs->current_file = -1;
+  cs()->current_file = -1;
   return status;
 }
 

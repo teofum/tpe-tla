@@ -156,7 +156,7 @@ struct EvalError {
   char *message;
 };
 
-void err_init(CompilerState *compiler_state);
+void err_init();
 void err_shutdown();
 
 void err_report_syntax(SyntaxError *error, const Location *loc, ErrorLevel level);

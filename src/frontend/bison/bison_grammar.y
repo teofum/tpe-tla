@@ -50,7 +50,6 @@ static void yyerror(YYLTYPE *location, const char *message) {
   PartialDeclarationStmt *declaration;
   ConstantStmt *constant;
   TypeAliasStmt *type_alias;
-  ExportStmt *export;
 
 	Expr *expression;
 	LiteralExpr *literal;
@@ -74,7 +73,6 @@ static void yyerror(YYLTYPE *location, const char *message) {
   FunctionDef *function_def;
   Parameter *parameter;
 
-  Directive *directive;
   Program *program;
 
   StmtList *statement_list;
@@ -117,7 +115,6 @@ static void yyerror(YYLTYPE *location, const char *message) {
 %destructor { ast_free_partial_decl($$); } <declaration>
 %destructor { ast_free_constant($$); } <constant>
 %destructor { ast_free_alias($$); } <type_alias>
-%destructor { ast_free_export($$); } <export>
 %destructor { ast_free_type($$); } <type>
 %destructor { ast_free_function_def($$); } <function_def>
 %destructor { ast_free_stmt_list($$, true); } <statement_list>
@@ -132,7 +129,6 @@ static void yyerror(YYLTYPE *location, const char *message) {
 %destructor { ast_free_type_list($$, true); } <type_list>
 %destructor { ast_free_identifier_list($$, true); } <identifier_list>
 %destructor { ast_free_expr_list($$, true); } <expression_list>
-%destructor { ast_free_directive($$); } <directive>
 
 /*== Symbols: terminals ==============================================================================================*/
 
@@ -184,7 +180,7 @@ static void yyerror(YYLTYPE *location, const char *message) {
 %token <token>    IMPORT            "'import'"
 %token <token>    ENV               "'env'"
 %token <token>    DEFAULT           "'default'"
-%token <token>    EXPORT            "'export'"
+%token <token>    FROM              "'from'"
 
 // Identifiers
 %token <identifier> IDENTIFIER      "identifier"
@@ -202,7 +198,8 @@ static void yyerror(YYLTYPE *location, const char *message) {
 %token <token>    IGNORED
 %token <token>    UNKNOWN           "<unknown lexeme>"
 %token <token>    END               "<EOF>"
-%token <directive> DIRECTIVE        "directive"
+%token <token>    DIR_IMPORT        "@import"
+%token <token>    DIR_EXPORT        "@export"
 
 // CSV
 %token <token>        CSV_END           "csv end"
@@ -218,7 +215,6 @@ static void yyerror(YYLTYPE *location, const char *message) {
 %type <declaration>                 declaration
 %type <constant>                    constant
 %type <type_alias>                  type_alias
-%type <export>                      export
 
 %type <expression>                  expression
 %type <expression>                  composable
@@ -319,7 +315,8 @@ statement_or_directive_list: statement_or_directive                 { $$ = parse
   ;
 
 statement_or_directive: statement                                   { $$ = $1; }
-  | DIRECTIVE                                                       { $$ = parse_directive($1); }
+  | DIR_IMPORT identifier_list FROM STRING                          { $$ = parse_import_directive($2, $4); }
+  | DIR_EXPORT identifier_list                                      { $$ = parse_export_directive($2); }
   ;
 
 statement_list: statement                                           { $$ = parse_stmt_list($1, NULL); }
@@ -331,7 +328,6 @@ statement: expression                                               { $$ = parse
   | constant                                                        { $$ = parse_constant_stmt($1); }
   | type_alias                                                      { $$ = parse_type_alias_stmt($1); }
   | function_def                                                    { $$ = parse_function_def_stmt($1); }
-  | export                                                          { $$ = parse_export_stmt($1); }
   | error                                                           { $$ = parse_error_stmt(); }
   ;
 
@@ -365,9 +361,6 @@ parameter: IDENTIFIER COLON type                                    { $$ = parse
 
 compose_type: COMPOSE type                                          { $$ = $2; }
   | %empty                                                          { $$ = NULL; }
-  ;
-
-export: EXPORT identifier_list                                      { $$ = parse_export($2); }
   ;
 
 /*-- Expressions -----------------------------------------------------------------------------------------------------*/

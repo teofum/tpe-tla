@@ -441,11 +441,20 @@ static void dot_function_def(const FunctionDef *function, u64 pid) {
   dot_block(function->body, id);
 }
 
-static void dot_export(const ExportStmt *export, u64 pid) {
+static void dot_export_dir(const ExportDirective *export, u64 pid) {
   u64 id = next_id();
   _node(id, "Export", NODE_STMT);
   _edge(pid, id);
   for (u32 i = 0; i < export->len; i++) {
+    // TODO
+  }
+}
+
+static void dot_import_dir(const ImportDirective *import, u64 pid) {
+  u64 id = next_id();
+  _node(id, "Import", NODE_STMT);
+  _edge(pid, id);
+  for (u32 i = 0; i < import->len; i++) {
     // TODO
   }
 }
@@ -463,7 +472,8 @@ static void dot_stmt(const Stmt *stmt, u64 pid) {
     case STMT_CONSTANT: return dot_const(stmt->constant, pid);
     case STMT_TYPE_ALIAS: return dot_alias(stmt->type_alias, pid);
     case STMT_FUNCTION_DEF: return dot_function_def(stmt->function_def, pid);
-    case STMT_EXPORT: return dot_export(stmt->export, pid);
+    case STMT_EXPORT: return dot_export_dir(stmt->export, pid);
+    case STMT_IMPORT: return dot_import_dir(stmt->import, pid);
     case STMT_PARSE_ERROR: return dot_error(pid);
   }
 }

@@ -107,15 +107,6 @@ CompilationStatus lex_identifier() {
   return STATUS_IN_PROGRESS;
 }
 
-CompilationStatus lex_directive() {
-  Token *token = fe_create_token(DIRECTIVE);
-  token->semantic_value->identifier = _token_meta(token);
-
-  fe_push_token(token);
-  fe_free_token(token);
-  return STATUS_IN_PROGRESS;
-}
-
 CompilationStatus lex_begin_multiline_comment(FlexContext ctx) {
   fe_enter_context(ctx);
   return STATUS_IN_PROGRESS;

@@ -126,7 +126,7 @@ id_char         [a-zA-Z0-9_-]
 "import"                      { return lex_keyword(IMPORT); }
 "env"                         { return lex_keyword(ENV); }
 "default"                     { return lex_keyword(DEFAULT); }
-"export"                      { return lex_keyword(EXPORT); }
+"from"                        { return lex_keyword(FROM); }
 
 -?{int}                       { return lex_integer_literal(); }
 -?{int}?\.{d}+                { return lex_float_literal(); }
@@ -135,7 +135,8 @@ id_char         [a-zA-Z0-9_-]
 "true"|"false"                { return lex_boolean_literal(); }
 
 ({alpha}|_){id_char}*         { return lex_identifier(); }
-@({alpha}|_){id_char}*        { return lex_directive(); }
+"@import"                     { return lex_keyword(DIR_IMPORT); }
+"@export"                     { return lex_keyword(DIR_EXPORT); }
 
 ^{whitespace}?\n              { return lex_ignored(); }
 \n                            { return lex_newline(); }

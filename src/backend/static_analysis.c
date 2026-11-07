@@ -28,26 +28,23 @@ typedef struct {
   dyn_arena *tc_arena;
 } StaticAnalyzer;
 
-static CompilerState *cs = NULL;
 static StaticAnalyzer *sa = NULL;
 
 /* -- Module init/shutdown -------------------------------------------------- */
 
-void sa_init(CompilerState *compiler_state) {
-  cs = compiler_state;
-
+void sa_init() {
   sa = new(StaticAnalyzer);
   sa->sym_logger = logger_create("Symbols", stderr,
-    cs->options.symbols_log_level
+    cs()->options.symbols_log_level
   );
   sa->tc_logger = logger_create("Typecheck", stderr,
-    cs->options.typecheck_log_level
+    cs()->options.typecheck_log_level
   );
   sa->tc_arena = mem_dyn_arena_create(MEM_SIZE_AUTO);
 
-  cs->global_scope = sc_new(SC_GLOBAL);
+  cs()->global_scope = sc_new(SC_GLOBAL);
   sa->stack = st_begin();
-  st_push(sa->stack, cs->global_scope);
+  st_push(sa->stack, cs()->global_scope);
 }
 
 void sa_shutdown() {
@@ -63,7 +60,6 @@ void sa_shutdown() {
   free(sa);
 
   sa = NULL;
-  cs = NULL;
 }
 
 static void tc_debug_log(const char *s, const Location *loc) {
@@ -273,9 +269,9 @@ static void _build_static_tables_ast(Symbols *s, Program *ast) {
 }
 
 CompilationStatus sa_build_static_tables(i32 file_idx) {
-  cs->current_file = file_idx;
+  cs()->current_file = file_idx;
 
-  Program *ast = cs->asts[file_idx];
+  Program *ast = cs()->asts[file_idx];
   assert(ast != NULL); // If we got to this point without an AST we have a bug
 
   Symbols *sym = new(Symbols);
@@ -285,13 +281,13 @@ CompilationStatus sa_build_static_tables(i32 file_idx) {
   map_manage_keys(sym->types, sk_clone, sk_free);
   map_init(sym->functions, sk_hash, sk_compare);
   map_manage_keys(sym->functions, sk_clone, sk_free);
-  cs->symbol_data[file_idx] = sym;
+  cs()->symbol_data[file_idx] = sym;
   builtins_register_fns(sym);
 
   _build_static_tables_ast(sym, ast);
   assert(st_peek(sa->stack).type == SC_GLOBAL);
 
-  cs->current_file = -1;
+  cs()->current_file = -1;
   return STATUS_SUCCEEDED;
 }
 
@@ -2077,7 +2073,7 @@ static void _check_function_def(Symbols *s, const FunctionDef *def) {
   st_pop(sa->stack);
 }
 
-static void _check_export(Symbols *s, const ExportStmt *export) {
+static void _check_export(Symbols *s, const ExportDirective *export) {
   for (u32 i = 0; i < export->len; i++) {
     // TODO
   }
@@ -2093,7 +2089,7 @@ static Type *tc_check_stmt(Symbols *s, const Stmt *stmt) {
     case STMT_FUNCTION_DEF: _check_function_def(s, stmt->function_def); return NULL;
     case STMT_EXPORT: _check_export(s, stmt->export); return NULL;
     case STMT_TYPE_ALIAS: return NULL;
-    case STMT_DIRECTIVE: return NULL;
+    case STMT_IMPORT: return NULL;
     case STMT_PARSE_ERROR: assert(false); // Unreachable
   }
 }
@@ -2129,12 +2125,12 @@ static Type *tc_check_ast(Symbols *s, const Program *ast) {
 }
 
 CompilationStatus sa_build_tables_and_typecheck(i32 file_idx) {
-  cs->current_file = file_idx;
+  cs()->current_file = file_idx;
 
-  Program *ast = cs->asts[file_idx];
+  Program *ast = cs()->asts[file_idx];
   assert(ast != NULL); // If we got to this point without an AST we have a bug
 
-  Symbols *sym = cs->symbol_data[file_idx];
+  Symbols *sym = cs()->symbol_data[file_idx];
   assert(sym != NULL); // If we got to this point without a symbol table we have a bug
   sym->symbols = new(SymbolTable);
   map_init(sym->symbols, sk_hash, sk_compare);
@@ -2144,7 +2140,7 @@ CompilationStatus sa_build_tables_and_typecheck(i32 file_idx) {
   tc_check_ast(sym, ast);
   assert(st_peek(sa->stack).type == SC_GLOBAL);
 
-  cs->current_file = -1;
+  cs()->current_file = -1;
   return STATUS_SUCCEEDED;
 }
 

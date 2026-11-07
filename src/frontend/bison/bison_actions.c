@@ -43,14 +43,14 @@ Stmt *parse_function_def_stmt(FunctionDef *function) {
   return ast_stmt_function_def(function);
 }
 
-Stmt *parse_export_stmt(ExportStmt *export) {
-  fe_parser_log(LOG_DEBUG, "Export Stmt");
-  return ast_stmt_export(export);
+Stmt *parse_import_directive(IdentifierList *ids, StringLiteral *from) {
+  fe_parser_log(LOG_DEBUG, "Import Directive");
+  return ast_stmt_import(ids, from);
 }
 
-Stmt *parse_directive(Directive *directive) {
-  fe_parser_log(LOG_DEBUG, "Directive %s", directive->lexeme);
-  return ast_stmt_directive(directive);
+Stmt *parse_export_directive(IdentifierList *ids) {
+  fe_parser_log(LOG_DEBUG, "Export Directive");
+  return ast_stmt_export(ids);
 }
 
 Stmt *parse_error_stmt() {
@@ -94,11 +94,6 @@ ConstantStmt *parse_constant(Identifier *left, Type *type, Expr *right) {
 TypeAliasStmt *parse_type_alias(Identifier *left, Type *right) {
   fe_parser_log(LOG_DEBUG, "Type alias for %s", left->lexeme);
   return ast_type_alias(left, right);
-}
-
-ExportStmt *parse_export(IdentifierList *ids) {
-  fe_parser_log(LOG_DEBUG, "Export");
-  return ast_export(ids);
 }
 
 // -----------------------------------------------------------------------------
@@ -274,8 +269,8 @@ BlockExpr *parse_block(StmtList *statements) {
 static char *_resolve_import_path(str rel_path) {
   bool from_root = rel_path.len > 0 && rel_path.ptr[0] == '/';
   char * base_cstr = from_root
-    ? fe_get_state()->options.base_path
-    : dirname(strdup(state_current_filepath(fe_get_state())));
+    ? cs()->options.base_path
+    : dirname(strdup(cs_current_filepath()));
 
   str base_path = str_from_cstring(base_cstr);
   fe_parser_log(LOG_DEBUG, "rel '%.*s'", (i32)rel_path.len, rel_path.ptr);
