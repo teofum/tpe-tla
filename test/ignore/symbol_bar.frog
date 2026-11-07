@@ -1,0 +1,7 @@
+@import base from "test/ignore/symbol_base.frog"
+
+bar is function() -> int {
+  base() * 5
+}
+
+@export bar

@@ -55,6 +55,14 @@ i32 main(i32 argc, char *const*argv) {
     }
   }
 
+  cs_build_file_order();
+  if (cs->status != STATUS_SUCCEEDED) return shutdown();
+
+  logger_log(cs->logger, LOG_DEBUG, "File order:");
+  for (u32 i = 0; i < cs->options.input_file_count; i++) {
+    logger_log(cs->logger, LOG_DEBUG, "\t%s", cs->options.input_filenames[cs->file_order[i]]);
+  }
+
   // Build static (type/function) symbol tables
   for (u32 i = 0; i < cs->options.input_file_count; i++) {
     sa_build_static_tables(i);

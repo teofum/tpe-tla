@@ -1,9 +1,11 @@
 #include <ast/ast.h>
 #include <backend/static_analysis.h>
+#include <stdlib.h>
 #include <support/types.h>
 #include <support/util.h>
 
 #include "state.h"
+#include "support/logger.h"
 
 CompilerState *_cs;
 
@@ -50,6 +52,45 @@ CompilationStatus cs_shutdown() {
 
 CompilerState *cs() {
   return _cs;
+}
+
+void cs_build_file_order() {
+  u32 fc = _cs->options.input_file_count;
+  u32 order = 0;
+  bool *resolved = new_array(bool, fc);
+  while (order < fc) {
+    bool valid = false;
+    for (u32 i = 0; i < fc; i++) {
+      if (resolved[i]) continue;
+      bool file_resolved = true;
+      for (u32 j = 0; j < fc; j++) {
+        if (i != j && _cs->file_dependencies[i][j] && !resolved[j]) file_resolved = false;
+        if (i == j && _cs->file_dependencies[i][j]) {
+          // File depends on itself????? ????
+          logger_log(
+            _cs->logger, LOG_FATAL,
+            "%s depends on.. itself????  wat ???? how did you even think this was going to work?????????",
+            _cs->options.input_filenames[i]
+          );
+          _cs->status = STATUS_FAILED;
+          free(resolved);
+          return;
+        }
+      }
+      if (!file_resolved) continue;
+
+      _cs->file_order[order++] = i;
+      resolved[i] = true;
+      valid = true;
+    }
+    if (!valid) {
+      logger_log(_cs->logger, LOG_FATAL, "Unable to resolve imports; possible circular dependency.");
+      _cs->status = STATUS_FAILED;
+      free(resolved);
+      return;
+    }
+  }
+  free(resolved);
 }
 
 const char *cs_current_filepath() {

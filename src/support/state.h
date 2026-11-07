@@ -30,6 +30,8 @@ CompilationStatus cs_shutdown();
 
 CompilerState *cs();
 
+void cs_build_file_order();
+
 const char *cs_current_filepath();
 
 #endif

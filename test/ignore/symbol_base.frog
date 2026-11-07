@@ -1,0 +1,5 @@
+base is function() -> int {
+  4
+}
+
+@export base
