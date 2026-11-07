@@ -1,3 +1,4 @@
+@import base from "test/ignore/symbol_base.frog"
 @import foo from "test/ignore/symbol_foo.frog"
 @import bar from "test/ignore/symbol_bar.frog"
 
@@ -5,4 +6,4 @@ foobar is function() -> int {
   foo() + bar()
 }
 
-@export foobar
+@export foobar, foo, bar, base

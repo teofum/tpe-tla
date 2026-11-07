@@ -65,25 +65,25 @@ i32 main(i32 argc, char *const*argv) {
 
   // Build static (type/function) symbol tables
   for (u32 i = 0; i < cs->options.input_file_count; i++) {
-    sa_build_static_tables(i);
+    sa_build_static_tables(cs->file_order[i]);
   }
   if (!err_gate()) return shutdown();
 
   // Typecheck and check reference integrity
   for (u32 i = 0; i < cs->options.input_file_count; i++) {
-    sa_build_tables_and_typecheck(i);
+    sa_build_tables_and_typecheck(cs->file_order[i]);
   }
   if (!err_gate()) return shutdown();
 
   // Evaluate
   for (u32 i = 0; i < cs->options.input_file_count; i++) {
-    eval_evaluate(i);
+    eval_evaluate(cs->file_order[i]);
   }
   if (!err_gate()) return shutdown();
 
   // Evaluate
   for (u32 i = 0; i < cs->options.input_file_count; i++) {
-    cg_generate(i);
+    cg_generate(cs->file_order[i]);
   }
   if (!err_gate()) return shutdown();
 

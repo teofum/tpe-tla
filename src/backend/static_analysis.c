@@ -81,7 +81,7 @@ static SymbolKey _sym_key(char *name) {
   return (SymbolKey){ .name = name, .scope = st_peek(sa->stack).id };
 }
 
-static void _static_tables_add_type(SymbolTable *s, TypeAliasStmt *type_alias) {
+static void _static_tables_add_type(SymbolTable *s, const TypeAliasStmt *type_alias) {
   SymbolKey key = _sym_key(type_alias->alias->lexeme);
   logger_log(sa->sym_logger, LOG_DEBUG,
     "Scope %u: Type %s",
@@ -105,7 +105,7 @@ static void _static_tables_add_type(SymbolTable *s, TypeAliasStmt *type_alias) {
   }
 }
 
-static void _static_tables_add_function(SymbolTable *s, FunctionDef *function) {
+static void _static_tables_add_function(SymbolTable *s, const FunctionDef *function) {
   _static_tables_block(s, function->body, SC_FUNCTION);
 
   SymbolKey key = _sym_key(function->name->lexeme);
@@ -249,17 +249,53 @@ static void _static_tables_expr(SymbolTable *s, Expr *expr) {
   }
 }
 
+static void _static_tables_import(SymbolTable *s, const ImportDirective *import) {
+  SymbolTable *foreign_st = cs()->symbol_data[import->file_idx];
+  Scope foreign_scope = cs()->file_scopes[import->file_idx];
+
+  for (u32 i = 0; i < import->len; i++) {
+    SymbolKey key = { .name = import->ids[i]->lexeme, .scope = foreign_scope.id };
+    Symbol *sym = map_get(foreign_st, &key);
+    if (!sym || !sym->export) {
+      assert(false); // TODO symbol is not exported error
+    }
+    switch (sym->type) {
+      case SYM_TYPE: _static_tables_add_type(s, sym->type_alias); break;
+      case SYM_FUNCTION: _static_tables_add_function(s, sym->function); break;
+      case SYM_VAR: assert(false); // Unreachable
+    }
+  }
+}
+
+static void _static_tables_export(SymbolTable *s, const ExportDirective *export) {
+  for (u32 i = 0; i < export->len; i++) {
+    SymbolKey key = _sym_key(export->ids[i]->lexeme);
+    Symbol *sym = map_get(s, &key);
+    if (!sym) {
+      assert(false); // TODO undefined symbol error
+    }
+    if (sym->type == SYM_VAR) {
+      assert(false); // TODO can't export a variable error
+    }
+    sym->export = true;
+  }
+}
+
 static void _static_tables_stmt(SymbolTable *s, Stmt *stmt) {
   switch (stmt->type) {
     case STMT_TYPE_ALIAS: _static_tables_add_type(s, stmt->type_alias); break;
     case STMT_FUNCTION_DEF: _static_tables_add_function(s, stmt->function_def); break;
     case STMT_EXPR: _static_tables_expr(s, stmt->expr); break;
+    case STMT_IMPORT: _static_tables_import(s, stmt->import); break;
+    case STMT_EXPORT: _static_tables_export(s, stmt->export); break;
     default: break;
   }
 }
 
 static void _build_static_tables_ast(SymbolTable *s, Program *ast) {
-  ast->scope = st_push(sa->stack, sc_new(SC_FILE));
+  Scope file_scope = sc_new(SC_FILE);
+  cs()->file_scopes[cs()->current_file] = file_scope;
+  ast->scope = st_push(sa->stack, file_scope);
   logger_log(sa->sym_logger, LOG_DEBUG, ">>> Scope %u", ast->scope);
   for (u32 i = 0; i < ast->len; i++) {
     _static_tables_stmt(s, ast->statements[i]);

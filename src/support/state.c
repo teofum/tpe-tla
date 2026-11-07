@@ -1,11 +1,13 @@
+#include <stdlib.h>
+
 #include <ast/ast.h>
 #include <backend/static_analysis.h>
-#include <stdlib.h>
+#include <backend/scope.h>
+#include <support/logger.h>
 #include <support/types.h>
 #include <support/util.h>
 
 #include "state.h"
-#include "support/logger.h"
 
 CompilerState *_cs;
 
@@ -21,6 +23,7 @@ CompilerState *cs_init(CompilerOptions *options) {
     .asts = new_array(Program *, options->input_file_count),
     .symbol_data = new_array(SymbolTable *, options->input_file_count),
     .values = new_array(const Value *, options->input_file_count),
+    .file_scopes = new_array(Scope, options->input_file_count),
   };
   logger_set_flags(_cs->logger, LOGGER_LOG_NAME, false);
   for (u32 i = 0; i < _cs->options.input_file_count; i++) {
@@ -40,6 +43,7 @@ CompilationStatus cs_shutdown() {
   free(_cs->values);
   free(_cs->file_dependencies);
   free(_cs->file_order);
+  free(_cs->file_scopes);
 
   logger_free(_cs->logger);
   options_free(&_cs->options);

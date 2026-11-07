@@ -23,6 +23,7 @@ typedef struct {
   const Value **values;
 
   Scope global_scope;
+  Scope *file_scopes;
 } CompilerState;
 
 CompilerState *cs_init(CompilerOptions *options);

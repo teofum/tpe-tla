@@ -39,6 +39,8 @@
     -- Want to clone explicitly? Just slice!
   - Verdict: it's a feature!
 [x] CSV import fucks the location tracking
+[ ] Imported symbol references blow up on eval if they reference other symbols
+    from the foreign scope that weren't themselves imported
 
 #=== General ==================================================================#
 
@@ -69,7 +71,8 @@
   [x] Typecheck + coercion hinting
   [x] Eval coercion
 
-[ ] Import/Export symbols
+[x] Import/Export symbols
+  [ ] Error handling
 
 [/] Remove default function values
   - Unremoved default function values (it turns out we needed those)

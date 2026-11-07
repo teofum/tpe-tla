@@ -9,19 +9,19 @@
 
 Symbol *sym_type(const TypeAliasStmt *type_alias) {
   Symbol *sym = new(Symbol);
-  *sym = (Symbol){ .type = SYM_TYPE, .type_alias = type_alias };
+  *sym = (Symbol){ .type = SYM_TYPE, .export = false, .type_alias = type_alias };
   return sym;
 }
 
 Symbol *sym_function(const FunctionDef *function) {
   Symbol *sym = new(Symbol);
-  *sym = (Symbol){ .type = SYM_FUNCTION, .function = function };
+  *sym = (Symbol){ .type = SYM_FUNCTION, .export = false, .function = function };
   return sym;
 }
 
 Symbol *sym_var(const VariableSymbol *var) {
   Symbol *sym = new(Symbol);
-  *sym = (Symbol){ .type = SYM_VAR, .var = var };
+  *sym = (Symbol){ .type = SYM_VAR, .export = false, .var = var };
   return sym;
 }
 

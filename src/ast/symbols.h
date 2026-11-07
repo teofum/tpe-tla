@@ -25,6 +25,7 @@ typedef enum {
 
 typedef struct {
   SymbolType type;
+  bool export;
   union {
     const TypeAliasStmt *type_alias;
     const FunctionDef *function;
