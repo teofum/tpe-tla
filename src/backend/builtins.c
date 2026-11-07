@@ -826,7 +826,7 @@ static const Value *rand_fn(
   return value;
 }
 
-static void _register_rand_fn(FunctionTable *fns) {
+static void _register_rand_fn(SymbolTable *s) {
   FunctionDef *def = b_new(FunctionDef);
   *def = (FunctionDef){
     .meta = {0},
@@ -839,8 +839,8 @@ static void _register_rand_fn(FunctionTable *fns) {
   };
 
   SymbolKey key = _sym_key("rand");
-  bool s = map_insert(fns, &key, def);
-  assert(s);
+  bool inserted = map_insert(s, &key, sym_function(def));
+  assert(inserted);
 }
 
 static const Value *element_fn(
@@ -934,7 +934,7 @@ static Parameter **_get_param_list_for_element(HTMLElementName el, u32 *len) {
 }
 
 static void _register_element_fn(
-  FunctionTable *fns,
+  SymbolTable *s,
   HTMLElementName el
 ) {
   HTMLElement *element = &_elements[el];
@@ -964,17 +964,17 @@ static void _register_element_fn(
   };
 
   SymbolKey key = _sym_key(element->tag);
-  bool s = map_insert(fns, &key, def);
-  assert(s);
+  bool inserted = map_insert(s, &key, sym_function(def));
+  assert(inserted );
 }
 
 /* -- Builtins: API --------------------------------------------------------- */
 
-void builtins_register_fns(Symbols *s) {
-  _register_rand_fn(s->functions);
+void builtins_register_fns(SymbolTable *s) {
+  _register_rand_fn(s);
 
   for (HTMLElementName el = 0; el < HTML_ELEM_COUNT; el++) {
-    _register_element_fn(s->functions, el);
+    _register_element_fn(s, el);
   }
 }
 

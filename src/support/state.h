@@ -19,7 +19,7 @@ typedef struct {
   i32 current_file;
 
   Program **asts;
-  Symbols **symbol_data;
+  SymbolTable **symbol_data;
   const Value **values;
 
   Scope global_scope;

@@ -19,7 +19,7 @@ CompilerState *cs_init(CompilerOptions *options) {
     .status = STATUS_NOT_STARTED,
     .current_file = -1,
     .asts = new_array(Program *, options->input_file_count),
-    .symbol_data = new_array(Symbols *, options->input_file_count),
+    .symbol_data = new_array(SymbolTable *, options->input_file_count),
     .values = new_array(const Value *, options->input_file_count),
   };
   logger_set_flags(_cs->logger, LOGGER_LOG_NAME, false);

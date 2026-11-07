@@ -15,17 +15,31 @@ typedef struct {
   const Value *value;
   Location loc;
   bool constant;
-} Symbol;
+} VariableSymbol;
 
-typedef map(SymbolKey, TypeAliasStmt) TypeTable;
-typedef map(SymbolKey, FunctionDef) FunctionTable;
-typedef map(SymbolKey, Symbol) SymbolTable;
+typedef enum {
+  SYM_TYPE,
+  SYM_FUNCTION,
+  SYM_VAR,
+} SymbolType;
 
 typedef struct {
-  TypeTable *types;
-  FunctionTable *functions;
-  SymbolTable *symbols;
-} Symbols;
+  SymbolType type;
+  union {
+    const TypeAliasStmt *type_alias;
+    const FunctionDef *function;
+    const VariableSymbol *var;
+  };
+} Symbol;
+
+typedef map(SymbolKey, Symbol) SymbolTable;
+
+Symbol *sym_type(const TypeAliasStmt *type_alias);
+Symbol *sym_function(const FunctionDef *function);
+Symbol *sym_var(const VariableSymbol *var);
+
+const char *sym_get_type_str(const Symbol *sym);
+Location sym_get_loc(const Symbol *sym);
 
 usize sk_hash(const SymbolKey *key);
 bool sk_compare(const SymbolKey *a, const SymbolKey *b);

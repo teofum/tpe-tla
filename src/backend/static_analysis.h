@@ -12,6 +12,6 @@ void sa_shutdown();
 CompilationStatus sa_build_static_tables(i32 file_idx);
 CompilationStatus sa_build_tables_and_typecheck(i32 file_idx);
 
-void sa_free_symbols(Symbols *s);
+void sa_free_symbols(SymbolTable *s);
 
 #endif

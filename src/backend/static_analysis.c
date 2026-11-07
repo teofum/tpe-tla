@@ -71,41 +71,41 @@ static void tc_debug_log(const char *s, const Location *loc) {
 
 /* -- Static symbol pass ---------------------------------------------------- */
 
-static void _static_tables_stmt(Symbols *s, Stmt *stmt);
-static void _static_tables_expr(Symbols *s, Expr *expr);
-static void _static_tables_block(Symbols *s, BlockExpr *block, ScopeType st);
-static void _static_tables_literal(Symbols *s, LiteralExpr *literal);
-static void _static_tables_variable(Symbols *s, VariableExpr *var);
+static void _static_tables_stmt(SymbolTable *s, Stmt *stmt);
+static void _static_tables_expr(SymbolTable *s, Expr *expr);
+static void _static_tables_block(SymbolTable *s, BlockExpr *block, ScopeType st);
+static void _static_tables_literal(SymbolTable *s, LiteralExpr *literal);
+static void _static_tables_variable(SymbolTable *s, VariableExpr *var);
 
 static SymbolKey _sym_key(char *name) {
   return (SymbolKey){ .name = name, .scope = st_peek(sa->stack).id };
 }
 
-static void _static_tables_add_type(Symbols *s, TypeAliasStmt *type_alias) {
+static void _static_tables_add_type(SymbolTable *s, TypeAliasStmt *type_alias) {
   SymbolKey key = _sym_key(type_alias->alias->lexeme);
   logger_log(sa->sym_logger, LOG_DEBUG,
     "Scope %u: Type %s",
     key.scope, key.name
   );
 
-  if (!map_insert(s->types, &key, type_alias)) {
+  if (!map_insert(s, &key, sym_type(type_alias))) {
     logger_log(sa->sym_logger, LOG_ERROR,
       "Scope %u: Redefinition of type %s",
       key.scope, key.name
     );
 
-    TypeAliasStmt *prev = map_get(s->types, &key);
+    Symbol *prev = map_get(s, &key);
     RedefError *error = new(RedefError);
     *error = (RedefError){
-      .object_type = "type",
+      .object_type = sym_get_type_str(prev),
       .object_name = strdup(key.name),
-      .previous_definition = prev->meta.loc
+      .previous_definition = sym_get_loc(prev)
     };
     err_report_redef(error, &type_alias->meta.loc, ERR_ERROR);
   }
 }
 
-static void _static_tables_add_function(Symbols *s, FunctionDef *function) {
+static void _static_tables_add_function(SymbolTable *s, FunctionDef *function) {
   _static_tables_block(s, function->body, SC_FUNCTION);
 
   SymbolKey key = _sym_key(function->name->lexeme);
@@ -114,25 +114,25 @@ static void _static_tables_add_function(Symbols *s, FunctionDef *function) {
     key.scope, key.name
   );
 
-  if (!map_insert(s->functions, &key, function)) {
+  if (!map_insert(s, &key, sym_function(function))) {
     logger_log(sa->sym_logger, LOG_ERROR,
       "Scope %u: Redefinition of function %s",
       key.scope, key.name
     );
 
-    FunctionDef *prev = map_get(s->functions, &key);
-    bool builtin = prev->body == NULL;
+    Symbol *prev = map_get(s, &key);
+    bool builtin = prev->function->body == NULL;
     RedefError *error = new(RedefError);
     *error = (RedefError){
-      .object_type = builtin ? "builtin function" : "function",
+      .object_type = sym_get_type_str(prev),
       .object_name = strdup(key.name),
-      .previous_definition = builtin ? (Location){0} : prev->meta.loc
+      .previous_definition = sym_get_loc(prev)
     };
     err_report_redef(error, &function->meta.loc, ERR_ERROR);
   }
 }
 
-static void _static_tables_block(Symbols *s, BlockExpr *block, ScopeType st) {
+static void _static_tables_block(SymbolTable *s, BlockExpr *block, ScopeType st) {
   block->scope = st_push(sa->stack, sc_new(st));
   logger_log(sa->sym_logger, LOG_DEBUG,
     ">>> Scope %u [%d:%d]",
@@ -148,7 +148,7 @@ static void _static_tables_block(Symbols *s, BlockExpr *block, ScopeType st) {
   st_pop(sa->stack);
 }
 
-static void _static_tables_literal(Symbols *s, LiteralExpr *literal) {
+static void _static_tables_literal(SymbolTable *s, LiteralExpr *literal) {
   switch (literal->type) {
     case L_LIST: {
       for (u32 i = 0; i < literal->list->len; i++) {
@@ -182,7 +182,7 @@ static void _static_tables_literal(Symbols *s, LiteralExpr *literal) {
   }
 }
 
-static void _static_tables_variable(Symbols *s, VariableExpr *var) {
+static void _static_tables_variable(SymbolTable *s, VariableExpr *var) {
   switch (var->type) {
     case V_INDEX: {
       _static_tables_variable(s, var->indexed->container);
@@ -199,7 +199,7 @@ static void _static_tables_variable(Symbols *s, VariableExpr *var) {
   }
 }
 
-static void _static_tables_expr(Symbols *s, Expr *expr) {
+static void _static_tables_expr(SymbolTable *s, Expr *expr) {
   switch (expr->type) {
     case EXPR_BLOCK: _static_tables_block(s, expr->block, SC_BLOCK); break;
     case EXPR_GROUP: _static_tables_expr(s, expr->group->inner_expr); break;
@@ -249,7 +249,7 @@ static void _static_tables_expr(Symbols *s, Expr *expr) {
   }
 }
 
-static void _static_tables_stmt(Symbols *s, Stmt *stmt) {
+static void _static_tables_stmt(SymbolTable *s, Stmt *stmt) {
   switch (stmt->type) {
     case STMT_TYPE_ALIAS: _static_tables_add_type(s, stmt->type_alias); break;
     case STMT_FUNCTION_DEF: _static_tables_add_function(s, stmt->function_def); break;
@@ -258,7 +258,7 @@ static void _static_tables_stmt(Symbols *s, Stmt *stmt) {
   }
 }
 
-static void _build_static_tables_ast(Symbols *s, Program *ast) {
+static void _build_static_tables_ast(SymbolTable *s, Program *ast) {
   ast->scope = st_push(sa->stack, sc_new(SC_FILE));
   logger_log(sa->sym_logger, LOG_DEBUG, ">>> Scope %u", ast->scope);
   for (u32 i = 0; i < ast->len; i++) {
@@ -274,13 +274,10 @@ CompilationStatus sa_build_static_tables(i32 file_idx) {
   Program *ast = cs()->asts[file_idx];
   assert(ast != NULL); // If we got to this point without an AST we have a bug
 
-  Symbols *sym = new(Symbols);
-  sym->types = new(TypeTable);
-  sym->functions = new(FunctionTable);
-  map_init(sym->types, sk_hash, sk_compare);
-  map_manage_keys(sym->types, sk_clone, sk_free);
-  map_init(sym->functions, sk_hash, sk_compare);
-  map_manage_keys(sym->functions, sk_clone, sk_free);
+  SymbolTable *sym = new(SymbolTable);
+  map_init(sym, sk_hash, sk_compare);
+  map_manage_keys(sym, sk_clone, sk_free);
+  map_manage_values(sym, (void(*)(Symbol *))free);
   cs()->symbol_data[file_idx] = sym;
   builtins_register_fns(sym);
 
@@ -494,12 +491,13 @@ static const Identifier *_composable_id() {
 
 /* -- Type checking: variables ---------------------------------------------- */
 
-static Type *tc_resolve_named_type(Symbols *s, const NamedType *named) {
+static Type *tc_resolve_named_type(SymbolTable *s, const NamedType *named) {
   const TypeAliasStmt *alias = NULL;
   StackEntry *st = st_current(sa->stack);
   while (!alias && st) {
     SymbolKey key = { .name = named->name->lexeme, .scope = st_scope(st).id };
-    alias = map_get(s->types, &key);
+    const Symbol *sym = map_get(s, &key);
+    if (sym && sym->type == SYM_TYPE) alias = sym->type_alias;
     st = st_next(st, false);
   }
 
@@ -521,12 +519,13 @@ static Type *tc_resolve_named_type(Symbols *s, const NamedType *named) {
   return alias->type;
 }
 
-static const FunctionDef *tc_resolve_function(Symbols *s, const Identifier *name) {
+static const FunctionDef *tc_resolve_function(SymbolTable *s, const Identifier *name) {
   const FunctionDef *function = NULL;
   StackEntry *st = st_current(sa->stack);
   while (!function && st) {
     SymbolKey key = { .name = name->lexeme, .scope = st_scope(st).id };
-    function = map_get(s->functions, &key);
+    const Symbol *sym = map_get(s, &key);
+    if (sym && sym->type == SYM_FUNCTION) function = sym->function;
     st = st_next(st, false);
   }
 
@@ -548,16 +547,17 @@ static const FunctionDef *tc_resolve_function(Symbols *s, const Identifier *name
   return function;
 }
 
-static const Symbol *tc_resolve_symbol(Symbols *s, const Identifier *name) {
-  const Symbol *symbol = NULL;
+static const VariableSymbol *tc_resolve_symbol(SymbolTable *s, const Identifier *name) {
+  const VariableSymbol *var = NULL;
   StackEntry *st = st_current(sa->stack);
-  while (!symbol && st) {
+  while (!var && st) {
     SymbolKey key = { .name = name->lexeme, .scope = st_scope(st).id };
-    symbol = map_get(s->symbols, &key);
+    const Symbol *sym = map_get(s, &key);
+    if (sym && sym->type == SYM_VAR) var = sym->var;
     st = st_next(st, true);
   }
 
-  if (!symbol) {
+  if (!var) {
     logger_log(sa->tc_logger, LOG_ERROR,
       "Scope %u: Variable %s is undefined",
       st_peek(sa->stack).id, name->lexeme
@@ -572,24 +572,25 @@ static const Symbol *tc_resolve_symbol(Symbols *s, const Identifier *name) {
     return NULL;
   }
 
-  return symbol;
+  return var;
 }
 
-static const Symbol *tc_resolve_composable(Symbols *s) {
-  const Symbol *symbol = NULL;
+static const VariableSymbol *tc_resolve_composable(SymbolTable *s) {
+  const VariableSymbol *var = NULL;
   StackEntry *st = st_current(sa->stack);
-  while (!symbol && st) {
+  while (!var && st) {
     SymbolKey key = { .name = _composable.lexeme, .scope = st_scope(st).id };
-    symbol = map_get(s->symbols, &key);
+    const Symbol *sym = map_get(s, &key);
+    if (sym && sym->type == SYM_VAR) var = sym->var;
     st = st_next(st, true);
   }
 
-  return symbol;
+  return var;
 }
 
-static bool tc_define_symbol(Symbols *s, const Identifier *name, Symbol *symbol) {
+static bool tc_define_symbol(SymbolTable *s, const Identifier *name, VariableSymbol *var) {
   SymbolKey key = _sym_key(name->lexeme);
-  Symbol *existing = map_get(s->symbols, &key);
+  Symbol *existing = map_get(s, &key);
 
   if (existing) {
     logger_log(sa->sym_logger, LOG_ERROR,
@@ -599,28 +600,28 @@ static bool tc_define_symbol(Symbols *s, const Identifier *name, Symbol *symbol)
 
     RedefError *error = new(RedefError);
     *error = (RedefError){
-      .object_type = "variable",
+      .object_type = sym_get_type_str(existing),
       .object_name = strdup(name->lexeme),
-      .previous_definition = existing->loc
+      .previous_definition = sym_get_loc(existing)
     };
     err_report_redef(error, &name->loc, ERR_ERROR);
     return false;
   }
 
-  symbol->loc = name->loc;
-  map_insert(s->symbols, &key, symbol);
+  var->loc = name->loc;
+  map_insert(s, &key, sym_var(var));
   return true;
 }
 
-static Symbol *_symbol_of(Type *type, bool constant) {
-  tc_make(Symbol, symbol, { .type = type, .constant = constant });
+static VariableSymbol *_symbol_of(Type *type, bool constant) {
+  tc_make(VariableSymbol, symbol, { .type = type, .constant = constant });
   return symbol;
 }
 
 /* -- Type checking: compare ------------------------------------------------ */
 
-static bool tc_compare_types(Symbols *s, const Type *a, const Type *b);
-static bool tc_accepts_type(Symbols *s, const Type *a, const Type *b);
+static bool tc_compare_types(SymbolTable *s, const Type *a, const Type *b);
+static bool tc_accepts_type(SymbolTable *s, const Type *a, const Type *b);
 
 static bool _is_builtin(const Type *type, BuiltinType builtin) {
   return type->type == T_BUILTIN && type->builtin == builtin;
@@ -675,16 +676,16 @@ static Type *_upgrade_numeric_type(BuiltinType l, BuiltinType r) {
   return _builtin(T_FLOAT);
 }
 
-static bool _compare_list_types(Symbols *s, const ListType *a, const ListType *b) {
+static bool _compare_list_types(SymbolTable *s, const ListType *a, const ListType *b) {
   return tc_compare_types(s, a->item_type, b->item_type);
 }
 
-static bool _compare_vector_types(Symbols *s, const VectorType *a, const VectorType *b) {
+static bool _compare_vector_types(SymbolTable *s, const VectorType *a, const VectorType *b) {
   return a->len == b->len
     && tc_compare_types(s, a->item_type, b->item_type);
 }
 
-static bool _compare_tuple_types(Symbols *s, const TupleType *a, const TupleType *b) {
+static bool _compare_tuple_types(SymbolTable *s, const TupleType *a, const TupleType *b) {
   if (a->len != b->len) return false;
   for (u32 i = 0; i < a->len; i++) {
     if (!tc_compare_types(s, a->types[i], b->types[i])) return false;
@@ -692,12 +693,12 @@ static bool _compare_tuple_types(Symbols *s, const TupleType *a, const TupleType
   return true;
 }
 
-static bool _compare_map_types(Symbols *s, const MapType *a, const MapType *b) {
+static bool _compare_map_types(SymbolTable *s, const MapType *a, const MapType *b) {
   return tc_compare_types(s, a->key_type, b->key_type)
     && tc_compare_types(s, a->value_type, b->value_type);
 }
 
-static bool _compare_struct_types(Symbols *s, const StructType *a, const StructType *b) {
+static bool _compare_struct_types(SymbolTable *s, const StructType *a, const StructType *b) {
   if (map_size(a->fields) != map_size(b->fields)) return false;
 
   const StructField *f;
@@ -712,7 +713,7 @@ static bool _compare_struct_types(Symbols *s, const StructType *a, const StructT
   return true;
 }
 
-static bool _compare_union_types(Symbols *s, const UnionType *a, const UnionType *b) {
+static bool _compare_union_types(SymbolTable *s, const UnionType *a, const UnionType *b) {
   if (a->len != b->len) return false;
   for (u32 i = 0; i < a->len; i++) {
     if (!tc_compare_types(s, a->types[i], b->types[i])) return false;
@@ -720,7 +721,7 @@ static bool _compare_union_types(Symbols *s, const UnionType *a, const UnionType
   return true;
 }
 
-static bool _compare_named_types(Symbols *s, const NamedType *a, const NamedType *b) {
+static bool _compare_named_types(SymbolTable *s, const NamedType *a, const NamedType *b) {
   if (ast_compare_identifiers(a->name, b->name)) return true;
   return tc_compare_types(
     s,
@@ -729,7 +730,7 @@ static bool _compare_named_types(Symbols *s, const NamedType *a, const NamedType
   );
 }
 
-static bool tc_compare_types(Symbols *s, const Type *a, const Type *b) {
+static bool tc_compare_types(SymbolTable *s, const Type *a, const Type *b) {
   if (a->type == T_ERROR || b->type == T_ERROR) return false;
 
   // If the types are literally the same object they are obviously equal
@@ -762,7 +763,7 @@ static bool _accepts_builtin_type(BuiltinType a, const Type *b) {
     && (b->builtin == a || (a == T_FLOAT && b->builtin == T_INT));
 }
 
-static bool _accepts_list_type(Symbols *s, const ListType *a, const Type *b) {
+static bool _accepts_list_type(SymbolTable *s, const ListType *a, const Type *b) {
   switch (b->type) {
     case T_LIST: {
       return tc_accepts_type(s, a->item_type, b->list->item_type);
@@ -780,7 +781,7 @@ static bool _accepts_list_type(Symbols *s, const ListType *a, const Type *b) {
   }
 }
 
-static bool _accepts_vector_type(Symbols *s, const VectorType *a, const Type *b) {
+static bool _accepts_vector_type(SymbolTable *s, const VectorType *a, const Type *b) {
   switch (b->type) {
     case T_VECTOR: {
       return a->len == b->vec->len
@@ -797,7 +798,7 @@ static bool _accepts_vector_type(Symbols *s, const VectorType *a, const Type *b)
   }
 }
 
-static bool _accepts_tuple_type(Symbols *s, const TupleType *a, const Type *b) {
+static bool _accepts_tuple_type(SymbolTable *s, const TupleType *a, const Type *b) {
   switch (b->type) {
     case T_VECTOR: {
       if (a->len != b->vec->len) return false;
@@ -817,7 +818,7 @@ static bool _accepts_tuple_type(Symbols *s, const TupleType *a, const Type *b) {
   }
 }
 
-static bool _accepts_map_type(Symbols *s, const MapType *a, const Type *b) {
+static bool _accepts_map_type(SymbolTable *s, const MapType *a, const Type *b) {
   switch (b->type) {
     case T_MAP: {
       return tc_compare_types(s, a->key_type, b->map->key_type)
@@ -835,7 +836,7 @@ static bool _accepts_map_type(Symbols *s, const MapType *a, const Type *b) {
   }
 }
 
-static bool _accepts_struct_type(Symbols *s, const StructType *a, const Type *b) {
+static bool _accepts_struct_type(SymbolTable *s, const StructType *a, const Type *b) {
   if (b->type != T_STRUCT) return false;
   const StructField *field;
   map_foreach_v(field, a->fields) {
@@ -845,7 +846,7 @@ static bool _accepts_struct_type(Symbols *s, const StructType *a, const Type *b)
   return true;
 }
 
-static bool _accepts_union_type(Symbols *s, const UnionType *a, const Type *b) {
+static bool _accepts_union_type(SymbolTable *s, const UnionType *a, const Type *b) {
   if (b->type == T_UNION) {
     for (u32 i = 0; i < b->union_type->len; i++) {
       if (!_accepts_union_type(s, a, b->union_type->types[i])) return false;
@@ -859,7 +860,7 @@ static bool _accepts_union_type(Symbols *s, const UnionType *a, const Type *b) {
   }
 }
 
-static bool tc_accepts_type(Symbols *s, const Type *a, const Type *b) {
+static bool tc_accepts_type(SymbolTable *s, const Type *a, const Type *b) {
   if (a->type == T_ERROR || b->type == T_ERROR) return false;
 
   // If the types are literally the same object they are obviously equal
@@ -886,7 +887,7 @@ static bool tc_accepts_type(Symbols *s, const Type *a, const Type *b) {
   }
 }
 
-static bool tc_compatible_types(Symbols *s, const Type *a, const Type *b) {
+static bool tc_compatible_types(SymbolTable *s, const Type *a, const Type *b) {
   return tc_accepts_type(s, a, b) || tc_accepts_type(s, b, a);
 }
 
@@ -945,11 +946,11 @@ static Type *tc_report_op_type(
 
 /* -- Type checking: check -------------------------------------------------- */
 
-static Type *tc_check_expr(Symbols *s, const Expr *expr);
-static Type *tc_check_stmt(Symbols *s, const Stmt *stmt);
-static Type *tc_check_block(Symbols *s, const BlockExpr *expr);
+static Type *tc_check_expr(SymbolTable *s, const Expr *expr);
+static Type *tc_check_stmt(SymbolTable *s, const Stmt *stmt);
+static Type *tc_check_block(SymbolTable *s, const BlockExpr *expr);
 
-static Type *_list_type(Symbols *s, ListLiteral *list) {
+static Type *_list_type(SymbolTable *s, ListLiteral *list) {
   tc_debug_log("List", &list->meta.loc);
 
   Type **types = tc_new_array(Type *, list->len);
@@ -964,7 +965,7 @@ static Type *_list_type(Symbols *s, ListLiteral *list) {
     : _tuple_of(types, list->len);
 }
 
-static Type *_vector_type(Symbols *s, VectorLiteral *vec) {
+static Type *_vector_type(SymbolTable *s, VectorLiteral *vec) {
   Type *item_type = tc_check_expr(s, vec->value);
   if (_is_error(item_type)) return tc_error();
 
@@ -997,7 +998,7 @@ static bool _is_valid_map_key_type(const Type *type) {
   }
 }
 
-static Type *_add_to_union_type(Symbols *s, Type *value_type, Type *new_type) {
+static Type *_add_to_union_type(SymbolTable *s, Type *value_type, Type *new_type) {
   if (_is_error(value_type) || _is_error(new_type)) return tc_error();
 
   if (value_type->type == T_UNION) {
@@ -1018,7 +1019,7 @@ static Type *_add_to_union_type(Symbols *s, Type *value_type, Type *new_type) {
   }
 }
 
-static Type *_map_type(Symbols *s, MapLiteral *map) {
+static Type *_map_type(SymbolTable *s, MapLiteral *map) {
   Type *key_type = tc_check_expr(s, map->entries[0]->key);
   Type *value_type = tc_check_expr(s, map->entries[0]->value);
   bool valid = true;
@@ -1048,7 +1049,7 @@ static Type *_map_type(Symbols *s, MapLiteral *map) {
   return valid ? _map_of(key_type, value_type) : tc_error();
 }
 
-static Type *_struct_type(Symbols *s, StructLiteral *struct_l) {
+static Type *_struct_type(SymbolTable *s, StructLiteral *struct_l) {
   StructField **fields = tc_new_array(StructField *, struct_l->len);
   bool valid = true;
 
@@ -1071,7 +1072,7 @@ static Type *_struct_type(Symbols *s, StructLiteral *struct_l) {
   return type;
 }
 
-static Type *_range_type(Symbols *s, RangeLiteral *range) {
+static Type *_range_type(SymbolTable *s, RangeLiteral *range) {
   bool start_valid = !range->start
     || _is_builtin(tc_check_expr(s, range->start), T_INT);
   bool end_valid = !range->end
@@ -1088,7 +1089,7 @@ static Type *_range_type(Symbols *s, RangeLiteral *range) {
   return type;
 }
 
-static Type *_literal_type(Symbols *s, LiteralExpr *expr) {
+static Type *_literal_type(SymbolTable *s, LiteralExpr *expr) {
   tc_debug_log("Literal", &expr->meta.loc);
 
   switch (expr->type) {
@@ -1116,7 +1117,7 @@ static Type *_struct_member_type(const StructType *s, const Identifier *name) {
   return field->type;
 }
 
-static Type *_indexed_list_item_type(Symbols *s, Type *item_type, Expr *index) {
+static Type *_indexed_list_item_type(SymbolTable *s, Type *item_type, Expr *index) {
   Type *index_type = tc_check_expr(s, index);
 
   if (index_type->type == T_RANGE) return _list_of(item_type);
@@ -1125,7 +1126,7 @@ static Type *_indexed_list_item_type(Symbols *s, Type *item_type, Expr *index) {
   return tc_report_bad_index_type(&index->meta.loc, index_type);
 }
 
-static Type *_indexed_list_type(Symbols *s, ListType *list, IndexedVariable *var) {
+static Type *_indexed_list_type(SymbolTable *s, ListType *list, IndexedVariable *var) {
   if (var->index_count == 1) {
     return _indexed_list_item_type(s, list->item_type, var->indices[0]);
   } else {
@@ -1140,7 +1141,7 @@ static Type *_indexed_list_type(Symbols *s, ListType *list, IndexedVariable *var
   }
 }
 
-static Type *_indexed_tuple_item_type(Symbols *s, TupleType *tuple, Expr *index) {
+static Type *_indexed_tuple_item_type(SymbolTable *s, TupleType *tuple, Expr *index) {
   Type *index_type = tc_check_expr(s, index);
   if (!_is_builtin(index_type, T_INT)) {
     return tc_report_bad_index_type(&index->meta.loc, index_type);
@@ -1169,7 +1170,7 @@ static Type *_indexed_tuple_item_type(Symbols *s, TupleType *tuple, Expr *index)
   return value_type;
 }
 
-static Type *_indexed_tuple_type(Symbols *s, TupleType *tuple, IndexedVariable *var) {
+static Type *_indexed_tuple_type(SymbolTable *s, TupleType *tuple, IndexedVariable *var) {
   if (var->index_count == 1) {
     return _indexed_tuple_item_type(s, tuple, var->indices[0]);
   } else {
@@ -1184,7 +1185,7 @@ static Type *_indexed_tuple_type(Symbols *s, TupleType *tuple, IndexedVariable *
   }
 }
 
-static Type *_indexed_vector_type(Symbols *s, VectorType *vec, IndexedVariable *var) {
+static Type *_indexed_vector_type(SymbolTable *s, VectorType *vec, IndexedVariable *var) {
   if (var->index_count == 1) {
     Type *index_type = tc_check_expr(s, var->indices[0]);
     if (!_is_builtin(index_type, T_INT)) {
@@ -1204,7 +1205,7 @@ static Type *_indexed_vector_type(Symbols *s, VectorType *vec, IndexedVariable *
   }
 }
 
-static Type *_indexed_map_type(Symbols *s, MapType *map, IndexedVariable *var) {
+static Type *_indexed_map_type(SymbolTable *s, MapType *map, IndexedVariable *var) {
   if (var->index_count == 1) {
     Type *index_type = tc_check_expr(s, var->indices[0]);
     if (!tc_accepts_type(s, map->key_type, index_type)) {
@@ -1232,12 +1233,12 @@ static Type *_indexed_map_type(Symbols *s, MapType *map, IndexedVariable *var) {
   }
 }
 
-static Type *_variable_type(Symbols *s, VariableExpr *var) {
+static Type *_variable_type(SymbolTable *s, VariableExpr *var) {
   tc_debug_log("Var", &var->meta.loc);
 
   switch (var->type) {
     case V_NAMED: {
-      const Symbol *symbol = tc_resolve_symbol(s, var->named->name);
+      const VariableSymbol *symbol = tc_resolve_symbol(s, var->named->name);
       return symbol ? symbol->type : tc_error();
     }
     case V_INDEX: {
@@ -1274,7 +1275,7 @@ static Type *_variable_type(Symbols *s, VariableExpr *var) {
   }
 }
 
-static Type *_unary_type(Symbols *s, UnaryExpr *expr) {
+static Type *_unary_type(SymbolTable *s, UnaryExpr *expr) {
   tc_debug_log("UnaryExpr", &expr->meta.loc);
 
   Type *expr_type = tc_check_expr(s, expr->expr);
@@ -1302,7 +1303,7 @@ static Type *_unary_type(Symbols *s, UnaryExpr *expr) {
   }
 }
 
-static Type *_arithmetic_numeric_type(Symbols *s, Type *l, Type *r, BinaryExpr *expr) {
+static Type *_arithmetic_numeric_type(SymbolTable *s, Type *l, Type *r, BinaryExpr *expr) {
   if (_is_numeric_type(r)) {
     return _upgrade_numeric_type(l->builtin, r->builtin);
   } else if (_is_numvec_type(r)) {
@@ -1318,7 +1319,7 @@ static Type *_arithmetic_numeric_type(Symbols *s, Type *l, Type *r, BinaryExpr *
   }
 }
 
-static Type *_arithmetic_vector_type(Symbols *s, Type *l, Type *r, BinaryExpr *expr) {
+static Type *_arithmetic_vector_type(SymbolTable *s, Type *l, Type *r, BinaryExpr *expr) {
   if (_is_numvec_type(r)) {
     if (_numvec_len(l) != _numvec_len(r)) {
       return tc_report_error(&expr->meta.loc, "vector length mismatch");
@@ -1341,7 +1342,7 @@ static Type *_arithmetic_vector_type(Symbols *s, Type *l, Type *r, BinaryExpr *e
   }
 }
 
-static Type *_binary_type(Symbols *s, BinaryExpr *expr) {
+static Type *_binary_type(SymbolTable *s, BinaryExpr *expr) {
   tc_debug_log("BinaryExpr", &expr->meta.loc);
 
   Type *l_type = tc_check_expr(s, expr->left);
@@ -1440,7 +1441,7 @@ static Type *_binary_type(Symbols *s, BinaryExpr *expr) {
   }
 }
 
-static bool _is_assignable(Symbols *s, const VariableExpr *expr) {
+static bool _is_assignable(SymbolTable *s, const VariableExpr *expr) {
   switch (expr->type) {
     case V_NAMED: return true;
     case V_STRUCT_MEMBER: return _is_assignable(s, expr->struct_member->struct_expr);
@@ -1455,7 +1456,7 @@ static bool _is_assignable(Symbols *s, const VariableExpr *expr) {
   }
 }
 
-static Type *_assignment_type(Symbols *s, const AssignmentExpr *expr) {
+static Type *_assignment_type(SymbolTable *s, const AssignmentExpr *expr) {
   tc_debug_log("Assignment", &expr->meta.loc);
 
   Type *lhs_type = _variable_type(s, expr->left);
@@ -1477,7 +1478,7 @@ static Type *_assignment_type(Symbols *s, const AssignmentExpr *expr) {
   );
 }
 
-static Type *_if_expr_type(Symbols *s, const IfExpr *expr) {
+static Type *_if_expr_type(SymbolTable *s, const IfExpr *expr) {
   tc_debug_log("IfExpr", &expr->meta.loc);
 
   Type *condition_type = tc_check_expr(s, expr->condition);
@@ -1503,7 +1504,7 @@ static Type *_if_expr_type(Symbols *s, const IfExpr *expr) {
   }
 }
 
-static Type *_for_expr_type(Symbols *s, const ForExpr *expr) {
+static Type *_for_expr_type(SymbolTable *s, const ForExpr *expr) {
   tc_debug_log("ForExpr", &expr->meta.loc);
 
   Type *iterable_type = tc_check_expr(s, expr->iterable);
@@ -1521,10 +1522,10 @@ static Type *_for_expr_type(Symbols *s, const ForExpr *expr) {
       : iterable_type->vec->item_type;
 
   st_push(sa->stack, expr->body->block->scope);
-  Symbol *iterator = _symbol_of(iterator_type, true);
+  VariableSymbol *iterator = _symbol_of(iterator_type, true);
   tc_define_symbol(s, expr->var_id, iterator);
   if (expr->idx_id) {
-    Symbol *idx_iterator = _symbol_of(_builtin(T_INT), true);
+    VariableSymbol *idx_iterator = _symbol_of(_builtin(T_INT), true);
     tc_define_symbol(s, expr->idx_id, idx_iterator);
   }
   Type *body_type = tc_check_block(s, expr->body->block);
@@ -1550,7 +1551,7 @@ static u32 _find_function_param(const FunctionDef *def, const Identifier *name) 
 }
 
 static bool _check_function_args(
-  Symbols *s,
+  SymbolTable *s,
   const FunctionCallExpr *expr,
   const FunctionDef *def
 ) {
@@ -1614,7 +1615,7 @@ static bool _check_function_args(
   return valid;
 }
 
-static Type *_function_call_type(Symbols *s, const FunctionCallExpr *expr) {
+static Type *_function_call_type(SymbolTable *s, const FunctionCallExpr *expr) {
   tc_debug_log("FunctionCall", &expr->meta.loc);
 
   const FunctionDef *def = tc_resolve_function(s, expr->name);
@@ -1656,7 +1657,7 @@ static Type *_function_call_type(Symbols *s, const FunctionCallExpr *expr) {
   return valid ? def->return_type : tc_error();
 }
 
-static BuiltinType _validate_csv_field_type(Symbols *s, Type *t) {
+static BuiltinType _validate_csv_field_type(SymbolTable *s, Type *t) {
   switch (t->type) {
     case T_NAMED: {
       return _validate_csv_field_type(s, tc_resolve_named_type(s, t->named));
@@ -1680,7 +1681,7 @@ static BuiltinType _validate_csv_field_type(Symbols *s, Type *t) {
 }
 
 static Type *_validate_csv_type(
-  Symbols *s,
+  SymbolTable *s,
   Type *t,
   const ImportExpr *expr,
   bool report_errors
@@ -1792,7 +1793,7 @@ static Type *_validate_csv_type(
   }
 }
 
-static Type *_import_type(Symbols *s, const ImportExpr *expr) {
+static Type *_import_type(SymbolTable *s, const ImportExpr *expr) {
   tc_debug_log("Import", &expr->meta.loc);
 
   switch (expr->type) {
@@ -1829,7 +1830,7 @@ static Type *_import_type(Symbols *s, const ImportExpr *expr) {
   }
 }
 
-static Type *_env_type(Symbols *s, const EnvExpr *expr) {
+static Type *_env_type(SymbolTable *s, const EnvExpr *expr) {
   tc_debug_log("Env", &expr->meta.loc);
 
   if (expr->default_value) {
@@ -1845,7 +1846,7 @@ static Type *_env_type(Symbols *s, const EnvExpr *expr) {
   return _builtin(T_STRING);
 }
 
-static Type *tc_check_block(Symbols *s, const BlockExpr *expr) {
+static Type *tc_check_block(SymbolTable *s, const BlockExpr *expr) {
   tc_debug_log("Block", &expr->meta.loc);
 
   Type **block_types = tc_new_array(Type *, expr->len);
@@ -1880,15 +1881,15 @@ static Type *tc_check_block(Symbols *s, const BlockExpr *expr) {
     : _tuple_of(block_types, type_count);
 }
 
-static Type *_block_type(Symbols *s, const BlockExpr *expr) {
+static Type *_block_type(SymbolTable *s, const BlockExpr *expr) {
   st_push(sa->stack, expr->scope);
   Type *type = tc_check_block(s, expr);
   st_pop(sa->stack);
   return type;
 }
 
-static Type *_compose_type(Symbols *s, const Expr *expr) {
-  const Symbol *composable = tc_resolve_composable(s);
+static Type *_compose_type(SymbolTable *s, const Expr *expr) {
+  const VariableSymbol *composable = tc_resolve_composable(s);
   if (!composable) {
     err_report_compose(&expr->meta.loc, ERR_ERROR);
   }
@@ -1896,7 +1897,7 @@ static Type *_compose_type(Symbols *s, const Expr *expr) {
   return composable->type;
 }
 
-static Type *tc_check_expr(Symbols *s, const Expr *expr) {
+static Type *tc_check_expr(SymbolTable *s, const Expr *expr) {
   Type *type = NULL;
   switch (expr->type) {
     case EXPR_LITERAL: type = _literal_type(s, expr->literal); break;
@@ -1919,7 +1920,7 @@ static Type *tc_check_expr(Symbols *s, const Expr *expr) {
   return type;
 }
 
-static void _check_decl(Symbols *s, const DeclarationStmt *decl) {
+static void _check_decl(SymbolTable *s, const DeclarationStmt *decl) {
   tc_debug_log("Decl", &decl->meta.loc);
 
   Type *value_type = tc_check_expr(s, decl->right);
@@ -2020,7 +2021,7 @@ static void _check_decl(Symbols *s, const DeclarationStmt *decl) {
   }
 }
 
-static void _check_constant(Symbols *s, const ConstantStmt *constant) {
+static void _check_constant(SymbolTable *s, const ConstantStmt *constant) {
   Type *value_type = tc_check_expr(s, constant->right);
 
   Type *decl_type = or_default(constant->type, value_type);
@@ -2036,7 +2037,7 @@ static void _check_constant(Symbols *s, const ConstantStmt *constant) {
   tc_define_symbol(s, constant->left, _symbol_of(decl_type, true));
 }
 
-static void _check_function_def(Symbols *s, const FunctionDef *def) {
+static void _check_function_def(SymbolTable *s, const FunctionDef *def) {
   st_push(sa->stack, def->body->scope);
 
   for (u32 i = 0; i < def->params_len; i++) {
@@ -2052,12 +2053,12 @@ static void _check_function_def(Symbols *s, const FunctionDef *def) {
       }
     }
 
-    Symbol *param = _symbol_of(def->params[i]->type, true);
+    VariableSymbol *param = _symbol_of(def->params[i]->type, true);
     tc_define_symbol(s, def->params[i]->name, param);
   }
 
   if (def->compose_type) {
-    Symbol *composable = _symbol_of(def->compose_type, true);
+    VariableSymbol *composable = _symbol_of(def->compose_type, true);
     tc_define_symbol(s, _composable_id(), composable);
   }
 
@@ -2073,13 +2074,13 @@ static void _check_function_def(Symbols *s, const FunctionDef *def) {
   st_pop(sa->stack);
 }
 
-static void _check_export(Symbols *s, const ExportDirective *export) {
+static void _check_export(SymbolTable *s, const ExportDirective *export) {
   for (u32 i = 0; i < export->len; i++) {
     // TODO
   }
 }
 
-static Type *tc_check_stmt(Symbols *s, const Stmt *stmt) {
+static Type *tc_check_stmt(SymbolTable *s, const Stmt *stmt) {
   tc_debug_log("Stmt", &stmt->meta.loc);
 
   switch (stmt->type) {
@@ -2094,7 +2095,7 @@ static Type *tc_check_stmt(Symbols *s, const Stmt *stmt) {
   }
 }
 
-static Type *tc_check_ast(Symbols *s, const Program *ast) {
+static Type *tc_check_ast(SymbolTable *s, const Program *ast) {
   st_push(sa->stack, ast->scope);
 
   Type **types = tc_new_array(Type *, ast->len);
@@ -2130,11 +2131,8 @@ CompilationStatus sa_build_tables_and_typecheck(i32 file_idx) {
   Program *ast = cs()->asts[file_idx];
   assert(ast != NULL); // If we got to this point without an AST we have a bug
 
-  Symbols *sym = cs()->symbol_data[file_idx];
+  SymbolTable *sym = cs()->symbol_data[file_idx];
   assert(sym != NULL); // If we got to this point without a symbol table we have a bug
-  sym->symbols = new(SymbolTable);
-  map_init(sym->symbols, sk_hash, sk_compare);
-  map_manage_keys(sym->symbols, sk_clone, sk_free);
 
   mem_dyn_arena_free_all(sa->tc_arena);
   tc_check_ast(sym, ast);
@@ -2144,11 +2142,9 @@ CompilationStatus sa_build_tables_and_typecheck(i32 file_idx) {
   return STATUS_SUCCEEDED;
 }
 
-void sa_free_symbols(Symbols *s) {
+void sa_free_symbols(SymbolTable *s) {
   if (!s) return;
 
-  if (s->types) { map_free(s->types); free(s->types); }
-  if (s->functions) { map_free(s->functions); free(s->functions); }
-  if (s->symbols) { map_free(s->symbols); free(s->symbols); }
+  map_free(s);
   free(s);
 }

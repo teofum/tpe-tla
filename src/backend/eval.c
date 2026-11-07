@@ -299,14 +299,15 @@ static const Identifier *_composable_id() {
 /* -- Evaluation: symbols --------------------------------------------------- */
 
 static const FunctionDef *_resolve_function(
-  const Symbols *s,
+  const SymbolTable *s,
   const Identifier *name
 ) {
   const FunctionDef *function = NULL;
   StackEntry *st = st_current(e->stack);
   while (!function && st) {
     SymbolKey key = { .name = name->lexeme, .scope = st_scope(st).id };
-    function = map_get(s->functions, &key);
+    const Symbol *sym = map_get(s, &key);
+    if (sym && sym->type == SYM_FUNCTION) function = sym->function;
     st = st_next(st, false);
   }
 
@@ -315,39 +316,40 @@ static const FunctionDef *_resolve_function(
 }
 
 
-static Symbol *_resolve_symbol(const Symbols *s, const Identifier *name) {
-  Symbol *symbol = NULL;
+static VariableSymbol *_resolve_symbol(const SymbolTable *s, const Identifier *name) {
+  VariableSymbol *var = NULL;
   StackEntry *st = st_current(e->stack);
-  while (!symbol && st) {
+  while (!var && st) {
     SymbolKey key = { .name = name->lexeme, .scope = st_scope(st).id };
-    symbol = map_get(s->symbols, &key);
+    const Symbol *sym = map_get(s, &key);
+    if (sym && sym->type == SYM_VAR) var = (VariableSymbol *)sym->var;
     st = st_next(st, true);
   }
 
-  assert(symbol != NULL); // Undefined variable
-  return symbol;
+  assert(var != NULL); // Undefined variable
+  return var;
 }
 
-static const Value *eval_get_symbol(const Symbols *s, const Identifier *name) {
+static const Value *eval_get_symbol(const SymbolTable *s, const Identifier *name) {
   return _resolve_symbol(s, name)->value;
 }
 
 static void eval_update_symbol(
-  const Symbols *s,
+  const SymbolTable *s,
   const Identifier *name,
   const Value *new_value
 ) {
-  Symbol *sym = _resolve_symbol(s, name);
+  VariableSymbol *sym = _resolve_symbol(s, name);
   assert(sym != NULL);
   sym->value = new_value;
 }
 
 /* -- Evaluation ------------------------------------------------------------ */
 
-static const Value *eval_expr(const Symbols *s, const Expr *expr);
-static const Value *eval_stmt(const Symbols *s, const Stmt *stmt);
+static const Value *eval_expr(const SymbolTable *s, const Expr *expr);
+static const Value *eval_stmt(const SymbolTable *s, const Stmt *stmt);
 
-static const Value *eval_range(const Symbols *s, const RangeLiteral *range) {
+static const Value *eval_range(const SymbolTable *s, const RangeLiteral *range) {
   const Value *start_v = range->start ? eval_expr(s, range->start) : NULL;
   const Value *end_v = range->end ? eval_expr(s, range->end) : NULL;
   assert(!start_v || start_v->type == VAL_INT);
@@ -363,7 +365,7 @@ static const Value *eval_range(const Symbols *s, const RangeLiteral *range) {
   return value;
 }
 
-static const Value *eval_list(const Symbols *s, const ListLiteral *list) {
+static const Value *eval_list(const SymbolTable *s, const ListLiteral *list) {
   const Value *value = _list(list->len);
   for (u32 i = 0; i < list->len; i++) {
     value->list->items[i] = eval_expr(s, list->exprs[i]);
@@ -372,7 +374,7 @@ static const Value *eval_list(const Symbols *s, const ListLiteral *list) {
   return value;
 }
 
-static const Value *eval_vector(const Symbols *s, const VectorLiteral *vec) {
+static const Value *eval_vector(const SymbolTable *s, const VectorLiteral *vec) {
   eval_make(List, list_v, {
     .len = vec->len,
     .items = eval_new_array(const Value *, vec->len)
@@ -385,7 +387,7 @@ static const Value *eval_vector(const Symbols *s, const VectorLiteral *vec) {
   return value;
 }
 
-static const Value *eval_map(const Symbols *s, const MapLiteral *map) {
+static const Value *eval_map(const SymbolTable *s, const MapLiteral *map) {
   Map *map_v = eval_new(Map);
   map_inita(map_v, eval_hash_value, eval_compare_values, eval_calloc, NULL);
 
@@ -408,7 +410,7 @@ static const Value *eval_map(const Symbols *s, const MapLiteral *map) {
   return value;
 }
 
-static const Value *eval_struct(const Symbols *s, const StructLiteral *struct_l) {
+static const Value *eval_struct(const SymbolTable *s, const StructLiteral *struct_l) {
   Map *map_v = eval_new(Map);
   map_inita(map_v, eval_hash_value, eval_compare_values, eval_calloc, NULL);
 
@@ -430,7 +432,7 @@ static const Value *eval_struct(const Symbols *s, const StructLiteral *struct_l)
   return value;
 }
 
-static const Value *eval_literal(const Symbols *s, const LiteralExpr *expr) {
+static const Value *eval_literal(const SymbolTable *s, const LiteralExpr *expr) {
   switch (expr->type) {
     case L_NIL: return _nil();
     case L_INTEGER: return _int(expr->integer->value);
@@ -446,7 +448,7 @@ static const Value *eval_literal(const Symbols *s, const LiteralExpr *expr) {
 }
 
 static const Value *eval_list_idx(
-  const Symbols *s,
+  const SymbolTable *s,
   const Value *container,
   const IndexedVariable *var
 ) {
@@ -511,7 +513,7 @@ static const Value *eval_list_idx(
 }
 
 static const Value *eval_map_idx(
-  const Symbols *s,
+  const SymbolTable *s,
   const Value *container,
   const IndexedVariable *var
 ) {
@@ -536,7 +538,7 @@ static const Value *eval_map_idx(
   return value;
 }
 
-static const Value *eval_variable(const Symbols *s, const VariableExpr *var) {
+static const Value *eval_variable(const SymbolTable *s, const VariableExpr *var) {
   switch (var->type) {
     case V_NAMED: return eval_get_symbol(s, var->named->name);
     case V_STRUCT_MEMBER: {
@@ -556,7 +558,7 @@ static const Value *eval_variable(const Symbols *s, const VariableExpr *var) {
   }
 }
 
-static const Value *eval_unary(const Symbols *s, const UnaryExpr *expr) {
+static const Value *eval_unary(const SymbolTable *s, const UnaryExpr *expr) {
   const Value *inner = eval_expr(s, expr->expr);
   if (!inner) return NULL;
 
@@ -724,7 +726,7 @@ static const Value *eval_comp_str(const str *l, const Value *r, TokenLabel op) {
   }
 }
 
-static const Value *eval_binary(const Symbols *s, const BinaryExpr *expr) {
+static const Value *eval_binary(const SymbolTable *s, const BinaryExpr *expr) {
   const Value *left = eval_expr(s, expr->left);
   if (!left) return NULL;
 
@@ -799,7 +801,7 @@ static const Value *eval_binary(const Symbols *s, const BinaryExpr *expr) {
   }
 }
 
-static const Value *_block(const Symbols *s, const BlockExpr *expr) {
+static const Value *_block(const SymbolTable *s, const BlockExpr *expr) {
   const Value *value = NULL;
   u32 item_count = 0;
 
@@ -824,7 +826,7 @@ static const Value *_block(const Symbols *s, const BlockExpr *expr) {
   return value;
 }
 
-static const Value *eval_block(const Symbols *s, const BlockExpr *expr) {
+static const Value *eval_block(const SymbolTable *s, const BlockExpr *expr) {
   st_push(e->stack, expr->scope);
   const Value *value = _block(s, expr);
   st_pop(e->stack);
@@ -854,7 +856,7 @@ static const Value *_do_assign(
   }
 }
 
-static const Value *eval_assignment(const Symbols *s, const AssignmentExpr *a) {
+static const Value *eval_assignment(const SymbolTable *s, const AssignmentExpr *a) {
   switch (a->left->type) {
     case V_NAMED: {
       const Value *r_value = eval_expr(s, a->right);
@@ -901,7 +903,7 @@ static const Value *eval_assignment(const Symbols *s, const AssignmentExpr *a) {
   }
 }
 
-static const Value *eval_if(const Symbols *s, const IfExpr *expr) {
+static const Value *eval_if(const SymbolTable *s, const IfExpr *expr) {
   const Value *cond_v = eval_expr(s, expr->condition);
   assert(cond_v->type == VAL_BOOL);
   return cond_v->boolean
@@ -909,7 +911,7 @@ static const Value *eval_if(const Symbols *s, const IfExpr *expr) {
     : (expr->false_branch ? eval_expr(s, expr->false_branch) : NULL);
 }
 
-static const Value *eval_for(const Symbols *s, const ForExpr *expr) {
+static const Value *eval_for(const SymbolTable *s, const ForExpr *expr) {
   const Value *iterable_v = eval_expr(s, expr->iterable);
 
   st_push(e->stack, expr->body->block->scope);
@@ -952,7 +954,7 @@ static const Value *eval_for(const Symbols *s, const ForExpr *expr) {
   return value;
 }
 
-static const Value *eval_call(const Symbols *s, const FunctionCallExpr *call) {
+static const Value *eval_call(const SymbolTable *s, const FunctionCallExpr *call) {
   const FunctionDef *def = _resolve_function(s, call->name);
 
   const Value **arg_values = eval_new_array(const Value *, call->args_len);
@@ -993,11 +995,11 @@ static const Value *eval_call(const Symbols *s, const FunctionCallExpr *call) {
   return value;
 }
 
-static const Value *eval_compose(const Symbols *s, const Expr *expr) {
+static const Value *eval_compose(const SymbolTable *s, const Expr *expr) {
   return eval_get_symbol(s, _composable_id());
 }
 
-static const Value *eval_env(const Symbols *s, const EnvExpr *expr) {
+static const Value *eval_env(const SymbolTable *s, const EnvExpr *expr) {
   char *name = str_to_cstring(expr->env_name->value);
   char *value = map_get(cs()->options.definitions, name);
 
@@ -1096,7 +1098,7 @@ static const Value *_csv_row(
   }
 }
 
-static const Value *eval_import(const Symbols *s, const ImportExpr *i) {
+static const Value *eval_import(const SymbolTable *s, const ImportExpr *i) {
   switch (i->type) {
     case IMPORT_URL: {
       const char *base = cs()->options.base_path;
@@ -1154,7 +1156,7 @@ static const Value *eval_import(const Symbols *s, const ImportExpr *i) {
   return _nil();
 }
 
-static const Value *eval_expr(const Symbols *s, const Expr *expr) {
+static const Value *eval_expr(const SymbolTable *s, const Expr *expr) {
   switch (expr->type) {
     case EXPR_LITERAL: return eval_literal(s, expr->literal);
     case EXPR_VARIABLE: return eval_variable(s, expr->variable);
@@ -1172,7 +1174,7 @@ static const Value *eval_expr(const Symbols *s, const Expr *expr) {
   }
 }
 
-static const Value *eval_decl(const Symbols *s, const DeclarationStmt *decl) {
+static const Value *eval_decl(const SymbolTable *s, const DeclarationStmt *decl) {
   const Value *r_value = eval_expr(s, decl->right);
   if (decl->left_count == 1) {
     eval_update_symbol(s, decl->left[0], r_value);
@@ -1193,13 +1195,13 @@ static const Value *eval_decl(const Symbols *s, const DeclarationStmt *decl) {
   return NULL;
 }
 
-static const Value *eval_const(const Symbols *s, const ConstantStmt *constant) {
+static const Value *eval_const(const SymbolTable *s, const ConstantStmt *constant) {
   const Value *r_value = eval_expr(s, constant->right);
   eval_update_symbol(s, constant->left, r_value);
   return NULL;
 }
 
-static const Value *eval_stmt(const Symbols *s, const Stmt *stmt) {
+static const Value *eval_stmt(const SymbolTable *s, const Stmt *stmt) {
   switch (stmt->type) {
     case STMT_EXPR: return eval_expr(s, stmt->expr);
     case STMT_DECLARATION: return eval_decl(s, stmt->decl);
@@ -1212,7 +1214,7 @@ static const Value *eval_stmt(const Symbols *s, const Stmt *stmt) {
   }
 }
 
-static const Value *eval_program(const Symbols *s, const Program *program) {
+static const Value *eval_program(const SymbolTable *s, const Program *program) {
   st_push(e->stack, program->scope);
 
   const Value *value = NULL;
@@ -1249,7 +1251,7 @@ CompilationStatus eval_evaluate(i32 file_idx) {
   Program *ast = cs()->asts[file_idx];
   assert(ast != NULL); // If we got to this point without an AST we have a bug
 
-  Symbols *sym = cs()->symbol_data[file_idx];
+  SymbolTable *sym = cs()->symbol_data[file_idx];
   assert(sym != NULL); // If we got to this point without a symbol table we have a bug
 
   builtins_set_eval_arena(e->arena);
