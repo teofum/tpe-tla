@@ -79,6 +79,7 @@ static void _static_tables_add_type(
   const TypeAliasStmt *type_alias,
   bool definition
 ) {
+  ((TypeAliasStmt *)type_alias)->native_scope = sa->stack;
   SymbolKey key = _sym_key(type_alias->alias->lexeme);
   logger_log(sa->sym_logger, LOG_DEBUG,
     "Scope %u: Type %s",
@@ -107,7 +108,10 @@ static void _static_tables_add_function(
   const FunctionDef *function,
   bool definition
 ) {
-  if (definition) _static_tables_block(s, function->body, SC_FUNCTION);
+  if (definition) {
+    ((FunctionDef *)function)->native_scope = sa->stack;
+    _static_tables_block(s, function->body, SC_FUNCTION);
+  }
 
   SymbolKey key = _sym_key(function->name->lexeme);
   logger_log(sa->sym_logger, LOG_DEBUG,
@@ -520,9 +524,15 @@ static const Identifier *_composable_id() {
 
 /* -- Type checking: variables ---------------------------------------------- */
 
-static Type *tc_resolve_named_type(SymbolTable *s, const NamedType *named) {
+static Type *tc_resolve_named_type(
+  SymbolTable *s,
+  const NamedType *named,
+  Scope *scope
+) {
+  scope = or_default(scope, sa->stack);
+
   const TypeAliasStmt *alias = NULL;
-  Scope *sc = sa->stack;
+  Scope *sc = scope;
   while (!alias && sc) {
     SymbolKey key = { .name = named->name->lexeme, .scope = sc_id(sc) };
     const Symbol *sym = map_get(s, &key);
@@ -533,7 +543,7 @@ static Type *tc_resolve_named_type(SymbolTable *s, const NamedType *named) {
   if (!alias) {
     logger_log(sa->tc_logger, LOG_ERROR,
       "Scope %u: Type %s is undefined",
-      sc_id(sa->stack), named->name->lexeme
+      sc_id(scope), named->name->lexeme
     );
 
     UndefError *error = new(UndefError);
@@ -649,8 +659,20 @@ static VariableSymbol *_symbol_of(Type *type, bool constant) {
 
 /* -- Type checking: compare ------------------------------------------------ */
 
-static bool tc_compare_types(SymbolTable *s, const Type *a, const Type *b);
-static bool tc_accepts_type(SymbolTable *s, const Type *a, const Type *b);
+static bool tc_compare_types(
+  SymbolTable *s,
+  const Type *a,
+  const Type *b,
+  Scope *ctx_a,
+  Scope *ctx_b
+);
+static bool tc_accepts_type(
+  SymbolTable *s,
+  const Type *a,
+  const Type *b,
+  Scope *ctx_a,
+  Scope *ctx_b
+);
 
 static bool _is_builtin(const Type *type, BuiltinType builtin) {
   return type->type == T_BUILTIN && type->builtin == builtin;
@@ -705,82 +727,73 @@ static Type *_upgrade_numeric_type(BuiltinType l, BuiltinType r) {
   return _builtin(T_FLOAT);
 }
 
-static bool _compare_list_types(SymbolTable *s, const ListType *a, const ListType *b) {
-  return tc_compare_types(s, a->item_type, b->item_type);
+static bool _compare_list_types(SymbolTable *s, const ListType *a, const ListType *b, Scope *ctx_a, Scope *ctx_b) {
+  return tc_compare_types(s, a->item_type, b->item_type, ctx_a, ctx_b);
 }
 
-static bool _compare_vector_types(SymbolTable *s, const VectorType *a, const VectorType *b) {
+static bool _compare_vector_types(SymbolTable *s, const VectorType *a, const VectorType *b, Scope *ctx_a, Scope *ctx_b) {
   return a->len == b->len
-    && tc_compare_types(s, a->item_type, b->item_type);
+    && tc_compare_types(s, a->item_type, b->item_type, ctx_a, ctx_b);
 }
 
-static bool _compare_tuple_types(SymbolTable *s, const TupleType *a, const TupleType *b) {
+static bool _compare_tuple_types(SymbolTable *s, const TupleType *a, const TupleType *b, Scope *ctx_a, Scope *ctx_b) {
   if (a->len != b->len) return false;
   for (u32 i = 0; i < a->len; i++) {
-    if (!tc_compare_types(s, a->types[i], b->types[i])) return false;
+    if (!tc_compare_types(s, a->types[i], b->types[i], ctx_a, ctx_b)) return false;
   }
   return true;
 }
 
-static bool _compare_map_types(SymbolTable *s, const MapType *a, const MapType *b) {
-  return tc_compare_types(s, a->key_type, b->key_type)
-    && tc_compare_types(s, a->value_type, b->value_type);
+static bool _compare_map_types(SymbolTable *s, const MapType *a, const MapType *b, Scope *ctx_a, Scope *ctx_b) {
+  return tc_compare_types(s, a->key_type, b->key_type, ctx_a, ctx_b)
+    && tc_compare_types(s, a->value_type, b->value_type, ctx_a, ctx_b);
 }
 
-static bool _compare_struct_types(SymbolTable *s, const StructType *a, const StructType *b) {
+static bool _compare_struct_types(SymbolTable *s, const StructType *a, const StructType *b, Scope *ctx_a, Scope *ctx_b) {
   if (map_size(a->fields) != map_size(b->fields)) return false;
 
   const StructField *f;
   map_foreach_v(f, a->fields) {
     StructField *fb = map_get(b->fields, f->name->lexeme);
-    if (!fb || !tc_compare_types(s, f->type, fb->type)) return false;
+    if (!fb || !tc_compare_types(s, f->type, fb->type, ctx_a, ctx_b)) return false;
   }
   map_foreach_v(f, b->fields) {
     StructField *fa = map_get(a->fields, f->name->lexeme);
-    if (!fa || !tc_compare_types(s, f->type, fa->type)) return false;
+    if (!fa || !tc_compare_types(s, fa->type, f->type, ctx_a, ctx_b)) return false;
   }
   return true;
 }
 
-static bool _compare_union_types(SymbolTable *s, const UnionType *a, const UnionType *b) {
+static bool _compare_union_types(SymbolTable *s, const UnionType *a, const UnionType *b, Scope *ctx_a, Scope *ctx_b) {
   if (a->len != b->len) return false;
   for (u32 i = 0; i < a->len; i++) {
-    if (!tc_compare_types(s, a->types[i], b->types[i])) return false;
+    if (!tc_compare_types(s, a->types[i], b->types[i], ctx_a, ctx_b)) return false;
   }
   return true;
 }
 
-static bool _compare_named_types(SymbolTable *s, const NamedType *a, const NamedType *b) {
-  if (ast_compare_identifiers(a->name, b->name)) return true;
-  return tc_compare_types(
-    s,
-    tc_resolve_named_type(s, a),
-    tc_resolve_named_type(s, b)
-  );
-}
-
-static bool tc_compare_types(SymbolTable *s, const Type *a, const Type *b) {
+static bool tc_compare_types(SymbolTable *s, const Type *a, const Type *b, Scope *ctx_a, Scope *ctx_b) {
   if (a->type == T_ERROR || b->type == T_ERROR) return false;
 
   // If the types are literally the same object they are obviously equal
   if (a == b) return true;
 
   if (a->type == T_NAMED) {
-    return tc_compare_types(s, tc_resolve_named_type(s, a->named), b);
+    return tc_compare_types(s, tc_resolve_named_type(s, a->named, ctx_a), b, ctx_a, ctx_b);
   }
   if (b->type == T_NAMED) {
-    return tc_compare_types(s, a, tc_resolve_named_type(s, b->named));
+    return tc_compare_types(s, a, tc_resolve_named_type(s, b->named, ctx_b), ctx_a, ctx_b);
   }
 
   if (a->type != b->type) return false;
   switch (a->type) {
     case T_BUILTIN: return a->builtin == b->builtin;
-    case T_LIST: return _compare_list_types(s, a->list, b->list);
-    case T_VECTOR: return _compare_vector_types(s, a->vec, b->vec);
-    case T_TUPLE: return _compare_tuple_types(s, a->tuple, b->tuple);
-    case T_MAP: return _compare_map_types(s, a->map, b->map);
-    case T_STRUCT: return _compare_struct_types(s, a->struct_type, b->struct_type);
-    case T_UNION: return _compare_union_types(s, a->union_type, b->union_type);
+    case T_LIST: return _compare_list_types(s, a->list, b->list, ctx_a, ctx_b);
+    case T_VECTOR: return _compare_vector_types(s, a->vec, b->vec, ctx_a, ctx_b);
+    case T_TUPLE: return _compare_tuple_types(s, a->tuple, b->tuple, ctx_a, ctx_b);
+    case T_MAP: return _compare_map_types(s, a->map, b->map, ctx_a, ctx_b);
+    case T_STRUCT: return _compare_struct_types(s, a->struct_type, b->struct_type, ctx_a, ctx_b);
+    case T_UNION: return _compare_union_types(s, a->union_type, b->union_type, ctx_a, ctx_b);
     case T_RANGE: return true; // Ranges are only one type
     case T_NAMED: assert(false);
     case T_ERROR: assert(false);
@@ -792,17 +805,17 @@ static bool _accepts_builtin_type(BuiltinType a, const Type *b) {
     && (b->builtin == a || (a == T_FLOAT && b->builtin == T_INT));
 }
 
-static bool _accepts_list_type(SymbolTable *s, const ListType *a, const Type *b) {
+static bool _accepts_list_type(SymbolTable *s, const ListType *a, const Type *b, Scope *ctx_a, Scope *ctx_b) {
   switch (b->type) {
     case T_LIST: {
-      return tc_accepts_type(s, a->item_type, b->list->item_type);
+      return tc_accepts_type(s, a->item_type, b->list->item_type, ctx_a, ctx_b);
     }
     case T_VECTOR: {
-      return tc_accepts_type(s, a->item_type, b->vec->item_type);
+      return tc_accepts_type(s, a->item_type, b->vec->item_type, ctx_a, ctx_b);
     }
     case T_TUPLE: {
       for (u32 i = 0; i < b->tuple->len; i++) {
-        if (!tc_accepts_type(s, a->item_type, b->tuple->types[i])) return false;
+        if (!tc_accepts_type(s, a->item_type, b->tuple->types[i], ctx_a, ctx_b)) return false;
       }
       return true;
     }
@@ -810,16 +823,16 @@ static bool _accepts_list_type(SymbolTable *s, const ListType *a, const Type *b)
   }
 }
 
-static bool _accepts_vector_type(SymbolTable *s, const VectorType *a, const Type *b) {
+static bool _accepts_vector_type(SymbolTable *s, const VectorType *a, const Type *b, Scope *ctx_a, Scope *ctx_b) {
   switch (b->type) {
     case T_VECTOR: {
       return a->len == b->vec->len
-        && tc_accepts_type(s, a->item_type, b->vec->item_type);
+        && tc_accepts_type(s, a->item_type, b->vec->item_type, ctx_a, ctx_b);
     }
     case T_TUPLE: {
       if (a->len != b->tuple->len) return false;
       for (u32 i = 0; i < b->tuple->len; i++) {
-        if (!tc_accepts_type(s, a->item_type, b->tuple->types[i])) return false;
+        if (!tc_accepts_type(s, a->item_type, b->tuple->types[i], ctx_a, ctx_b)) return false;
       }
       return true;
     }
@@ -827,19 +840,19 @@ static bool _accepts_vector_type(SymbolTable *s, const VectorType *a, const Type
   }
 }
 
-static bool _accepts_tuple_type(SymbolTable *s, const TupleType *a, const Type *b) {
+static bool _accepts_tuple_type(SymbolTable *s, const TupleType *a, const Type *b, Scope *ctx_a, Scope *ctx_b) {
   switch (b->type) {
     case T_VECTOR: {
       if (a->len != b->vec->len) return false;
       for (u32 i = 0; i < a->len; i++) {
-        if (!tc_accepts_type(s, a->types[i], b->vec->item_type)) return false;
+        if (!tc_accepts_type(s, a->types[i], b->vec->item_type, ctx_a, ctx_b)) return false;
       }
       return true;
     }
     case T_TUPLE: {
       if (a->len != b->tuple->len) return false;
       for (u32 i = 0; i < b->tuple->len; i++) {
-        if (!tc_accepts_type(s, a->types[i], b->tuple->types[i])) return false;
+        if (!tc_accepts_type(s, a->types[i], b->tuple->types[i], ctx_a, ctx_b)) return false;
       }
       return true;
     }
@@ -847,17 +860,17 @@ static bool _accepts_tuple_type(SymbolTable *s, const TupleType *a, const Type *
   }
 }
 
-static bool _accepts_map_type(SymbolTable *s, const MapType *a, const Type *b) {
+static bool _accepts_map_type(SymbolTable *s, const MapType *a, const Type *b, Scope *ctx_a, Scope *ctx_b) {
   switch (b->type) {
     case T_MAP: {
-      return tc_compare_types(s, a->key_type, b->map->key_type)
-        && tc_accepts_type(s, a->value_type, b->map->value_type);
+      return tc_compare_types(s, a->key_type, b->map->key_type, ctx_a, ctx_b)
+        && tc_accepts_type(s, a->value_type, b->map->value_type, ctx_a, ctx_b);
     }
     case T_STRUCT: {
       if (!_is_builtin(a->key_type, T_STRING)) return false;
       const StructField *field;
       map_foreach_v(field, b->struct_type->fields) {
-        if (!tc_accepts_type(s, a->value_type, field->type)) return false;
+        if (!tc_accepts_type(s, a->value_type, field->type, ctx_a, ctx_b)) return false;
       }
       return true;
     }
@@ -865,59 +878,66 @@ static bool _accepts_map_type(SymbolTable *s, const MapType *a, const Type *b) {
   }
 }
 
-static bool _accepts_struct_type(SymbolTable *s, const StructType *a, const Type *b) {
+static bool _accepts_struct_type(SymbolTable *s, const StructType *a, const Type *b, Scope *ctx_a, Scope *ctx_b) {
   if (b->type != T_STRUCT) return false;
   const StructField *field;
   map_foreach_v(field, a->fields) {
     const StructField *bf = map_get(b->struct_type->fields, field->name->lexeme);
-    if (!bf || !tc_accepts_type(s, field->type, bf->type)) return false;
+    if (!bf || !tc_accepts_type(s, field->type, bf->type, ctx_a, ctx_b)) return false;
   }
   return true;
 }
 
-static bool _accepts_union_type(SymbolTable *s, const UnionType *a, const Type *b) {
+static bool _accepts_union_type(SymbolTable *s, const UnionType *a, const Type *b, Scope *ctx_a, Scope *ctx_b) {
   if (b->type == T_UNION) {
     for (u32 i = 0; i < b->union_type->len; i++) {
-      if (!_accepts_union_type(s, a, b->union_type->types[i])) return false;
+      if (!_accepts_union_type(s, a, b->union_type->types[i], ctx_a, ctx_b)) return false;
     }
     return true;
   } else {
     for (u32 i = 0; i < a->len; i++) {
-      if (tc_accepts_type(s, a->types[i], b)) return true;
+      if (tc_accepts_type(s, a->types[i], b, ctx_a, ctx_b)) return true;
     }
     return false;
   }
 }
 
-static bool tc_accepts_type(SymbolTable *s, const Type *a, const Type *b) {
+static bool tc_accepts_type(
+  SymbolTable *s,
+  const Type *a,
+  const Type *b,
+  Scope *ctx_a,
+  Scope *ctx_b
+) {
   if (a->type == T_ERROR || b->type == T_ERROR) return false;
 
   // If the types are literally the same object they are obviously equal
   if (b == a) return true;
 
   if (a->type == T_NAMED) {
-    return tc_accepts_type(s, tc_resolve_named_type(s, a->named), b);
+    return tc_accepts_type(s, tc_resolve_named_type(s, a->named, ctx_a), b, ctx_a, ctx_b);
   }
   if (b->type == T_NAMED) {
-    return tc_accepts_type(s, a, tc_resolve_named_type(s, b->named));
+    return tc_accepts_type(s, a, tc_resolve_named_type(s, b->named, ctx_b), ctx_a, ctx_b);
   }
 
   switch (a->type) {
     case T_BUILTIN: return _accepts_builtin_type(a->builtin, b);
-    case T_LIST: return _accepts_list_type(s, a->list, b);
-    case T_VECTOR: return _accepts_vector_type(s, a->vec, b);
-    case T_TUPLE: return _accepts_tuple_type(s, a->tuple, b);
-    case T_MAP: return _accepts_map_type(s, a->map, b);
-    case T_STRUCT: return _accepts_struct_type(s, a->struct_type, b);
-    case T_UNION: return _accepts_union_type(s, a->union_type, b);
+    case T_LIST: return _accepts_list_type(s, a->list, b, ctx_a, ctx_b);
+    case T_VECTOR: return _accepts_vector_type(s, a->vec, b, ctx_a, ctx_b);
+    case T_TUPLE: return _accepts_tuple_type(s, a->tuple, b, ctx_a, ctx_b);
+    case T_MAP: return _accepts_map_type(s, a->map, b, ctx_a, ctx_b);
+    case T_STRUCT: return _accepts_struct_type(s, a->struct_type, b, ctx_a, ctx_b);
+    case T_UNION: return _accepts_union_type(s, a->union_type, b, ctx_a, ctx_b);
     case T_RANGE: return b->type == T_RANGE;
     case T_NAMED: assert(false);
     case T_ERROR: assert(false);
   }
 }
 
-static bool tc_compatible_types(SymbolTable *s, const Type *a, const Type *b) {
-  return tc_accepts_type(s, a, b) || tc_accepts_type(s, b, a);
+static bool tc_compatible_types(SymbolTable *s, const Type *a, const Type *b, Scope *ctx_a, Scope *ctx_b) {
+  return tc_accepts_type(s, a, b, ctx_a, ctx_b)
+    || tc_accepts_type(s, b, a, ctx_a, ctx_b);
 }
 
 /* -- Type checking: errors ------------------------------------------------- */
@@ -986,7 +1006,9 @@ static Type *_list_type(SymbolTable *s, ListLiteral *list) {
   bool homogenous = true;
   for (u32 i = 0; i < list->len; i++) {
     types[i] = tc_check_expr(s, list->exprs[i]);
-    if (i > 0 && !tc_compare_types(s, types[0], types[i])) homogenous = false;
+    if (i > 0 && !tc_compare_types(s, types[0], types[i], NULL, NULL)) {
+      homogenous = false;
+    }
   }
 
   return homogenous
@@ -1031,7 +1053,7 @@ static Type *_add_to_union_type(SymbolTable *s, Type *value_type, Type *new_type
   if (_is_error(value_type) || _is_error(new_type)) return tc_error();
 
   if (value_type->type == T_UNION) {
-    if (_accepts_union_type(s, value_type->union_type, new_type)) {
+    if (_accepts_union_type(s, value_type->union_type, new_type, NULL, NULL)) {
       return value_type;
     }
 
@@ -1040,7 +1062,7 @@ static Type *_add_to_union_type(SymbolTable *s, Type *value_type, Type *new_type
     u->types = realloc(u->types, u->len * sizeof(Type *)); // FIXME leaks and stinks!!
     return value_type;
   } else {
-    if (tc_accepts_type(s, value_type, new_type)) {
+    if (tc_accepts_type(s, value_type, new_type, NULL, NULL)) {
       return value_type;
     }
 
@@ -1064,7 +1086,7 @@ static Type *_map_type(SymbolTable *s, MapLiteral *map) {
     Type *k = tc_check_expr(s, map->entries[i]->key);
     Type *v = tc_check_expr(s, map->entries[i]->value);
 
-    if (!tc_compare_types(s, key_type, k)) {
+    if (!tc_compare_types(s, key_type, k, NULL, NULL)) {
       TypeError *error = new(TypeError);
       *error = (TypeError){ .message = "inconsistent key type" };
       err_report_type(error, &map->entries[i]->key->meta.loc, ERR_ERROR);
@@ -1237,7 +1259,7 @@ static Type *_indexed_vector_type(SymbolTable *s, VectorType *vec, IndexedVariab
 static Type *_indexed_map_type(SymbolTable *s, MapType *map, IndexedVariable *var) {
   if (var->index_count == 1) {
     Type *index_type = tc_check_expr(s, var->indices[0]);
-    if (!tc_accepts_type(s, map->key_type, index_type)) {
+    if (!tc_accepts_type(s, map->key_type, index_type, NULL, NULL)) {
       return tc_report_error_fmt(
         &var->indices[0]->meta.loc,
         "invalid key type: expected %s, got %s",
@@ -1249,7 +1271,7 @@ static Type *_indexed_map_type(SymbolTable *s, MapType *map, IndexedVariable *va
     bool valid = true;
     for (u32 i = 0; i < var->index_count; i++) {
       Type *index_type = tc_check_expr(s, var->indices[i]);
-      if (!tc_accepts_type(s, map->key_type, index_type)) {
+      if (!tc_accepts_type(s, map->key_type, index_type, NULL, NULL)) {
         return tc_report_error_fmt(
           &var->indices[i]->meta.loc,
           "invalid key type: expected %s, got %s",
@@ -1273,7 +1295,7 @@ static Type *_variable_type(SymbolTable *s, VariableExpr *var) {
     case V_INDEX: {
       const Type *container = _variable_type(s, var->indexed->container);
       if (container->type == T_NAMED) {
-        container = tc_resolve_named_type(s, container->named);
+        container = tc_resolve_named_type(s, container->named, NULL);
       }
       switch (container->type) {
         case T_LIST: return _indexed_list_type(s, container->list, var->indexed);
@@ -1291,7 +1313,7 @@ static Type *_variable_type(SymbolTable *s, VariableExpr *var) {
     case V_STRUCT_MEMBER: {
       const Type *container = _variable_type(s, var->struct_member->struct_expr);
       if (container->type == T_NAMED) {
-        container = tc_resolve_named_type(s, container->named);
+        container = tc_resolve_named_type(s, container->named, NULL);
       }
       if (container->type != T_STRUCT) {
         return tc_report_error_fmt(
@@ -1445,7 +1467,7 @@ static Type *_binary_type(SymbolTable *s, BinaryExpr *expr) {
     }
     case EQUAL_EQUAL:
     case BANG_EQUAL: {
-      if (!tc_compatible_types(s, l_type, r_type)) {
+      if (!tc_compatible_types(s, l_type, r_type, NULL, NULL)) {
         return tc_report_error_fmt(
           &expr->meta.loc,
           "%s and %s are not comparable",
@@ -1499,7 +1521,7 @@ static Type *_assignment_type(SymbolTable *s, const AssignmentExpr *expr) {
     return tc_error();
   }
 
-  if (tc_accepts_type(s, lhs_type, rhs_type)) return lhs_type;
+  if (tc_accepts_type(s, lhs_type, rhs_type, NULL, NULL)) return lhs_type;
   return tc_report_error_fmt(
     &expr->meta.loc,
     "%s is not assignable to %s",
@@ -1524,9 +1546,9 @@ static Type *_if_expr_type(SymbolTable *s, const IfExpr *expr) {
     );
   }
 
-  if (tc_accepts_type(s, true_type, false_type)) {
+  if (tc_accepts_type(s, true_type, false_type, NULL, NULL)) {
     return true_type;
-  } else if (tc_accepts_type(s, false_type, true_type)) {
+  } else if (tc_accepts_type(s, false_type, true_type, NULL, NULL)) {
     return false_type;
   } else {
     return _union_of(2, true_type, false_type);
@@ -1620,7 +1642,7 @@ static bool _check_function_args(
 
     Parameter *param = def->params[param_idx];
     Type *arg_type = tc_check_expr(s, arg->value);
-    if (!tc_accepts_type(s, param->type, arg_type)) {
+    if (!tc_accepts_type(s, param->type, arg_type, def->native_scope, NULL)) {
       tc_report_error_fmt(
         &arg->meta.loc,
         "%s is not assignable to %s",
@@ -1634,8 +1656,8 @@ static bool _check_function_args(
   for (u32 i = 0; i < def->params_len; i++) {
     if (
       !params_set[i]
-      && !def->params[i]->default_value                             // Defaulted
-      && !tc_accepts_type(s, def->params[i]->type, _builtin(T_NIL)) // Optional
+      && !def->params[i]->default_value
+      && !tc_accepts_type(s, def->params[i]->type, _builtin(T_NIL), NULL, NULL)
     ) {
       err_report_fn_param_req(expr, def->params[i], ERR_ERROR);
       valid = false;
@@ -1660,7 +1682,7 @@ static Type *_function_call_type(SymbolTable *s, const FunctionCallExpr *expr) {
     if (composable_type) {
       if (_is_error(composable_type)) {
         return tc_error();
-      } else if (!tc_accepts_type(s, def->compose_type, composable_type)) {
+      } else if (!tc_accepts_type(s, def->compose_type, composable_type, def->native_scope, NULL)) {
         return tc_report_error_fmt(
           &expr->composable->meta.loc,
           "%s is not assignable to %s",
@@ -1668,7 +1690,7 @@ static Type *_function_call_type(SymbolTable *s, const FunctionCallExpr *expr) {
         );
       }
     } else {
-      if (!tc_accepts_type(s, def->compose_type, _builtin(T_NIL))) {
+      if (!tc_accepts_type(s, def->compose_type, _builtin(T_NIL), def->native_scope, NULL)) {
         return tc_report_error_fmt(
           &expr->meta.loc,
           "function '%s' expects a composable",
@@ -1684,13 +1706,18 @@ static Type *_function_call_type(SymbolTable *s, const FunctionCallExpr *expr) {
     );
   }
 
-  return valid ? def->return_type : tc_error();
+  Type *resolved_return = def->return_type;
+  if (resolved_return->type == T_NAMED) {
+    resolved_return = tc_resolve_named_type(s, resolved_return->named, def->native_scope);
+  }
+
+  return valid ? resolved_return : tc_error();
 }
 
 static BuiltinType _validate_csv_field_type(SymbolTable *s, Type *t) {
   switch (t->type) {
     case T_NAMED: {
-      return _validate_csv_field_type(s, tc_resolve_named_type(s, t->named));
+      return _validate_csv_field_type(s, tc_resolve_named_type(s, t->named, NULL));
     }
     case T_BUILTIN: {
       switch (t->builtin) {
@@ -1837,7 +1864,7 @@ static Type *_import_type(SymbolTable *s, const ImportExpr *expr) {
       if (expr->data_type) {
         row_type = expr->data_type;
         if (row_type->type == T_NAMED) {
-          row_type = tc_resolve_named_type(s, row_type->named);
+          row_type = tc_resolve_named_type(s, row_type->named, NULL);
         }
         if (
           !_is_error(row_type)
@@ -1892,7 +1919,7 @@ static Type *tc_check_block(SymbolTable *s, const BlockExpr *expr) {
     }
 
     if (stmt_type && !_is_assignment(expr->statements[i])) {
-      if (type_count > 0 && !tc_compare_types(s, block_types[0], stmt_type)) {
+      if (type_count > 0 && !tc_compare_types(s, block_types[0], stmt_type, NULL, NULL)) {
         homogenous = false;
       }
       block_types[type_count++] = stmt_type;
@@ -1960,7 +1987,7 @@ static void _check_decl(SymbolTable *s, const DeclarationStmt *decl) {
 
   if (decl->left_count == 1) {
     Type *decl_type = or_default(decl->type, value_type);
-    if (!tc_accepts_type(s, decl_type, value_type)) {
+    if (!tc_accepts_type(s, decl_type, value_type, NULL, NULL)) {
       tc_report_error_fmt(
         &decl->right->meta.loc,
         "%s is not assignable to %s",
@@ -1974,7 +2001,7 @@ static void _check_decl(SymbolTable *s, const DeclarationStmt *decl) {
     switch (value_type->type) {
       case T_LIST: {
         Type *decl_type = or_default(decl->type, value_type->list->item_type);
-        if (!tc_accepts_type(s, decl_type, value_type->list->item_type)) {
+        if (!tc_accepts_type(s, decl_type, value_type->list->item_type, NULL, NULL)) {
           tc_report_error_fmt(
             &decl->right->meta.loc,
             "%s is not assignable to %s",
@@ -1990,7 +2017,7 @@ static void _check_decl(SymbolTable *s, const DeclarationStmt *decl) {
       }
       case T_VECTOR: {
         Type *decl_type = or_default(decl->type, value_type->vec->item_type);
-        if (!tc_accepts_type(s, decl_type, value_type->vec->item_type)) {
+        if (!tc_accepts_type(s, decl_type, value_type->vec->item_type, NULL, NULL)) {
           tc_report_error_fmt(
             &decl->right->meta.loc,
             "%s is not assignable to %s",
@@ -2025,7 +2052,7 @@ static void _check_decl(SymbolTable *s, const DeclarationStmt *decl) {
           }
 
           Type *decl_type = or_default(decl->type, value_type->tuple->types[i]);
-          if (!tc_accepts_type(s, decl_type, value_type->tuple->types[i])) {
+          if (!tc_accepts_type(s, decl_type, value_type->tuple->types[i], NULL, NULL)) {
             tc_report_error_fmt(
               &decl->right->meta.loc,
               "%s is not assignable to %s",
@@ -2056,7 +2083,7 @@ static void _check_constant(SymbolTable *s, const ConstantStmt *constant) {
   Type *value_type = tc_check_expr(s, constant->right);
 
   Type *decl_type = or_default(constant->type, value_type);
-  if (!tc_accepts_type(s, decl_type, value_type)) {
+  if (!tc_accepts_type(s, decl_type, value_type, NULL, NULL)) {
     tc_report_error_fmt(
       &constant->right->meta.loc,
       "%s is not assignable to %s",
@@ -2075,7 +2102,7 @@ static void _check_function_def(SymbolTable *s, const FunctionDef *def) {
   for (u32 i = 0; i < def->params_len; i++) {
     if (def->params[i]->default_value) {
       Type *dv_type = tc_check_expr(s, def->params[i]->default_value);
-      if (!tc_accepts_type(s, def->params[i]->type, dv_type)) {
+      if (!tc_accepts_type(s, def->params[i]->type, dv_type, NULL, NULL)) {
         tc_report_error_fmt(
           &def->params[i]->default_value->meta.loc,
           "%s is not assignable to %s",
@@ -2095,7 +2122,7 @@ static void _check_function_def(SymbolTable *s, const FunctionDef *def) {
   }
 
   Type *body_type = tc_check_block(s, def->body);
-  if (!tc_accepts_type(s, def->return_type, body_type)) {
+  if (!tc_accepts_type(s, def->return_type, body_type, NULL, NULL)) {
     tc_report_error_fmt(
       &def->return_type->meta.loc,
       "invalid function return type: %s is not assignable to %s",
@@ -2138,7 +2165,7 @@ static Type *tc_check_ast(SymbolTable *s, const Program *ast) {
   for (u32 i = 0; i < ast->len; i++) {
     Type *stmt_type = tc_check_stmt(s, ast->statements[i]);
     if (stmt_type) {
-      if (type_count > 0 && !tc_compare_types(s, types[0], stmt_type)) {
+      if (type_count > 0 && !tc_compare_types(s, types[0], stmt_type, NULL, NULL)) {
         homogenous = false;
       }
       types[type_count++] = stmt_type;

@@ -1,0 +1,11 @@
+Foo is [int, int]
+
+ret_foo is function() -> Foo {
+  [4, 2]
+}
+
+takes_foo is function(x: Foo) -> int {
+  x[0] + x[1]
+}
+
+@export ret_foo, takes_foo

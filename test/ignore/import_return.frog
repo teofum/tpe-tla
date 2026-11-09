@@ -1,0 +1,7 @@
+@import ret_foo, takes_foo from "test/ignore/import_return_fn.frog"
+
+x: [int, int] = ret_foo()
+
+x
+takes_foo(x)
+takes_foo(ret_foo())

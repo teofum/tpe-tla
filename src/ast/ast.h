@@ -261,6 +261,7 @@ struct TypeAliasStmt {
   ASTNodeMetadata meta;
   Identifier *alias;
   Type *type;
+  Scope *native_scope;
 };
 
 struct ExportDirective {
@@ -557,6 +558,7 @@ struct FunctionDef {
   Type *return_type;
   BlockExpr *body;
   BuiltinFunction builtin;
+  Scope *native_scope;
 };
 
 struct Parameter {
