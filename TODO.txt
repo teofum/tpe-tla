@@ -44,7 +44,7 @@
   - Made transitive imports work, at least for functions
 [ ] Check transitive imports for a few cases:
   [ ] Type in type
-  [ ] Function return type
+  [x] Function return/parameter type
 
 #=== General ==================================================================#
 
