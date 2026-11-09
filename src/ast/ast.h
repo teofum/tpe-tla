@@ -261,7 +261,6 @@ struct TypeAliasStmt {
   ASTNodeMetadata meta;
   Identifier *alias;
   Type *type;
-  Scope *native_scope;
 };
 
 struct ExportDirective {
@@ -490,6 +489,7 @@ struct IndexedVariable {
 struct Type {
   ASTNodeMetadata meta;
   TypeType type;
+  Scope *native_scope;
   union {
     BuiltinType builtin;
     NamedType *named;

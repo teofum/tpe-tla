@@ -408,7 +408,7 @@ static const Value *eval_struct(const SymbolTable *s, const StructLiteral *struc
   Map *map_v = eval_new(Map);
   map_inita(map_v, eval_hash_value, eval_compare_values, eval_calloc, NULL);
 
-  for (u32 i = 1; i < struct_l->len; i++) {
+  for (u32 i = 0; i < struct_l->len; i++) {
     const Value *key_v = _str_id(struct_l->fields[i]->name);
     const Value *value_v = eval_expr(s, struct_l->fields[i]->value);
     if (!map_insert(map_v, (Value *)key_v, (Value *)value_v)) {

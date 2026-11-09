@@ -74,12 +74,49 @@ static SymbolKey _sym_key(char *name) {
   return (SymbolKey){ .name = name, .scope = sc_id(sa->stack) };
 }
 
+static void _set_native_scope(Type *t, Scope *scope) {
+  t->native_scope = sa->stack;
+  switch (t->type) {
+    case T_BUILTIN: break;
+    case T_RANGE: break;
+    case T_NAMED: break;
+    case T_ERROR: assert(false); // Unreachable
+    case T_VECTOR: _set_native_scope(t->vec->item_type, scope); break;
+    case T_LIST: _set_native_scope(t->list->item_type, scope); break;
+    case T_MAP: {
+      _set_native_scope(t->map->key_type, scope);
+      _set_native_scope(t->map->value_type, scope);
+      break;
+    }
+    case T_TUPLE: {
+      for (u32 i = 0; i < t->tuple->len; i++) {
+        _set_native_scope(t->tuple->types[i], scope);
+      }
+      break;
+    }
+    case T_STRUCT: {
+      StructField *member_t = NULL;
+      map_foreach_v(member_t, t->struct_type->fields) {
+        _set_native_scope(member_t->type, scope);
+      }
+      break;
+    }
+    case T_UNION: {
+      for (u32 i = 0; i < t->union_type->len; i++) {
+        _set_native_scope(t->union_type->types[i], scope);
+      }
+      break;
+    }
+  }
+}
+
 static void _static_tables_add_type(
   SymbolTable *s,
   const TypeAliasStmt *type_alias,
   bool definition
 ) {
-  ((TypeAliasStmt *)type_alias)->native_scope = sa->stack;
+  if (definition) _set_native_scope(type_alias->type, sa->stack);
+
   SymbolKey key = _sym_key(type_alias->alias->lexeme);
   logger_log(sa->sym_logger, LOG_DEBUG,
     "Scope %u: Type %s",
@@ -526,10 +563,12 @@ static const Identifier *_composable_id() {
 
 static Type *tc_resolve_named_type(
   SymbolTable *s,
-  const NamedType *named,
+  const Type *type,
   Scope *scope
 ) {
-  scope = or_default(scope, sa->stack);
+  assert(type->type == T_NAMED);
+  const NamedType *named = type->named;
+  scope = or_default(scope, or_default(type->native_scope, sa->stack));
 
   const TypeAliasStmt *alias = NULL;
   Scope *sc = scope;
@@ -779,10 +818,12 @@ static bool tc_compare_types(SymbolTable *s, const Type *a, const Type *b, Scope
   if (a == b) return true;
 
   if (a->type == T_NAMED) {
-    return tc_compare_types(s, tc_resolve_named_type(s, a->named, ctx_a), b, ctx_a, ctx_b);
+    Type *resolved = tc_resolve_named_type(s, a, ctx_a);
+    return tc_compare_types(s, resolved, b, resolved->native_scope, ctx_b);
   }
   if (b->type == T_NAMED) {
-    return tc_compare_types(s, a, tc_resolve_named_type(s, b->named, ctx_b), ctx_a, ctx_b);
+    Type *resolved = tc_resolve_named_type(s, b, ctx_b);
+    return tc_compare_types(s, a, resolved, ctx_a, resolved->native_scope);
   }
 
   if (a->type != b->type) return false;
@@ -915,10 +956,12 @@ static bool tc_accepts_type(
   if (b == a) return true;
 
   if (a->type == T_NAMED) {
-    return tc_accepts_type(s, tc_resolve_named_type(s, a->named, ctx_a), b, ctx_a, ctx_b);
+    Type *resolved = tc_resolve_named_type(s, a, ctx_a);
+    return tc_accepts_type(s, resolved, b, resolved->native_scope, ctx_b);
   }
   if (b->type == T_NAMED) {
-    return tc_accepts_type(s, a, tc_resolve_named_type(s, b->named, ctx_b), ctx_a, ctx_b);
+    Type *resolved = tc_resolve_named_type(s, b, ctx_b);
+    return tc_accepts_type(s, a, resolved, ctx_a, resolved->native_scope);
   }
 
   switch (a->type) {
@@ -1295,7 +1338,7 @@ static Type *_variable_type(SymbolTable *s, VariableExpr *var) {
     case V_INDEX: {
       const Type *container = _variable_type(s, var->indexed->container);
       if (container->type == T_NAMED) {
-        container = tc_resolve_named_type(s, container->named, NULL);
+        container = tc_resolve_named_type(s, container, NULL);
       }
       switch (container->type) {
         case T_LIST: return _indexed_list_type(s, container->list, var->indexed);
@@ -1313,7 +1356,7 @@ static Type *_variable_type(SymbolTable *s, VariableExpr *var) {
     case V_STRUCT_MEMBER: {
       const Type *container = _variable_type(s, var->struct_member->struct_expr);
       if (container->type == T_NAMED) {
-        container = tc_resolve_named_type(s, container->named, NULL);
+        container = tc_resolve_named_type(s, container, NULL);
       }
       if (container->type != T_STRUCT) {
         return tc_report_error_fmt(
@@ -1708,7 +1751,7 @@ static Type *_function_call_type(SymbolTable *s, const FunctionCallExpr *expr) {
 
   Type *resolved_return = def->return_type;
   if (resolved_return->type == T_NAMED) {
-    resolved_return = tc_resolve_named_type(s, resolved_return->named, def->native_scope);
+    resolved_return = tc_resolve_named_type(s, resolved_return, def->native_scope);
   }
 
   return valid ? resolved_return : tc_error();
@@ -1717,7 +1760,7 @@ static Type *_function_call_type(SymbolTable *s, const FunctionCallExpr *expr) {
 static BuiltinType _validate_csv_field_type(SymbolTable *s, Type *t) {
   switch (t->type) {
     case T_NAMED: {
-      return _validate_csv_field_type(s, tc_resolve_named_type(s, t->named, NULL));
+      return _validate_csv_field_type(s, tc_resolve_named_type(s, t, NULL));
     }
     case T_BUILTIN: {
       switch (t->builtin) {
@@ -1864,7 +1907,7 @@ static Type *_import_type(SymbolTable *s, const ImportExpr *expr) {
       if (expr->data_type) {
         row_type = expr->data_type;
         if (row_type->type == T_NAMED) {
-          row_type = tc_resolve_named_type(s, row_type->named, NULL);
+          row_type = tc_resolve_named_type(s, row_type, NULL);
         }
         if (
           !_is_error(row_type)

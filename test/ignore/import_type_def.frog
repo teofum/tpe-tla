@@ -1,0 +1,8 @@
+Foo is [string, int]
+
+HasFoo is struct {
+  foo: Foo,
+  bar: float
+}
+
+@export HasFoo
