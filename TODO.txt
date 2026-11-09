@@ -42,8 +42,8 @@
 [x] Imported symbol references blow up on eval if they reference other symbols
     from the foreign scope that weren't themselves imported
   - Made transitive imports work, at least for functions
-[ ] Check transitive imports for a few cases:
-  [ ] Type in type
+[x] Check transitive imports for a few cases:
+  [x] Type in type
   [x] Function return/parameter type
 
 #=== General ==================================================================#
