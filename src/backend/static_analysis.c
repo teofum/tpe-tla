@@ -132,8 +132,8 @@ static void _static_tables_add_type(
     Symbol *prev = map_get(s, &key);
     RedefError *error = new(RedefError);
     *error = (RedefError){
-      .object_type = sym_get_type_str(prev),
-      .object_name = strdup(key.name),
+      .symbol_type = sym_get_type_str(prev),
+      .symbol_name = strdup(key.name),
       .previous_definition = sym_get_loc(prev)
     };
     err_report_redef(error, &type_alias->meta.loc, ERR_ERROR);
@@ -166,8 +166,8 @@ static void _static_tables_add_function(
     bool builtin = prev->function->body == NULL;
     RedefError *error = new(RedefError);
     *error = (RedefError){
-      .object_type = sym_get_type_str(prev),
-      .object_name = strdup(key.name),
+      .symbol_type = sym_get_type_str(prev),
+      .symbol_name = strdup(key.name),
       .previous_definition = sym_get_loc(prev)
     };
     err_report_redef(error, &function->meta.loc, ERR_ERROR);
@@ -298,7 +298,12 @@ static void _static_tables_import(SymbolTable *s, const ImportDirective *import)
     SymbolKey key = { .name = import->ids[i]->lexeme, .scope = sc_id(foreign_scope) };
     Symbol *sym = map_get(s, &key);
     if (!sym || !sym->export) {
-      assert(false); // TODO symbol is not exported error
+      NotExportedError *error = new(NotExportedError);
+      *error = (NotExportedError){
+        .symbol_name = strdup(import->ids[i]->lexeme),
+        .filename = cs()->options.input_filenames[i],
+      };
+      err_report_not_exported(error, &import->ids[i]->loc, ERR_ERROR);
     }
     switch (sym->type) {
       case SYM_TYPE: _static_tables_add_type(s, sym->type_alias, false); break;
@@ -313,10 +318,21 @@ static void _static_tables_export(SymbolTable *s, const ExportDirective *export)
     SymbolKey key = _sym_key(export->ids[i]->lexeme);
     Symbol *sym = map_get(s, &key);
     if (!sym) {
-      assert(false); // TODO undefined symbol error
+      UndefError *error = new(UndefError);
+      *error = (UndefError){
+        .symbol_type = "symbol",
+        .symbol_name = strdup(export->ids[i]->lexeme),
+      };
+      err_report_undef(error, &export->ids[i]->loc, ERR_ERROR);
+      return;
     }
     if (sym->type == SYM_VAR) {
-      assert(false); // TODO can't export a variable error
+      VarExportError *error = new(VarExportError);
+      *error = (VarExportError){
+        .name = strdup(export->ids[i]->lexeme),
+      };
+      err_report_var_export(error, &export->ids[i]->loc, ERR_ERROR);
+      return;
     }
     sym->export = true;
   }
@@ -587,8 +603,8 @@ static Type *tc_resolve_named_type(
 
     UndefError *error = new(UndefError);
     *error = (UndefError){
-      .object_type = "type",
-      .object_name = strdup(named->name->lexeme),
+      .symbol_type = "type",
+      .symbol_name = strdup(named->name->lexeme),
     };
     err_report_undef(error, &named->meta.loc, ERR_ERROR);
     return tc_error();
@@ -615,8 +631,8 @@ static const FunctionDef *tc_resolve_function(SymbolTable *s, const Identifier *
 
     UndefError *error = new(UndefError);
     *error = (UndefError){
-      .object_type = "function",
-      .object_name = strdup(name->lexeme),
+      .symbol_type = "function",
+      .symbol_name = strdup(name->lexeme),
     };
     err_report_undef(error, &name->loc, ERR_ERROR);
     return NULL;
@@ -643,8 +659,8 @@ static const VariableSymbol *tc_resolve_symbol(SymbolTable *s, const Identifier 
 
     UndefError *error = new(UndefError);
     *error = (UndefError){
-      .object_type = "variable",
-      .object_name = strdup(name->lexeme),
+      .symbol_type = "variable",
+      .symbol_name = strdup(name->lexeme),
     };
     err_report_undef(error, &name->loc, ERR_ERROR);
     return NULL;
@@ -678,8 +694,8 @@ static bool tc_define_symbol(SymbolTable *s, const Identifier *name, VariableSym
 
     RedefError *error = new(RedefError);
     *error = (RedefError){
-      .object_type = sym_get_type_str(existing),
-      .object_name = strdup(name->lexeme),
+      .symbol_type = sym_get_type_str(existing),
+      .symbol_name = strdup(name->lexeme),
       .previous_definition = sym_get_loc(existing)
     };
     err_report_redef(error, &name->loc, ERR_ERROR);
@@ -2176,12 +2192,6 @@ static void _check_function_def(SymbolTable *s, const FunctionDef *def) {
   sa->stack = enclosing;
 }
 
-static void _check_export(SymbolTable *s, const ExportDirective *export) {
-  for (u32 i = 0; i < export->len; i++) {
-    // TODO
-  }
-}
-
 static Type *tc_check_stmt(SymbolTable *s, const Stmt *stmt) {
   tc_debug_log("Stmt", &stmt->meta.loc);
 
@@ -2190,9 +2200,9 @@ static Type *tc_check_stmt(SymbolTable *s, const Stmt *stmt) {
     case STMT_DECLARATION: _check_decl(s, stmt->decl); return NULL;
     case STMT_CONSTANT: _check_constant(s, stmt->constant); return NULL;
     case STMT_FUNCTION_DEF: _check_function_def(s, stmt->function_def); return NULL;
-    case STMT_EXPORT: _check_export(s, stmt->export); return NULL;
     case STMT_TYPE_ALIAS: return NULL;
     case STMT_IMPORT: return NULL;
+    case STMT_EXPORT: return NULL;
     case STMT_PARSE_ERROR: assert(false); // Unreachable
   }
 }

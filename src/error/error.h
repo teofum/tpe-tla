@@ -15,6 +15,8 @@ typedef enum {
   // Static analysis errors
   ERR_REDEF,            // Symbol redefinition
   ERR_UNDEF,            // Undefined symbol reference
+  ERR_NOT_EXPORTED,     // Imported symbol is not exported
+  ERR_EXPORT_VAR,       // Can't export a variable
   ERR_ASSIGNMENT,       // Assignment to invalid lhs expression
   ERR_FN_ARG_COUNT,     // Function call argument count mismatch
   ERR_FN_ARG_NAME,      // Function call argument invalid name
@@ -50,6 +52,8 @@ typedef struct ImportFileError ImportFileError;
 typedef struct ImportCSVError ImportCSVError;
 typedef struct RedefError RedefError;
 typedef struct UndefError UndefError;
+typedef struct NotExportedError NotExportedError;
+typedef struct VarExportError VarExportError;
 typedef struct TypeError TypeError;
 typedef struct FnArgCountError FnArgCountError;
 typedef struct FnArgNameError FnArgNameError;
@@ -74,6 +78,8 @@ typedef struct {
     ImportCSVError *import_csv;
     RedefError *redefinition;
     UndefError *undef_symbol;
+    NotExportedError *not_exported;
+    VarExportError *var_export;
     TypeError *type_error;
     FnArgCountError *fn_arg_count;
     FnArgNameError *fn_arg_name;
@@ -109,14 +115,23 @@ struct ImportCSVError {
 };
 
 struct RedefError {
-  const char *object_type;
-  char *object_name;
+  const char *symbol_type;
+  char *symbol_name;
   Location previous_definition;
 };
 
 struct UndefError {
-  const char *object_type;
-  char *object_name;
+  const char *symbol_type;
+  char *symbol_name;
+};
+
+struct NotExportedError {
+  char *symbol_name;
+  const char *filename;
+};
+
+struct VarExportError {
+  char *name;
 };
 
 struct TypeError {
@@ -167,6 +182,8 @@ void err_report_import_file(char *path, const Location *loc, ErrorLevel level);
 void err_report_import_csv(char *message, const Location *loc, ErrorLevel level);
 void err_report_redef(RedefError *error, const Location *loc, ErrorLevel level);
 void err_report_undef(UndefError *error, const Location *loc, ErrorLevel level);
+void err_report_not_exported(NotExportedError *error, const Location *loc, ErrorLevel level);
+void err_report_var_export(VarExportError *error, const Location *loc, ErrorLevel level);
 void err_report_type(TypeError *error, const Location *loc, ErrorLevel level);
 void err_report_fn_arg_count(FnArgCountError *error, const Location *loc, ErrorLevel level);
 void err_report_fn_arg_name(const FunctionCallExpr *call, const Argument *arg, ErrorLevel level);
@@ -188,6 +205,8 @@ void err_free_import_file_error(ImportFileError *e);
 void err_free_import_csv_error(ImportCSVError *e);
 void err_free_redef_error(RedefError *e);
 void err_free_undef_error(UndefError *e);
+void err_free_not_exported_error(NotExportedError *e);
+void err_free_var_export_error(VarExportError *e);
 void err_free_type_error(TypeError *e);
 void err_free_fn_arg_count_error(FnArgCountError *e);
 void err_free_fn_arg_name_error(FnArgNameError *e);

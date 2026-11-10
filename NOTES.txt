@@ -1,5 +1,11 @@
 This file has implementation notes worth keeping in mind for the final report.
 
+- Tests involving external files (import expressions) are ignored because they
+  break in CI.
+
+- Tests involving multiple files (@import/@export) are ignored as the test
+  runner can't start them in its current form.
+
 - Default parameter eval is inefficient, we could cache them since they are by
   definition the same each time the function is called. Too bad!
 
@@ -42,7 +48,7 @@ The following steps are executed in order, each for every file.
   The AST for the file is scanned for type and function definitions, and the
   type and function symbol tables are built, including scope information.
 
-3. Type checking [TODO]:
+3. Type checking [DONE]:
   Once the static symbol table is built, all statements and expressions in the
   file are type checked. Function definitions are type checked at the end of
   their respective scope. The variable symbol table is also built during this
@@ -52,7 +58,7 @@ The following steps are executed in order, each for every file.
 These two stages may produce type errors and symbol errors (e.g., redefinition
 of an already defined function or type, use of an undefined variable).
 
-4. Evaluation [TODO]:
+4. Evaluation [DONE]:
   The goal of this step is to reduce an AST (i.e., a program) to a single value
   or a list of values. Expressions are evaluated in order from top to bottom,
   and reduced to the value they return. Because symbol integrity has been
@@ -67,7 +73,7 @@ MAYBE: cache the values produced by eval, to allow faster recompilation if some
 files have errors? We can easily invalidate by source file modified timestamp.
 NOTE: if we do this, need to also list any dependencies such as imports.
 
-5. Code generation [TODO]:
+5. Code generation [DONE]:
   This step is run immediately after evaluation. The value or values produced
   are converted to an output file (html). This step shouldn't produce any errors
   as the results of the evaluation stage should be valid, but I/O errors may

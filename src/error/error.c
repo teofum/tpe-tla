@@ -118,6 +118,18 @@ void err_report_undef(UndefError *u, const Location *loc, ErrorLevel level) {
   da_push(e->errors, &error);
 }
 
+void err_report_not_exported(NotExportedError *ne, const Location *loc, ErrorLevel level) {
+  Error error = _make_error(ERR_NOT_EXPORTED, CS_STATIC_ANALYSIS, level, loc);
+  error.not_exported = ne;
+  da_push(e->errors, &error);
+}
+
+void err_report_var_export(VarExportError *ve, const Location *loc, ErrorLevel level) {
+  Error error = _make_error(ERR_EXPORT_VAR, CS_STATIC_ANALYSIS, level, loc);
+  error.var_export = ve;
+  da_push(e->errors, &error);
+}
+
 void err_report_type(TypeError *t, const Location *loc, ErrorLevel level) {
   Error error = _make_error(ERR_TYPE, CS_TYPECHECK, level, loc);
   error.type_error = t;
@@ -320,11 +332,11 @@ static void _log_redefinition_error(Error *error) {
 
   str error_str = str_format(
     "redefinition of %s '%s':",
-    r->object_type, r->object_name
+    r->symbol_type, r->symbol_name
   );
   _log_error_with_loc(error_str, error);
 
-  str prev_str = str_format("'%s' previously defined here:", r->object_name);
+  str prev_str = str_format("'%s' previously defined here:", r->symbol_name);
   str prev_with_loc = _error_loc(prev_str, error->filepath, &r->previous_definition, B);
 
   logger_log(e->logger, LOG_INFO, "%.*s", prev_with_loc.len, prev_with_loc.ptr);
@@ -336,7 +348,27 @@ static void _log_undef_symbol_error(Error *error) {
 
   str error_str = str_format(
     "%s '%s' is undefined",
-    u->object_type, u->object_name
+    u->symbol_type, u->symbol_name
+  );
+  _log_error_with_loc(error_str, error);
+}
+
+static void _log_not_exported_error(Error *error) {
+  NotExportedError *ne = error->not_exported;
+
+  str error_str = str_format(
+    "'%s' does not export a symbol with name '%s'",
+    ne->filename, ne->symbol_name
+  );
+  _log_error_with_loc(error_str, error);
+}
+
+static void _log_var_export_error(Error *error) {
+  VarExportError *ve = error->var_export;
+
+  str error_str = str_format(
+    "Cannot export variable or constant '%s'",
+    ve->name
   );
   _log_error_with_loc(error_str, error);
 }
@@ -437,6 +469,8 @@ static void _log_error(Error *error) {
     case ERR_STRUCT_FIELD: _log_struct_field_error(error); break;
     case ERR_REDEF: _log_redefinition_error(error); break;
     case ERR_UNDEF: _log_undef_symbol_error(error); break;
+    case ERR_NOT_EXPORTED: _log_not_exported_error(error); break;
+    case ERR_EXPORT_VAR: _log_var_export_error(error); break;
     case ERR_TYPE: _log_type_error(error); break;
     case ERR_FN_ARG_COUNT: _log_fn_arg_count_error(error); break;
     case ERR_FN_ARG_NAME: _log_fn_arg_name_error(error); break;
@@ -483,6 +517,8 @@ void err_free_error(Error *e) {
     case ERR_STRUCT_FIELD: err_free_struct_field_error(e->struct_field); break;
     case ERR_REDEF: err_free_redef_error(e->redefinition); break;
     case ERR_UNDEF: err_free_undef_error(e->undef_symbol); break;
+    case ERR_NOT_EXPORTED: err_free_not_exported_error(e->not_exported); break;
+    case ERR_EXPORT_VAR: err_free_var_export_error(e->var_export); break;
     case ERR_TYPE: err_free_type_error(e->type_error); break;
     case ERR_FN_ARG_COUNT: err_free_fn_arg_count_error(e->fn_arg_count); break;
     case ERR_FN_ARG_NAME: err_free_fn_arg_name_error(e->fn_arg_name); break;
@@ -527,12 +563,22 @@ void err_free_struct_field_error(StructFieldError *e) {
 }
 
 void err_free_redef_error(RedefError *e) {
-  free(e->object_name);
+  free(e->symbol_name);
   free(e);
 }
 
 void err_free_undef_error(UndefError *e) {
-  free(e->object_name);
+  free(e->symbol_name);
+  free(e);
+}
+
+void err_free_not_exported_error(NotExportedError *e) {
+  free(e->symbol_name);
+  free(e);
+}
+
+void err_free_var_export_error(VarExportError *e) {
+  free(e->name);
   free(e);
 }
 

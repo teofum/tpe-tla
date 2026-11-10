@@ -44,6 +44,7 @@
   - Made transitive imports work, at least for functions
 [x] Check transitive imports for a few cases:
   [x] Type in type
+    - Actually types just capture a full lexical scope now to make this work :)
   [x] Function return/parameter type
 
 #=== General ==================================================================#

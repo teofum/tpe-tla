@@ -1,0 +1,4 @@
+foo := 5
+
+@export foo         // Error: foo is a variable
+@export bar         // Error: bar is undefined

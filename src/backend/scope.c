@@ -43,15 +43,6 @@ u32 sc_id(const Scope *scope) {
   return scope->id;
 }
 
-// Scope *st_begin() {
-//   return new(Stack);
-// }
-//
-// void st_end(Stack *st) {
-//   assert(st->current == NULL);
-//   free(st);
-// }
-
 Scope *st_push(Scope *stack, Scope *scope) {
   scope->parent = stack;
   return scope;

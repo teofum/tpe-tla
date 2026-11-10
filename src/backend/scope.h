@@ -18,9 +18,6 @@ u32 sc_id(const Scope *scope);
 void st_init();
 void st_shutdown();
 
-// Scope *st_begin();
-// void st_end(Scope *st);
-
 Scope *st_push(Scope *stack, Scope *scope);
 Scope *st_pop(Scope *stack);
 
