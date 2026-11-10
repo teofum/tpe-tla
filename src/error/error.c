@@ -306,7 +306,7 @@ static void _log_typed_import_error(Error *error) {
 
 static void _log_import_file_error(Error *error) {
   ImportFileError *i = error->import_file;
-  str error_str = str_format("imported file '%s' does not exist:", i->path);
+  str error_str = str_format("file '%s' not found", i->path);
   _log_error_with_loc(error_str, error);
 }
 

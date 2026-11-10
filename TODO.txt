@@ -77,7 +77,7 @@
   [x] Eval coercion
 
 [x] Import/Export symbols
-  [ ] Error handling
+  [x] Error handling
 
 [/] Remove default function values
   - Unremoved default function values (it turns out we needed those)

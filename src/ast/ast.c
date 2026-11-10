@@ -139,7 +139,11 @@ Stmt *ast_stmt_import(IdentifierList *ids, StringLiteral *from) {
     }
   }
   if (!found) {
-    assert(false); // TODO error
+    err_report_import_file(
+      str_to_cstring(from->value),
+      &from->token->loc,
+      ERR_ERROR
+    );
   }
 
   ast_free_string_literal(from);
