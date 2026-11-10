@@ -227,10 +227,7 @@ void fe_leave_context() {
 
 static InputBuffer *_create_buffer(const char *path) {
   FILE *file = fopen(path, "r");
-  if (!file) {
-    // TODO error
-    return NULL;
-  }
+  assert(file);
 
   InputBuffer *buf = new(InputBuffer);
   *buf = (InputBuffer){
@@ -279,7 +276,6 @@ static CompilationStatus _next() {
   return yylex(NULL, (void *)f->location, f->scanner);
 }
 
-// TODO move error handling to the error module
 CompilationStatus fe_parse(i32 file_idx) {
   const char *filepath = cs()->options.input_filenames[file_idx];
 

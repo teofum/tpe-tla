@@ -445,18 +445,12 @@ static void dot_export_dir(const ExportDirective *export, u64 pid) {
   u64 id = next_id();
   _node(id, "Export", NODE_STMT);
   _edge(pid, id);
-  for (u32 i = 0; i < export->len; i++) {
-    // TODO
-  }
 }
 
 static void dot_import_dir(const ImportDirective *import, u64 pid) {
   u64 id = next_id();
   _node(id, "Import", NODE_STMT);
   _edge(pid, id);
-  for (u32 i = 0; i < import->len; i++) {
-    // TODO
-  }
 }
 
 static void dot_error(u64 pid) {
