@@ -218,6 +218,9 @@ static bool eval_compare_values(const Value *a, const Value *b) {
 static str eval_stringify(const Value *v) {
   switch (v->type) {
     case VAL_STRING: return *v->string;
+    case VAL_INT: return str_format_a(eval_malloc, "%ld", v->integer);
+    case VAL_FLOAT: return str_format_a(eval_malloc, "%f", v->floating);
+    case VAL_BOOL: return str_from_cstring_a(eval_malloc, v->boolean ? "true" : "false");
     default: return str_from_cstring_a(eval_malloc, "(TODO stringify values)");
   }
 }
