@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <math.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -345,7 +346,9 @@ static void _static_tables_stmt(SymbolTable *s, Stmt *stmt) {
     case STMT_EXPR: _static_tables_expr(s, stmt->expr); break;
     case STMT_IMPORT: _static_tables_import(s, stmt->import); break;
     case STMT_EXPORT: _static_tables_export(s, stmt->export); break;
-    default: break;
+    case STMT_DECLARATION: _static_tables_expr(s, stmt->decl->right); break;
+    case STMT_CONSTANT: _static_tables_expr(s, stmt->constant->right); break;
+    case STMT_PARSE_ERROR: break;
   }
 }
 
@@ -1803,7 +1806,6 @@ static Type *_validate_csv_type(
   bool report_errors
 ) {
   CSVFile *csv = expr->csv;
-  csv->coercion_hints = new_array(BuiltinType, csv->columns);
   switch (t->type) {
     case T_VECTOR: {
       if (t->vec->len != csv->columns) {
@@ -1920,6 +1922,7 @@ static Type *_import_type(SymbolTable *s, const ImportExpr *expr) {
       Type *record_type = _map_of(string_type, string_type);
 
       Type *row_type = record_type;
+      expr->csv->coercion_hints = new_array(BuiltinType, expr->csv->columns);
       if (expr->data_type) {
         row_type = expr->data_type;
         if (row_type->type == T_NAMED) {
@@ -1935,6 +1938,10 @@ static Type *_import_type(SymbolTable *s, const ImportExpr *expr) {
           );
           row_type = tc_error();
         }
+      } else {
+        // Default coercion hints
+        expr->csv->row_vtype_hint = VAL_MAP;
+        for (u32 i = 0; i < expr->csv->columns; i++) expr->csv->coercion_hints[i] = T_STRING;
       }
 
       Type **types = tc_new_array(Type *, 2);

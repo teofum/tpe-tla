@@ -1,0 +1,11 @@
+current := 1
+last := 0
+
+fib := for x in 0..10 {
+  n := current
+  current = n + last
+  last = n
+  n
+}
+
+fib

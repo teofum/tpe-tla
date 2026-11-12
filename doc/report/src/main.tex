@@ -13,7 +13,100 @@
 
 \subsection{Dominio}
 
+\textit{Frog} es un lenguaje de \textit{templating} para producir sitios web estáticos en HTML que puedan ser hosteados por un servidor web estándar (e.g. Apache, nginx). Combina la sintaxis sencilla de un lenguaje de \textit{markup} para definir elementos de un modo menos verborrágico que HTML con la potencia de un lenguaje de programación, permite crear componentes reutilizables, e integrar en los programas algunas tareas de procesamiento de datos.
+
+Presenta una alternativa minimalista para escribir sitios web estáticos, con un \textit{toolchain} simple, sin dependencias externas, y sin requisitos en \textit{runtime} más que un servidor HTTP común.
+
 \subsection{Lenguaje}
+
+A continuación se detalla la especificación básica del lenguaje \textit{frog}.
+
+\subsubsection{Construcciones básicas}
+
+\textit{Frog} es un lenguaje \textbf{basado en expresiones}, es decir, la mayoría de construcciones en el lenguaje son expresiones que resuelven o evalúan a un valor. Las expresiones pueden contener otras expresiones, hasta llegar a \textbf{primitivas}. Un programa está compuesto por expresiones, y el programa entero se resuelve a un valor.
+
+Por ejemplo, el siguiente programa genera el texto "Hola TLA!":
+
+\small
+\begin{verbatim}
+  "Hola TLA!"
+\end{verbatim}
+\normalsize
+
+Un programa algo más complejo retorna una lista con los primeros 10 elementos de la secuencia fibonacci:
+
+\small
+\begin{verbatim}
+  current := 1
+  last := 0
+
+  fib := for x in 0..10 {
+    n := current
+    current = n + last
+    last = n
+    n
+  }
+
+  fib
+\end{verbatim}
+\normalsize
+
+Y el siguiente programa hace lo mismo, pero mediante una función recursiva:
+
+\small
+\begin{verbatim}
+  current := 1
+  last := 0
+
+  fib := for x in 0..10 {
+    n := current
+    current = n + last
+    last = n
+    n
+  }
+
+  fib
+\end{verbatim}
+\normalsize
+
+\begin{enumerate}
+	\item Una asignación retorna el valor asignado a la variable; esto permite encadenar asignaciones. Las asignaciones tienen comportamiento especial.
+	\item Una llamada a función retorna el valor de retorno de la función.
+	\item Una expresión condicional retorna el valor de la rama que haya sido tomada en base a la o las condiciones.
+	\item Un \textit{loop} retorna una lista de tipo \texttt{T[]}, donde \texttt{T} es el tipo que retorna la expresión interna.
+\end{enumerate}
+
+Un bloque de código, delimitado por \texttt{\{\}}, también es una expresión, que consiste de un agrupamiento lineal y ordenado de otras construcciones. Los bloques son la principal forma de organizar código en \textit{frog}. El valor de retorno de un bloque está dado por las siguientes reglas:
+
+\begin{enumerate}
+	\item Toda expresión dentro del bloque, \textbf{excepto las asignaciones}, agrega su valor de retorno al del bloque.
+	\item Si el bloque contiene una única expresión que no es una asignación, retorna directamente su valor.
+	\item Si el bloque contiene varias expresiones, entonces retorna una tupla con los valores de todas sus expresiones (excepto asignaciones).
+	\item Un bloque que contiene únicamente asignaciones, o construcciones sin valor propio (detalladas más adelante) no tiene valor de retorno. En la mayoría de contextos, esto es un error.
+\end{enumerate}
+
+Las construcciones que no resuelven a un valor, sino que modifican el estado del programa, son:
+
+\begin{itemize}
+	\item Declaraciones de variables o constantes
+	\item Definiciones de tipo
+	\item Definiciones de función
+	\item Directivas
+\end{itemize}
+
+Estas construcciones se detallan más adelante.
+
+\subsubsection{Tipos de datos}
+
+\subsubsection{Variables y constantes}
+
+\subsubsection{Funciones y componentes}
+
+\subsubsection{Composición de funciones}
+
+\subsubsection{Recursos externos}
+
+\subsubsection{Módulos}
 
 \section{Implementación}
 
@@ -264,6 +357,19 @@ Como efecto secundario, esta implementación hace relativamente sencillo agregar
 \end{itemize}
 
 \section{Futuras Extensiones}
+
+Durante el desarrollo se identificaron varias posibilidades de extensión a futuro. Algunas son extensiones a la especificación del lenguaje, otras son partes de la misma que no se implementaron, sea por tiempo o porque quedaron en conflicto con otros cambios al lenguaje realizados durante la implementación.
+
+\begin{itemize}
+	\item Soporte para otros formatos de recursos externos, como JSON, Markdown o mismo HTML (permitiendo operar sobre documentos existentes).
+	\item Más opciones de organización de proyecto, como algún sistema de \textit{templates} por tipo de archivo. Si bien estaba en la especificación original, no estaba del todo definido y se decidió dejarlo fuera de la implementación.
+	\item Mejores opciones de manipulación de strings, como por ejemplo la posibilidad de usar la sintaxis de \textit{slicing} de listas sobre strings, o alguna forma de interpolación.
+	\item Una expresión de decomposición de listas que permita concatenación fácil, por ejemplo \texttt{list := [head, ...tail]} o \texttt{list := [...foo, 5, ...bar]} (una lista compuesta por todos los elementos de \texttt{foo}, seguidos de 5, seguido de todos los elementos de \texttt{bar}).
+	\item Una librería más completa de funciones \textit{builtin}, incluyendo por ejemplo funciones aritméticas, manipulación de listas, mapas y strings, etc.
+	\item Expresiones \texttt{switch} con pattern matching.
+	\item Alguna forma de discriminar el tipo que contiene una unión, similar a \textit{type guards} de Typescript (TODO ref) o \texttt{if let} en Rust(TODO ref).
+	\item Mejor documentación, mensajes de ayuda, y manejo de algunos errores.
+\end{itemize}
 
 \section{Conclusiones}
 
