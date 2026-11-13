@@ -30,6 +30,7 @@
 #include <support/util.h>
 
 #include "eval.h"
+#include "support/env.h"
 
 typedef struct {
   Logger *logger;
@@ -1031,7 +1032,7 @@ static const Value *eval_env(SymbolTable *s, const EnvExpr *expr) {
   char *name = str_to_cstring(expr->env_name->value);
   char *value = map_get(cs()->options.definitions, name);
 
-  if (value) {
+  if (value || env_set_str(name, &value)) {
     free(name);
     str *str_value = eval_new(str);
     *str_value = str_from_cstring_a(eval_malloc, value);
