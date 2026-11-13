@@ -651,7 +651,7 @@ Stmt *ast_stmt_constant(ConstantStmt *constant);
 Stmt *ast_stmt_alias(TypeAliasStmt *alias);
 Stmt *ast_stmt_function_def(FunctionDef *function);
 Stmt *ast_stmt_export(IdentifierList *ids);
-Stmt *ast_stmt_import(IdentifierList *ids, StringLiteral *from);
+Stmt *ast_stmt_import(IdentifierList *ids, u32 file_idx);
 Stmt *ast_stmt_error();
 
 PartialDeclarationStmt *ast_declaration(IdentifierList *ids, Type *type, Expr *expr);

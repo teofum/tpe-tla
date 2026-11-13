@@ -119,7 +119,7 @@ Stmt *ast_stmt_export(IdentifierList *ids) {
   return stmt;
 }
 
-Stmt *ast_stmt_import(IdentifierList *ids, StringLiteral *from) {
+Stmt *ast_stmt_import(IdentifierList *ids, u32 file_idx) {
   Stmt *stmt = new(Stmt);
   *stmt = (Stmt) {
     .meta = _ast_get_metadata(),
@@ -127,26 +127,8 @@ Stmt *ast_stmt_import(IdentifierList *ids, StringLiteral *from) {
     .import = new(ImportDirective),
   };
   stmt->import->meta = _ast_get_metadata();
+  stmt->import->file_idx = file_idx;
   ast_consume_identifier_list(ids, &stmt->import->ids, &stmt->import->len);
-
-  bool found = false;
-  CompilerOptions *o = &cs()->options;
-  for (u32 i = 0; i < o->input_file_count && !found; i++) {
-    if (strncmp(o->input_filenames[i], from->value.ptr, from->value.len) == 0) {
-      stmt->import->file_idx = i;
-      cs()->file_dependencies[cs()->current_file][i] = true;
-      found = true;
-    }
-  }
-  if (!found) {
-    err_report_import_file(
-      str_to_cstring(from->value),
-      &from->token->loc,
-      ERR_ERROR
-    );
-  }
-
-  ast_free_string_literal(from);
   return stmt;
 }
 

@@ -45,7 +45,25 @@ Stmt *parse_function_def_stmt(FunctionDef *function) {
 
 Stmt *parse_import_directive(IdentifierList *ids, StringLiteral *from) {
   fe_parser_log(LOG_DEBUG, "Import Directive");
-  return ast_stmt_import(ids, from);
+
+  i32 file_idx = -1;
+  CompilerOptions *o = &cs()->options;
+  for (u32 i = 0; i < o->input_file_count && file_idx == -1; i++) {
+    if (strncmp(o->input_filenames[i], from->value.ptr, from->value.len) == 0) {
+      cs()->file_dependencies[cs()->current_file][i] = true;
+      file_idx = i;
+    }
+  }
+  if (file_idx == -1) {
+    err_report_import_file(
+      str_to_cstring(from->value),
+      &from->token->loc,
+      ERR_ERROR
+    );
+  }
+
+  ast_free_string_literal(from);
+  return ast_stmt_import(ids, file_idx);
 }
 
 Stmt *parse_export_directive(IdentifierList *ids) {
