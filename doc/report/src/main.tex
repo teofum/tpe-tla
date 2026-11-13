@@ -283,9 +283,88 @@ Una función acepta composición si se declara con un \texttt{tipo de ocmposici�
 
 Un bloque de código pasado para composición captura el \textit{scope} de la llamada a función; es decir, tiene acceso a las variables del lugar donde se llama. \textbf{No tiene acceso al \textit{scope} interno de la función}, ya que se evalúa fuera de la llamada.
 
+Las funciones \textit{builtin} que representan elementos HTML utilizan la sintaxis de composición para pasar el contenido interno de los elementos, permitiendo definir estructuras HTML de forma prolija:
+
+\small
+\begin{verbatim}
+  title := "CSV table demo"
+
+  html: {
+    head: {
+      meta(charset = "utf-8")
+      title: { title }
+      script(src = "https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4")
+    }
+    body: {
+      h1: { title }
+      csv_table(headers, data)
+    }
+  }
+\end{verbatim}
+\normalsize
+
 \subsubsection{Recursos externos}
 
+Además del código fuente, \textit{frog} permite incluir recursos externos o estáticos en las páginas generadas mediante la expresión \texttt{import <mode> "path/to/file"}. Esta expresión importa un archivo externo al código y lo interpreta dependiendo del modo:
 
+\begin{table}[H]
+\centering
+\begin{tabularx}{\linewidth}{|l|>{\raggedright\arraybackslash}X|l|}
+\hline
+\textbf{Modo} & \textbf{Interpretación}                                                                   & \textbf{Tipo de retorno} \\ \hline
+\texttt{url}  & Transforma el path al archivo en una URL relativa, utilizando las opciones del compilador & \texttt{string}          \\ \hline
+\texttt{raw}  & Lee los contenidos del archivo verbatim como cadena de texto. Asume archivo de texto.     & \texttt{string}          \\ \hline
+\texttt{csv}  & Lee un archivo CSV e interpreta los datos; ver \autoref{subsub:csv_import}                & varía                    \\ \hline
+\end{tabularx}
+\end{table}
+
+Los modos \texttt{url} y \texttt{raw} son sencillos, \texttt{url} es particularmente útil para hojas de estilo CSS e imágenes, mientras que \texttt{raw} resulta útil para incluir Javascript.
+
+El modo \texttt{csv} es un poco más complejo: la expresión retorna una tupla \texttt{[string[], row\_type[]]}, donde el primer componente es una lista de \textit{headers} (los valores en la primera fila del CSV) y el segundo es una lista de cada fila que sigue a la primera, interpretada según el tipo \texttt{row\_type}.
+
+Esta expresión tiene la particularidad de que puede ser tipada como \texttt{import csv of T}, en cuyo caso \texttt{row\_type is T}. De omitirse el tipo, \texttt{row\_type} toma su valor por defecto \texttt{string[string]}, donde cada fila es un mapa indexado por los valores de \textit{headers}.
+
+Un tipo para esta expresión debe ser \textit{compatible con CSV}, lo cual significa que debe ser uno de:
+
+\begin{itemize}
+	\item Un vector de tamaño igual a la cantidad de columnas, cuyo tipo interno es un tipo de campo CSV válido.
+	\item Una tupla de tamaño igual a la cantidad de columnas, cuyos tipos son todos tipos de campo CSV válidos.
+	\item Una lista cuyo tipo interno es un tipo de campo CSV válido.
+	\item Un mapa con tipo de clave \texttt{string} y tipo de valor que corresponde a un tipo de campo CSV válido.
+	\item Un struct, cuyos miembros coinciden exactamente en nombre con los \textit{headers} del CSV, y tienen tipos de campo CSV válidos.
+	\item Una unión en la cual al menos un miembro cumple alguna de las anteriores. En caso de que varios miembros cumplan, se toma el primero por orden de definición.
+\end{itemize}
+
+Un tipo es válido como \textit{tipo de campo CSV} si es:
+
+\begin{itemize}
+	\item Un tipo primitivo \texttt{string}, \texttt{int}, \texttt{float} o \texttt{bool}
+	\item Un alias para un tipo de campo CSV válido
+	\item Una unión que contiene al menos un tipo que cumple las anteriores. En caso de haber varios, se prioriza \texttt{string} al ser el menos restrictivo.
+\end{itemize}
+
+\subsubsection{Variables de entorno}
+
+Además de la inclusión de recursos externos, la otra forma de modificar el comportamiento de un programa fuera del código fuente es mediante variables de entorno, que pueden ser importadas con la expresión \texttt{env NAME [default "some string value"]}.
+
+Esta expresión siempre tiene tipo \texttt{string}; busca una variable del nombre dado en dos lugares, en el siguente orden:
+
+\begin{enumerate}
+	\item Variables definidas con la opción de línea de comandos \texttt{-D NAME="value"} (o \texttt{--define})
+	\item Variables de entorno
+\end{enumerate}
+
+La expresión puede tomar opcionalmente un valor por defecto, siempre un string, indicado con la palabra \texttt{default}. Retorna este valor si la variable no está definida en ninguno de los dos lugares. Si la variable no está definida y no tiene valor por defecto, genera un error de compilación.
+
+La expresión \texttt{env} puede ser utilizada para compilación condicional:
+
+\small
+\begin{verbatim}
+  if (env SOME_FLAG default "false") == "true" {
+    ...
+  }
+\end{verbatim}
+\normalsize
 
 \subsubsection{Módulos}
 
@@ -457,47 +536,9 @@ Donde \texttt{attr\_type} es equivalente a \texttt{union\{int, float, string, bo
 
 Además, todas las funciones que representen elementos no \textit{void} (TODO ref MDN) toman como tipo de composición cualquier tipo primitivo o elemento HTML, o una lista de estos tipos. Todas las funciones HTML retornan un valor de tipo \texttt{element}.
 
-\subsubsection{Recursos externos}
-
-El lenguaje permite incluir recursos externos en el sitio de distintos modos, utilizando la expresión \texttt{import}. Esta expresión importa un archivo externo al código y lo interpreta dependiendo del modo:
-
-\begin{table}[H]
-\centering
-\begin{tabularx}{\linewidth}{|l|>{\raggedright\arraybackslash}X|l|}
-\hline
-\textbf{Modo} & \textbf{Interpretación}                                                                   & \textbf{Tipo de retorno} \\ \hline
-\texttt{url}  & Transforma el path al archivo en una URL relativa, utilizando las opciones del compilador & \texttt{string}          \\ \hline
-\texttt{raw}  & Lee los contenidos del archivo verbatim como cadena de texto. Asume archivo de texto.     & \texttt{string}          \\ \hline
-\texttt{csv}  & Lee un archivo CSV e interpreta los datos; ver \autoref{subsub:csv_import}                & varía                    \\ \hline
-\end{tabularx}
-\end{table}
-
 \subsubsection{Importación de archivos CSV}\label{subsub:csv_import}
 
 Uno de los recursos externos que se pueden incluir en una página es un CSV como fuente de datos. La expresión \texttt{import csv} parsea el CSV, utilizando un buffer secundario en el parser que modifica el contexto de Flex para reconocer tokens de CSV. La gramática de Bison luego incluye como subset, utilizando estos tokens, la gramática de CSV según (TODO CSV RFC ref). Los valores se guardan como metadatos en el nodo que representa la expresión en el AST.
-
-La expresión retorna una tupla \texttt{[string[], row\_type[]]}, donde el primer componente es una lista de \textit{headers} (los valores en la primera fila del CSV) y el segundo es una lista de cada fila que sigue a la primera, interpretada según el tipo \texttt{row\_type}.
-
-Esta expresión tiene la particularidad de que puede ser tipada como \texttt{import csv of T}, en cuyo caso \texttt{row\_type is T}. De omitirse el tipo, \texttt{row\_type} toma su valor por defecto \texttt{string[string]}, donde cada fila es un mapa indexado por los valores de \textit{headers}.
-
-Un tipo para esta expresión debe ser \textit{compatible con CSV}, lo cual significa que debe ser uno de:
-
-\begin{itemize}
-	\item Un vector de tamaño igual a la cantidad de columnas, cuyo tipo interno es un tipo de campo CSV válido.
-	\item Una tupla de tamaño igual a la cantidad de columnas, cuyos tipos son todos tipos de campo CSV válidos.
-	\item Una lista cuyo tipo interno es un tipo de campo CSV válido.
-	\item Un mapa con tipo de clave \texttt{string} y tipo de valor que corresponde a un tipo de campo CSV válido.
-	\item Un struct, cuyos miembros coinciden exactamente en nombre con los \textit{headers} del CSV, y tienen tipos de campo CSV válidos.
-	\item Una unión en la cual al menos un miembro cumple alguna de las anteriores. En caso de que varios miembros cumplan, se toma el primero por orden de definición.
-\end{itemize}
-
-Un tipo es válido como \textit{tipo de campo CSV} si es:
-
-\begin{itemize}
-	\item Un tipo primitivo \texttt{string}, \texttt{int}, \texttt{float} o \texttt{bool}
-	\item Un alias para un tipo de campo CSV válido
-	\item Una unión que contiene al menos un tipo que cumple las anteriores. En caso de haber varios, se prioriza \texttt{string} al ser el menos restrictivo.
-\end{itemize}
 
 En momento de evaluación, el evaluador intenta transformar los valores del CSV al tipo de fila dado. En el caso de tipos lista (lista, vector o tupla) se transforma cada campo al tipo correspondiente a su posición y se ubican en orden de columna (izquierda a derecha). En el caso de tipos mapa (mapa o struct), se transforma cada campo al tipo correspondiente y se ubican en la fila indexados por el \textit{header} corresopndiente a su columna. De no poder convertir un valor al tipo solicitado, se produce un error.
 
