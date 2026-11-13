@@ -9,6 +9,8 @@
 
 \section{Introducción}
 
+Para este trabajo práctico se desarrolló un compilador para un lenguaje de programación, \textit{frog}, orientado a generación de sitios web estáticos. El compilador utiliza Flex + Bison para el frontend, parseando una gramática basada en parte en lenguajes imperativos (C, Typescript, Odin) y en parte en lenguajes híbridos (JSX). El backend fue implementado en C constando de etapas de análisis estático, evaluación y generación de código.
+
 \section{Modelo Computacional}
 
 \subsection{Dominio}
@@ -366,7 +368,19 @@ La expresión \texttt{env} puede ser utilizada para compilación condicional:
 \end{verbatim}
 \normalsize
 
+\subsubsection{Directivas}
+
+Las \textbf{directivas} son construcciones que no pertenecen directamente al programa, sino que actúan como indicaciones para el compilador. Tienen el formato \texttt{@directive} y únicamente están permitidas en el \textit{scope} raíz de cada archivo.
+
 \subsubsection{Módulos}
+
+El lenguaje permite modularizar el código y compartir definiciones de tipos y funciones entre archivos, mediante las directivas \texttt{@import} y \texttt{@export}.
+
+\texttt{@export} toma uno o más nombres de símbolos estáticos (tipos o funciones), que deben estar definidos en el \textit{scope} donde se encuentra la directiva. Marca estos símbolos como exportados, indicando que otros archivos pueden utilizarlos mediante \texttt{@import}.
+
+\texttt{@import} toma uno o más nombres de símbolos y un archivo de origen, que debe corresponder a uno de los archivos fuente incluidos en la compilación. Suponiendo que los símbolos existen en el archivo indicado y fueron marcados como exportados con \texttt{@export}, los define en el \textit{scope} local para que puedan ser utilizados.
+
+Los símbolos importados capturan el \textit{scope} de su archivo de origen, con tal de poder resolver por ejemplo tipos de retorno de una función que fueron definidos en el archivo de origen y no exportados.
 
 \section{Implementación}
 
@@ -525,20 +539,20 @@ Las más notables son la familia de funciones que representan todos los elemento
 \centering
 \begin{tabular}{|l|l|l|}
 \hline
-\textbf{Atributos}              & \textbf{Tipos de datos}           \\ \hline
-\textit{boolean attributes}     & \texttt{bool?}                    \\ \hline
-\texttt{dataset}, \texttt{aria} & \texttt{attr\_type{[}string{]}?}  \\ \hline
-Otros atributos                 & \texttt{attr\_type?}              \\ \hline
+\textbf{Atributos}                                          & \textbf{Tipos de datos}           \\ \hline
+\textit{boolean attributes} \cite{mdn:boolean_attributes}   & \texttt{bool?}                    \\ \hline
+\texttt{dataset}, \texttt{aria}                             & \texttt{attr\_type{[}string{]}?}  \\ \hline
+Otros atributos                                             & \texttt{attr\_type?}              \\ \hline
 \end{tabular}
 \end{table}
 
 Donde \texttt{attr\_type} es equivalente a \texttt{union\{int, float, string, bool, union\{int, float, string, bool\}[]\}}.
 
-Además, todas las funciones que representen elementos no \textit{void} (TODO ref MDN) toman como tipo de composición cualquier tipo primitivo o elemento HTML, o una lista de estos tipos. Todas las funciones HTML retornan un valor de tipo \texttt{element}.
+Además, todas las funciones que representen elementos no \textit{void} \cite{mdn:void_element} toman como tipo de composición cualquier tipo primitivo o elemento HTML, o una lista de estos tipos. Todas las funciones HTML retornan un valor de tipo \texttt{element}.
 
 \subsubsection{Importación de archivos CSV}\label{subsub:csv_import}
 
-Uno de los recursos externos que se pueden incluir en una página es un CSV como fuente de datos. La expresión \texttt{import csv} parsea el CSV, utilizando un buffer secundario en el parser que modifica el contexto de Flex para reconocer tokens de CSV. La gramática de Bison luego incluye como subset, utilizando estos tokens, la gramática de CSV según (TODO CSV RFC ref). Los valores se guardan como metadatos en el nodo que representa la expresión en el AST.
+Uno de los recursos externos que se pueden incluir en una página es un CSV como fuente de datos. La expresión \texttt{import csv} parsea el CSV, utilizando un buffer secundario en el parser que modifica el contexto de Flex para reconocer tokens de CSV. La gramática de Bison luego incluye como subset, utilizando estos tokens, la gramática de CSV según RFC 4180 \cite{rfc:4180_csv}. Los valores se guardan como metadatos en el nodo que representa la expresión en el AST.
 
 En momento de evaluación, el evaluador intenta transformar los valores del CSV al tipo de fila dado. En el caso de tipos lista (lista, vector o tupla) se transforma cada campo al tipo correspondiente a su posición y se ubican en orden de columna (izquierda a derecha). En el caso de tipos mapa (mapa o struct), se transforma cada campo al tipo correspondiente y se ubican en la fila indexados por el \textit{header} corresopndiente a su columna. De no poder convertir un valor al tipo solicitado, se produce un error.
 
@@ -551,6 +565,16 @@ Se encontraron numerosas dificultades a lo largo de la implementación del lengu
 La especificación original del lenguaje ignoraba todos los caracteres \textit{whitespace}, incluyendo saltos de línea, implícitamente permitiendo múltiples expresiones en una línea. Durante el desarrollo del frontend, se encontraron problemas de ambigüedad gramática difíciles de resolver con este funcionamiento, debido a la falta de un delimitador entre expresiones. Por ejemplo, \texttt{foo[2]} podía ser interpretado como un acceso a lista por índice (tercer elemento de \texttt{foo}), o como una expresión que retorna el valor de \texttt{foo} continuada por una literal de lista de un elemento.
 
 Se consideraron varias opciones, y se decidió introducir un separador de expresiones utilizando el salto de línea para esta función. Esto permitió distinguir expresiones explícitamente. En algunos casos particulares se permiten saltos de línea dentro de una expresión (listas, structs, etc.), pero están controlados de modo de evitar la ambigüedad.
+
+\subsubsection{Manejo de memoria en el backend}
+
+Durante la implementación de la etapa de análisis estático y type checking se encontraron problemas con el manejo de memoria en el compilador, debido a la complejidad de los \textit{lifetimes} de muchos objetos y de su \textit{ownership} combinado. Los mismos problemas resurgieron en la etapa de evaluación, y se implementó la misma solución.
+
+Por ejemplo: los objetos de tipo \texttt{Type} utilizados por el type checker pueden originarse en el parser (tipos explícitamente declarados), en cuyo caso viven en el AST y el mismo se encarga de liberarlos, o bien pueden ser generados en el momento por el type checker (tipos inferidos), en cuyo caso es el type checker el dueño de esos objetos y quien debe encargarse de manejar su memoria. Estos objetos se mezclan entre sí en varios lugares, lo cual dificulta rastrear el \textit{ownership} de cada uno.
+
+La solución a estos problemas vino de hacer uso extensivo de \textit{custom allocators}, en particular un \textit{arena} dinámico, que reserva bloques de memoria y los divide mediante una función análoga a \texttt{malloc}. Estas alocaciones no se pueden liberar individualmente, sino que el arena entero es liberado cuando ninguno de los objetos creados es necesario. Esto simplifica en gran medida el manejo de memoria, ya que, por ejemplo, el type checker puede crear todos sus objetos \texttt{Type} en un arena que sólo vive hasta una vez terminado el type checking. Efectivamente, se encuentra una cota superior a la unión del \textit{lifetime} de todos los objetos y se usa para determinar dónde debe existir el arena.
+
+El compilador usa arena allocators en typecheck, evaluación, builtins, entre otros lugares.
 
 \subsubsection{Resolución transitiva de símbolos importados}
 
@@ -578,7 +602,7 @@ Como efecto secundario, esta implementación hace relativamente sencillo agregar
 	\item Definir el tipado de la composición de funciones vino con dificultades: la versión original según la especificación infería el tipo de la composición según el retorno de la función, pero esto va en dirección opuesta al funcionamiento normal del typecheck, que primero infiere el tipo de una expresión (en este caso, el cuerpo de una función) para luego compararlo con el tipo de retorno. Se resolvió requerir un tipo de composición explícito en las funciones que aceptan composición.
 \end{itemize}
 
-\section{Futuras Extensiones}
+\section{Futuras Extensiones}\label{sec:future}
 
 Durante el desarrollo se identificaron varias posibilidades de extensión a futuro. Algunas son extensiones a la especificación del lenguaje, otras son partes de la misma que no se implementaron, sea por tiempo o porque quedaron en conflicto con otros cambios al lenguaje realizados durante la implementación.
 
@@ -589,10 +613,26 @@ Durante el desarrollo se identificaron varias posibilidades de extensión a futu
 	\item Una expresión de decomposición de listas que permita concatenación fácil, por ejemplo \texttt{list := [head, ...tail]} o \texttt{list := [...foo, 5, ...bar]} (una lista compuesta por todos los elementos de \texttt{foo}, seguidos de 5, seguido de todos los elementos de \texttt{bar}).
 	\item Una librería más completa de funciones \textit{builtin}, incluyendo por ejemplo funciones aritméticas, manipulación de listas, mapas y strings, etc.
 	\item Expresiones \texttt{switch} con pattern matching.
-	\item Alguna forma de discriminar el tipo que contiene una unión, similar a \textit{type guards} de Typescript (TODO ref) o \texttt{if let} en Rust(TODO ref).
+	\item Alguna forma de discriminar el tipo que contiene una unión, similar a \textit{type guards} de Typescript \cite{ts:type_guards} o \texttt{if let} en Rust \cite{rs:if_let}.
+	\item Tipos genéricos o parámetros de tipo.
 	\item Mejor documentación, mensajes de ayuda, y manejo de algunos errores.
 \end{itemize}
 
 \section{Conclusiones}
+
+En base al proceso de diseño del lenguaje, implementación, y las pruebas realizadas con el compilador resultante, concluimos que la idea básica del lenguaje—producir sitios estáticos HTML con algo más cercano a un lenguaje de programación completo que un DSL de templating—es viable como forma de desarrollo, y podría escalar a proyectos más grandes con buen soporte de \textit{tooling}.
+
+Para esto el compilador y el lenguaje necesitarían de varias adiciones, mencionadas en \autoref{sec:future}, así como una etapa de prueba extensiva para refinar la sintaxis y el funcionamiento. También consideramos necesaria una etapa de optimización, ya que el compilador fue implementado de la forma conceptualmente más simple sin consideración particular por el rendimiento, dado que fue principalmente implementado con fines didácticos y con tiempo y recursos limitados.
+
+En un plazo más largo, sería interesante implementar una segunda variante del compilador que, en lugar de evaluar el código en tiempo de compilación y emitir HTML estático, produzca alguna forma de \textit{bytecode} que luego pueda ser ejecutada por un \textit{runtime} en un servidor, junto con información de pedidos HTTP, permitiendo hacer por ejemplo consultas a otros servicios o a bases de datos, transformando el lenguaje en una herramienta de sitios SSR mucho más potente.
+
+Dicho \textit{runtime} podría tener múltiples implementaciones, por ejemplo, una implementación en Javascript/Typescript para correr sobre servidores Node y otra en Java para correr sobre un servidor como Tomcat. Al utilizar una VM, permitiría que el mismo artefacto del compilador pueda ser utilizado en varias arquitecturas de servidor siempre y cuando exista una implementación del \textit{runtime}.
+
+Encontramos también que una gran parte de la complejidad del lenguaje viene de la mano del sistema de tipado estructural, de las reglas de \textit{scoping}, y de la interacción entre los dos (la necesidad de resolver tipos con nombre, lo cual lleva a necesitar alguna forma de captura de \textit{scope}). Para una futura reimplementación con otro tiempo, concluímos que sería apropiada una investigación más extensa sobre estos problemas específicos y como se resuelven en otros lenguajes que hacen algo similar (Typescript siendo de particular interés debido a la similitud de su sistema de tipado con lo que se busca en este lenguaje).
+
+\pagebreak
+\section{Referencias}
+\bibliographystyle{IEEEtran}
+\bibliography{refs}
 
 \end{document}

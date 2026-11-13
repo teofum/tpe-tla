@@ -60,7 +60,7 @@
 [x] Read environment variable for AST debug view
 [x] Read and parse command line options
 [x] Read input from file/directory, rather than stdin
-[ ] FUTURE: log to files, read environment variables for paths
+[>] FUTURE: log to files, read environment variables for paths
 
 [x] Improve and update README.md
   [x] Give the dang thing a name
@@ -68,10 +68,12 @@
 
 [x] Modify dyn_array to have a type safe API more similar to the hash map
 
-[ ] String slicing
+[>] String slicing
+  - Future.
 [x] Function composition
 [x] Iterable ranges
-[ ] Decomposition statement for list composing
+[>] Decomposition statement for list composing
+  - Future.
 [x] Typed CSV imports
   [x] Typecheck + coercion hinting
   [x] Eval coercion
@@ -85,7 +87,7 @@
 [-] MAYBE: Remove list/tuple literals and replace with blocks?
   - Nah, waste of time. Plus list literal syntax looks nice.
 
-[ ] Add back compiler opts (disabled for debubbing)
+[x] Add back compiler opts (disabled for debubbing)
 
 #=== Backend ==================================================================#
 
