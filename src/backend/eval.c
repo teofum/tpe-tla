@@ -45,7 +45,7 @@ static Evaluator *e = NULL;
 
 void eval_init() {
   e = new(Evaluator);
-  e->logger = logger_create("Eval", stderr, LOG_DEBUG);
+  e->logger = logger_create("Eval", stderr, cs()->options.eval_log_level);
   e->arena = mem_dyn_arena_create(MEM_SIZE_AUTO);
   e->stack = cs()->global_scope;
 }

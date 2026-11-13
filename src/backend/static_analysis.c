@@ -1346,16 +1346,17 @@ static Type *_indexed_map_type(SymbolTable *s, MapType *map, IndexedVariable *va
   }
 }
 
-static Type *_variable_type(SymbolTable *s, VariableExpr *var) {
+static Type *_variable_type(SymbolTable *s, VariableExpr *var, bool *constant) {
   tc_debug_log("Var", &var->meta.loc);
 
   switch (var->type) {
     case V_NAMED: {
       const VariableSymbol *symbol = tc_resolve_symbol(s, var->named->name);
+      if (constant) *constant = symbol->constant;
       return symbol ? symbol->type : tc_error();
     }
     case V_INDEX: {
-      const Type *container = _variable_type(s, var->indexed->container);
+      const Type *container = _variable_type(s, var->indexed->container, constant);
       if (container->type == T_NAMED) {
         container = tc_resolve_named_type(s, container, NULL);
       }
@@ -1373,7 +1374,7 @@ static Type *_variable_type(SymbolTable *s, VariableExpr *var) {
       }
     }
     case V_STRUCT_MEMBER: {
-      const Type *container = _variable_type(s, var->struct_member->struct_expr);
+      const Type *container = _variable_type(s, var->struct_member->struct_expr, constant);
       if (container->type == T_NAMED) {
         container = tc_resolve_named_type(s, container, NULL);
       }
@@ -1572,16 +1573,17 @@ static bool _is_assignable(SymbolTable *s, const VariableExpr *expr) {
 static Type *_assignment_type(SymbolTable *s, const AssignmentExpr *expr) {
   tc_debug_log("Assignment", &expr->meta.loc);
 
-  Type *lhs_type = _variable_type(s, expr->left);
+  bool lhs_const = false;
+  Type *lhs_type = _variable_type(s, expr->left, &lhs_const);
   Type *rhs_type = tc_check_expr(s, expr->right);
 
-  // Fail silently on error type; assume error has been reported upstream
-  if (_is_error(lhs_type) || _is_error(rhs_type)) return tc_error();
-
-  if (!_is_assignable(s, expr->left)) {
+  if (lhs_const || !_is_assignable(s, expr->left)) {
     err_report_assignment(&expr->left->meta.loc, ERR_ERROR);
     return tc_error();
   }
+
+  // Fail silently on error type; assume error has been reported upstream
+  if (_is_error(lhs_type) || _is_error(rhs_type)) return tc_error();
 
   if (tc_accepts_type(s, lhs_type, rhs_type, NULL, NULL)) return lhs_type;
   return tc_report_error_fmt(
@@ -2025,7 +2027,7 @@ static Type *tc_check_expr(SymbolTable *s, const Expr *expr) {
   Type *type = NULL;
   switch (expr->type) {
     case EXPR_LITERAL: type = _literal_type(s, expr->literal); break;
-    case EXPR_VARIABLE: type = _variable_type(s, expr->variable); break;
+    case EXPR_VARIABLE: type = _variable_type(s, expr->variable, NULL); break;
     case EXPR_UNARY: type = _unary_type(s, expr->unary); break;
     case EXPR_BINARY: type = _binary_type(s, expr->binary); break;
     case EXPR_ASSIGNMENT: type = _assignment_type(s,expr->assignment); break;

@@ -27,6 +27,7 @@ typedef struct {
   LogLevel parser_log_level;
   LogLevel symbols_log_level;
   LogLevel typecheck_log_level;
+  LogLevel eval_log_level;
 
   CompilerDefinitions *definitions;
 } CompilerOptions;

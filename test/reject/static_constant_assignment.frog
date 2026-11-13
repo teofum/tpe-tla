@@ -1,0 +1,16 @@
+x ::= 5
+
+xs ::= [1, 2, 3, 4]
+
+foo ::= { .bar = "xyz" }
+
+// Error: assigning a constant
+x = 6
+
+// None of these should work
+xs[2] = 999
+xs[1, 2] = [999, 999]
+foo.bar = "something else"
+
+x
+xs

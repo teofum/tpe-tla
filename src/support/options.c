@@ -29,6 +29,7 @@ static CompilerOptions _options_default() {
     .scanner_log_level = LOG_NONE,
     .symbols_log_level = LOG_NONE,
     .typecheck_log_level = LOG_NONE,
+    .eval_log_level = LOG_NONE,
 
     .definitions = new(CompilerDefinitions),
   };
@@ -49,6 +50,7 @@ static void _options_env(CompilerOptions *options) {
   env_set_log_level("__DEBUG_PARSER_LOG_LEVEL", &options->parser_log_level);
   env_set_log_level("__DEBUG_SYMBOLS_LOG_LEVEL", &options->symbols_log_level);
   env_set_log_level("__DEBUG_TYPECHECK_LOG_LEVEL", &options->typecheck_log_level);
+  env_set_log_level("__DEBUG_EVAL_LOG_LEVEL", &options->eval_log_level);
 }
 
 static void _options_cli_args(CompilerOptions *options, i32 argc, char *const*argv) {
