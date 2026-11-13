@@ -55,19 +55,21 @@ Y el siguiente programa hace lo mismo, pero mediante una función recursiva:
 
 \small
 \begin{verbatim}
-  current := 1
-  last := 0
-
-  fib := for x in 0..10 {
-    n := current
-    current = n + last
-    last = n
-    n
+  fib is function(n: int) -> int {
+    if n < 0 {
+      0
+    } else if n < 2 {
+      1
+    } else {
+      fib(n - 1) + fib(n - 2)
+    }
   }
 
-  fib
+  for n in 0..10 { fib(n) }
 \end{verbatim}
 \normalsize
+
+Algunas expresiones son las típicas encontradas en un lenguaje de programación: literales, variables, operadores binarios, etc. Otras tienen comportamiento especial, o son expresiones que en un lenguaje imperativo convencional no lo serían (por ejemplo, control de flujo):
 
 \begin{enumerate}
 	\item Una asignación retorna el valor asignado a la variable; esto permite encadenar asignaciones. Las asignaciones tienen comportamiento especial.
@@ -85,6 +87,8 @@ Un bloque de código, delimitado por \texttt{\{\}}, también es una expresión, 
 	\item Un bloque que contiene únicamente asignaciones, o construcciones sin valor propio (detalladas más adelante) no tiene valor de retorno. En la mayoría de contextos, esto es un error.
 \end{enumerate}
 
+Además de ser una expresión que retorna un valor, un bloque define un \textit{scope} léxico, que delimita el alcance de las declaraciones presentes dentro del mismo.
+
 Las construcciones que no resuelven a un valor, sino que modifican el estado del programa, son:
 
 \begin{itemize}
@@ -98,13 +102,190 @@ Estas construcciones se detallan más adelante.
 
 \subsubsection{Tipos de datos}
 
+El lenguaje utiliza un \textbf{sistema de tipos estructural}, es decir, los tipos se comparan por su estructura y no su identidad. Un objeto tipado (variable, parámetro de función, etc.) acepta un valor de cualquier tipo compatible.
+
+Se definen los siguientes tipos de datos primitivos:
+
+\begin{itemize}
+	\item \texttt{int}, números enteros con signo de 64 bits.
+	\item \texttt{float}, números decimales en representación IEEE 754 de doble precisión.
+	\item \texttt{bool}, toma los valores \texttt{true} o \texttt{false}.
+	\item \texttt{string}, cadenas de texto.
+	\item \texttt{element}, elementos html con un tag, atributos, y elementos hijos.
+	\item \texttt{range}, intervalo entre dos enteros. Expresado únicamente en literales para iteración y \textit{array slicing}.
+	\item \texttt{nil}, el tipo del valor nulo. Generalmente utilizado en una unión para representar tipos opcionales.
+\end{itemize}
+
+Además, el lenguaje define los siguientes tipos compuestos, que pueden utilizarse para construir tipos de datos más complejos:
+
+\begin{itemize}
+	\item Listas (\texttt{T[]}), una lista con elementos de tipo \texttt{T} y tamaño arbitrario.
+	\item Tuplas (\texttt{[T, U, V, ...]}), una tupla con un número conocido de elementos que pueden tener distintos tipos, definidos por su posición.
+	\item Vectores (\texttt{[T; n]} donde \texttt{n: int}), equivalentes a una tupla donde todos los valores tienen el mismo tipo, o una lista de tamaño estáticamente conocido.
+	\item Mapas (\texttt{V[K]}), un mapa de elementos de tipo \texttt{V} indexados por llaves de tipo \texttt{K}.
+	\item Structs (\texttt{struct}), una estructura con miembros nombrados, cada uno con un tipo definido.
+	\item Uniones (\texttt{union}), representan un tipo que acepta cualquiera de sus miembros.
+\end{itemize}
+
+El sistema de tipado utiliza los conceptos de \textbf{igualdad}, \textbf{aceptación} y \textbf{compatibilidad} de tipos.
+
+\paragraph{Igualdad}
+Los tipos \texttt{T}, \texttt{U} son \textbf{iguales} si y sólo si tienen exactamente la misma estructura en todos sus niveles.
+
+\paragraph{Aceptación}
+Un tipo \texttt{T} \textbf{acepta} a otro tipo \texttt{U} si cumple ciertas condiciones, dependiendo de la forma de \texttt{T}:
+
+\begin{itemize}
+	\item Un tipo primitivo se acepta únicamente a sí mismo, con la excepción de \texttt{float} que también acepta \texttt{int}.
+	\item Una lista \texttt{T[]} acepta
+	\begin{enumerate}
+		\item Otra lista \texttt{U[]}, si y sólo si \texttt{T} acepta \texttt{U}.
+		\item Un vector \texttt{[U; n]}, si y sólo si \texttt{T} acepta \texttt{U}.
+		\item Una tupla \texttt{[U1, ..., Un]}, si y sólo si \texttt{T} acepta \texttt{Ui} para todo \texttt{1 <= i <= n}.
+	\end{enumerate}
+	\item Un vector \texttt{[T; n]} acepta
+	\begin{enumerate}
+		\item Otro vector \texttt{[U; m]}, si y sólo si \texttt{m == n} y \texttt{T} acepta \texttt{U}.
+		\item Una tupla \texttt{[U1, ..., Um]}, si y sólo si \texttt{m == n} y \texttt{T} acepta \texttt{Ui} para todo \texttt{1 <= i <= m}.
+	\end{enumerate}
+	\item Una tupla \texttt{[T1, ..., Tn]} acepta
+	\begin{enumerate}
+		\item Un vector \texttt{[U; m]}, si y sólo si \texttt{m == n} y \texttt{Ti} acepta \texttt{U} para todo \texttt{1 <= i <= n}.
+		\item Otra tupla \texttt{[U1, ..., Um]}, si y sólo si \texttt{m == n} y \texttt{Ti} acepta \texttt{Ui} para todo \texttt{1 <= i <= n}.
+	\end{enumerate}
+	\item Un mapa \texttt{V[K]} acepta
+	\begin{enumerate}
+		\item Otro mapa \texttt{V'[K']}, si y sólo si \texttt{K' == K} y \texttt{V} acepta \texttt{V'}.
+		\item Si \texttt{K == string}, un struct \texttt{S}, siempre y cuando cada uno de sus miembros sea aceptado por \texttt{V}.
+	\end{enumerate}
+	\item Un struct \texttt{S} acepta otro struct \texttt{R}, si y sólo si para todo miembro \texttt{s\_i: Ti} de \texttt{S}, existe un miembro \texttt{r\_i: Ui} de \texttt{R} tal que \texttt{Ti} acepta \texttt{Ui}.
+	\item Una unión \texttt{S = union\{T1, ..., Tn\}} acepta
+	\begin{enumerate}
+		\item Cualquiera de sus miembros \texttt{T1, ..., Tn}.
+		\item Un tipo \texttt{U} tal que algún miembro \texttt{Ti} acepta \texttt{U}.
+		\item Otra unión \texttt{R}, que cumple: para todo miembro \texttt{Ui} de \texttt{R}, \texttt{S} acepta \texttt{Ui}.
+	\end{enumerate}
+\end{itemize}
+
+\paragraph{Compatibilidad}
+Los tipos \texttt{T}, \texttt{U} son \textbf{compatibles} si y sólo si \texttt{T} acepta \texttt{U} o \texttt{U} acepta \texttt{T}. Esta definición se utiliza para determinar si dos objetos pueden ser comparados; por ejemplo, \texttt{5 == 5.0} por más que tengan tipos distintos (\texttt{int} y \texttt{float}).
+
+En la mayoría de casos, se verifica la aceptación: al asignar a una variable o parámetro de función, o al verificar que el cuerpo de una función cumpla con el contrato definido en su prototipo (tipo de retorno). El lenguaje también hace \textbf{inferencia de tipos}, permitiendo omitir anotaciones de tipos donde los mismos se pueden determinar de las expresiones, con excepción de los tipos de retorno de función que son siempre requeridos.
+
+Un tipo puede ser nombrado mediante un \textbf{alias} o \textbf{definición de tipo}, de la forma \texttt{TypeName is T}. Estos nombres se resuelven al momento de comparar tipos. Por ejemplo, para nombrar un struct:
+
+\small
+\begin{verbatim}
+  Person is struct {
+    first_name: string,
+    last_name: string
+  }
+
+  Book is struct {
+    isbn: string,
+    title: string,
+    author: Person
+  }
+\end{verbatim}
+\normalsize
+
+Luego, dentro del \textit{scope} que contiene esta declaración, la expresión de tipo \texttt{Book} es equivalente a \texttt{struct \{ isbn: string, title: string, author: struct \{ first\_name: string, last\_name: string \} \}}.
+
 \subsubsection{Variables y constantes}
+
+\textit{Frog} permite declarar variables y constantes dentro de un \textit{scope}, como cualquier lenguaje imperativo. Una declaración de variable tiene la forma \texttt{name: [Type] = <expression>}, donde el tipo puede omitirse y se infiere del valor inicial. Toda declaración requiere inicializar la variable con un valor inicial, no está permitido declarar una variable sin valor.
+
+Una variable existente en el \textit{scope} actual (independiente de dónde haya sido definida) puede ser reasignada con una expresión de asignación \texttt{name = <expression>}.
+
+Una constante se declara de modo análogo a una variable, con una declaración de constante de la forma \texttt{name:: [Type] = <expression>}. Funciona de modo idéntico a una variable, con la diferencia que no se permite reasignarla. Reasignar una constante genera un error de compilación.
 
 \subsubsection{Funciones y componentes}
 
+El lenguaje permite definir \textit{funciones} para reutilizar código, de forma similar a cualquier lenguaje imperativo. Las funciones en \textit{frog} tienen algunas características particulares:
+
+\begin{itemize}
+	\item Las funciones actúan como un punto de corte en la resolución de \textit{scope} para variables. Es decir, dentro de una función, no se permite acceder variables externas a la misma.
+	\item Los parámetros de función no pueden ser modificados por la misma, dentro del \textit{scope} de la función están declarados como constantes.
+	\item Las funciones deben tener un valor de retorno.
+\end{itemize}
+
+Estas características implican que las funciones en \textit{frog} son puras, es decir, no tienen efectos secundarios fuera de retornar un valor en base a sus parámetros.
+
+Las funciones se definen de modo similar a un tipo de datos, con la adición de un cuerpo de función que contiene su código:
+
+\small
+\begin{verbatim}
+  display_name is function(user: User) -> string {
+    concat(" ", user.first_name, user.last_name)
+  }
+\end{verbatim}
+\normalsize
+
+La sintaxis de llamada de función es similar a un lenguaje como C, con algunas características adicionales:
+
+Los parámetros de función pueden ser opcionales (si su tipo acepta \texttt{nil}) o tener definido un valor por defecto, en cuyo caso pueden ser omitidos de la llamada:
+
+\small
+\begin{verbatim}
+  with_defaults is function(x: int, y: int?, z: int = 5) -> string {
+    ...
+  }
+
+  with_defaults(1, 2, 3)
+  with_defaults(1)
+\end{verbatim}
+\normalsize
+
+Los argumentos en una llamada a función pueden especificar un nombre de parámetro con la sintaxis \texttt{name = <expression>}. Los argumentos con nombre deben ir después de todos los argumentos posicionales.
+
+\small
+\begin{verbatim}
+  with_defaults(x = 1, z = 3)
+  with_defaults(1, z = 3)
+  with_defaults(z = 3, x = 1, y = 2)
+\end{verbatim}
+\normalsize
+
+Una función que toma parámetros con nombre \texttt{class} o \texttt{id} soporta una sintaxis de llamada especial, donde estos parámetros pueden pasarse en formato similar a un selector de CSS:
+
+\small
+\begin{verbatim}
+  div.flex.flex-row.gap-4.items-center#myDiv()
+
+  // Equivalente a
+
+  div(class = ["flex", "flex-row", "gap-4", "items-center"], id = "myDiv")
+\end{verbatim}
+\normalsize
+
+Se llama \textbf{componentes} a las funciones usadas dentro de una estructura que genera HTML. Generalmente retornan \texttt{element} y pueden tomar composición.
+
 \subsubsection{Composición de funciones}
 
+La construcción que permite utilizar el lenguaje para construir estructuras HTML complejas de modo sencillo es la \textbf{composición de funciones}. Esto consiste en pasar un valor adicional como parte de una llamada a función. La expresión es tratada como un parámetro especial, y es inserta en cada lugar donde la función tenga la palabra reservada \texttt{compose}.
+
+Una función acepta composición si se declara con un \texttt{tipo de ocmposición}:
+
+\small
+\begin{verbatim}
+  twice is function compose string -> [string; 2] {
+    compose
+    compose
+  }
+
+  foo := twice "Hello"    // ["Hello", "Hello"]
+  bar := twice {
+    who := "world"
+    "Hello ${who}!"
+  }                       // ["Hello, world!", "Hello, world!"]
+\end{verbatim}
+\normalsize
+
+Un bloque de código pasado para composición captura el \textit{scope} de la llamada a función; es decir, tiene acceso a las variables del lugar donde se llama. \textbf{No tiene acceso al \textit{scope} interno de la función}, ya que se evalúa fuera de la llamada.
+
 \subsubsection{Recursos externos}
+
+
 
 \subsubsection{Módulos}
 
