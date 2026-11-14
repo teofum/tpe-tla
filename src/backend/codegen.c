@@ -25,7 +25,7 @@ Codegen *cg = NULL;
 void cg_init() {
   cg = new(Codegen);
   cg->pretty = true;
-  cg->indent_size = 4;
+  cg->indent_size = 2;
 }
 
 void cg_shutdown() {
@@ -123,18 +123,18 @@ void cg_generate(u32 file_idx) {
 
   const Value *value = cs()->values[file_idx];
   if (value != NULL) {
-    // char *stem = fs_stem(state_current_filepath(cs()));
-    // char *out_path = NULL;
-    // asprintf(&out_path, "out/%s.html", stem);
-    // free(stem);
-    // cg->out_file = fopen(out_path, "w");
+    char *stem = fs_stem(cs_current_filepath());
+    char *out_path = NULL;
+    asprintf(&out_path, "%s/%s.html", cs()->options.out_path, stem);
+    fs_mkpath(out_path, S_IRWXU | S_IRWXG | S_IROTH);
+    free(stem);
+    cg->out_file = fopen(out_path, "w");
 
-    cg->out_file = stdout;
     _write_value(value, "", 0);
     fprintf(cg->out_file, "\n");
 
-    // fclose(cg->out_file);
-    // free(out_path);
+    fclose(cg->out_file);
+    free(out_path);
   }
 
   cs()->current_file = -1;

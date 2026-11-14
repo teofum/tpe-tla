@@ -19,6 +19,7 @@ typedef struct {
   char **input_filenames;
   char *base_path;
   char *base_url;
+  char *out_path;
 
   bool emit_ast_dot;
   char *ast_dot_base_path;

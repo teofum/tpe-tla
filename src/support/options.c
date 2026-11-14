@@ -24,6 +24,7 @@ static CompilerOptions _options_default() {
     .input_filenames = NULL,
     .base_path = getcwd(NULL, 0),
     .base_url = strdup(""),
+    .out_path = strdup("out"),
 
     .emit_ast_dot = false,
     .ast_dot_base_path = NULL,
@@ -77,7 +78,7 @@ static void _options_cli_args(CompilerOptions *options, i32 argc, char *const*ar
     OPT_AST_DOT,
   };
 
-  static const char *optstr = "v::D:s:b:u:qh";
+  static const char *optstr = "v::D:s:o:b:u:qh";
   static struct option long_opts[] = {
     {"help",        no_argument,        NULL, 'h'           },
     {"verbose",     optional_argument,  NULL, 'v'           },
@@ -86,12 +87,14 @@ static void _options_cli_args(CompilerOptions *options, i32 argc, char *const*ar
     {"emit-ast",    optional_argument,  NULL, OPT_AST_DOT   },
     {"define",      required_argument,  NULL, 'D'           },
     {"src-dir",     required_argument,  NULL, 's'           },
+    {"out-dir",     required_argument,  NULL, 'o'           },
     {"base-dir",    required_argument,  NULL, 'b'           },
     {"base-url",    required_argument,  NULL, 'u'           },
     {0,             0,                  0,    0             }
   };
 
   bool defined_basedir = false;
+  bool defined_outdir = false;
   bool valid = true;
   char *glob_dir = NULL;
 
@@ -139,6 +142,17 @@ static void _options_cli_args(CompilerOptions *options, i32 argc, char *const*ar
             if (options->base_path) free(options->base_path);
             options->base_path = realpath(optarg, NULL);
           }
+        }
+        break;
+      }
+      case 'o': {
+        if (defined_outdir) {
+          fprintf(stderr, "Multiple output directories defined\n");
+          valid = false;
+        } else {
+          if (options->out_path) free(options->out_path);
+          options->out_path = realpath(optarg, NULL);
+          defined_outdir = true;
         }
         break;
       }
@@ -203,6 +217,7 @@ void options_free(CompilerOptions *opts) {
     free(opts->input_filenames[i]);
   }
   free(opts->input_filenames);
+  free(opts->out_path);
   free(opts->base_path);
   free(opts->base_url);
   if (opts->ast_dot_base_path) free(opts->ast_dot_base_path);
