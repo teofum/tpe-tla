@@ -498,6 +498,6 @@ char *ast_dot_filepath(CompilerState *cs, const char *input_filepath) {
   const char *prefix = or_default(cs->options.ast_dot_base_path, "ast");
 
   char *path = NULL;
-  asprintf(&path, "%s/%s", prefix, input_filepath);
+  usize l = asprintf(&path, "%s/%s", prefix, input_filepath);
   return path;
 }

@@ -225,10 +225,10 @@ static str _error_loc(str error_str, const char *fp, Location *loc, const char *
     u32 n_lines = ll - fl + 1;
     char buf[256];
     for (u32 line = 0; line < fl; line++) {
-      fgets(buf, 256, file);
+      char *_ = fgets(buf, 256, file);
     }
     for (u32 line = fl; line <= ll; line++) {
-      fgets(buf, 256, file);
+      char *_ = fgets(buf, 256, file);
       u32 fc = (line == fl) ? fc_fl : 0;
       u32 lc = (line == ll) ? lc_ll : strlen(buf);
       if (lc == 0) continue;

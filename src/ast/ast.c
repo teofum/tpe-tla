@@ -776,7 +776,7 @@ CSVFile *ast_csv_file(CSVRecordList *record_list) {
     CSVRecord *row = records[i + 1];
     if (row->len != columns) {
       char *msg = NULL;
-      asprintf(&msg,
+      usize l = asprintf(&msg,
         "column count mismatch at row %u: expected %u, got %u",
         i + 1, columns, row->len
       );

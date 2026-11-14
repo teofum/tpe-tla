@@ -216,13 +216,58 @@ static bool eval_compare_values(const Value *a, const Value *b) {
   }
 }
 
+static str eval_stringify(const Value *v);
+
+static str _stringify_range(const Range *r) {
+  if (r->has_start) {
+    if (r->has_end) {
+      return str_format_a(eval_malloc, "<range %ld..%ld>", r->start, r->end);
+    } else {
+      return str_format_a(eval_malloc, "<range %ld..>", r->start);
+    }
+  } else {
+    if (r->has_end) {
+      return str_format_a(eval_malloc, "<range ..%ld>", r->end);
+    } else {
+      return str_format_a(eval_malloc, "<range ..>");
+    }
+  }
+}
+
+static str _stringify_list(const List *l) {
+  str string = str_from_cstring_a(eval_malloc, "");
+  for (u32 i = 0; i < l->len; i++) {
+    if (i > 0) str_append_c_a(eval_malloc, NULL, &string, " ");
+    str_append_a(eval_malloc, NULL, &string, eval_stringify(l->items[i]));
+  }
+  return string;
+}
+
+static str _stringify_map(const Map *m) {
+  str string = str_from_cstring_a(eval_malloc, "<map [ ");
+  u32 i = 0;
+  const Value *key, *value;
+  map_foreach(key, value, (Map *)m) {
+    if (i++ > 0) str_append_c_a(eval_malloc, NULL, &string, ", ");
+    str_append_a(eval_malloc, NULL, &string, eval_stringify(key));
+    str_append_c_a(eval_malloc, NULL, &string, " = ");
+    str_append_a(eval_malloc, NULL, &string, eval_stringify(value));
+  }
+  str_append_c_a(eval_malloc, NULL, &string, " ]>");
+  return string;
+}
+
 static str eval_stringify(const Value *v) {
   switch (v->type) {
     case VAL_STRING: return *v->string;
     case VAL_INT: return str_format_a(eval_malloc, "%ld", v->integer);
     case VAL_FLOAT: return str_format_a(eval_malloc, "%f", v->floating);
     case VAL_BOOL: return str_from_cstring_a(eval_malloc, v->boolean ? "true" : "false");
-    default: return str_from_cstring_a(eval_malloc, "(TODO stringify values)");
+    case VAL_NIL: return str_from_cstring_a(eval_malloc, "(nil)");
+    case VAL_RANGE: return _stringify_range(v->range);
+    case VAL_LIST: return _stringify_list(v->list);
+    case VAL_MAP: return _stringify_map(v->map);
+    case VAL_ELEMENT: return str_format_a(eval_malloc, "<element %s>", v->element->tag);
   }
 }
 
@@ -423,7 +468,7 @@ static const Value *eval_map(SymbolTable *s, const MapLiteral *map) {
     if (!map_insert(map_v, (Value *)key_v, (Value *)value_v)) {
       str key_str = eval_stringify(key_v);
       char *msg = NULL;
-      asprintf(&msg,
+      usize l = asprintf(&msg,
         "duplicate map literal key '%.*s'",
         (i32)key_str.len, key_str.ptr
       );
@@ -445,7 +490,7 @@ static const Value *eval_struct(SymbolTable *s, const StructLiteral *struct_l) {
     const Value *value_v = eval_expr(s, struct_l->fields[i]->value);
     if (!map_insert(map_v, (Value *)key_v, (Value *)value_v)) {
       char *msg = NULL;
-      asprintf(&msg,
+      usize l = asprintf(&msg,
         "duplicate struct literal field '%s'",
         struct_l->fields[i]->name->lexeme
       );
@@ -1045,7 +1090,7 @@ static const Value *eval_env(SymbolTable *s, const EnvExpr *expr) {
   }
 
   char *msg = NULL;
-  asprintf(&msg, "required env variable '%s' is undefined", name);
+  usize l = asprintf(&msg, "required env variable '%s' is undefined", name);
   err_report_eval(msg, &expr->meta.loc, ERR_ERROR);
   free(name);
   return NULL;
@@ -1091,7 +1136,7 @@ static const Value *_csv_row(
         const Value *field_value = _csv_field(row[j], csv->coercion_hints[j]);
         if (field_value->type == VAL_NIL) {
           char *msg = NULL;
-          asprintf(&msg,
+          usize l = asprintf(&msg,
             "failed to parse CSV field: '%.*s' cannot be coerced to %s",
             (i32)row[j]->value.len, row[j]->value.ptr,
             builtin_type_str[csv->coercion_hints[j]]
@@ -1112,7 +1157,7 @@ static const Value *_csv_row(
         const Value *field_value = _csv_field(row[j], csv->coercion_hints[j]);
         if (field_value->type == VAL_NIL) {
           char *msg = NULL;
-          asprintf(&msg,
+          usize l = asprintf(&msg,
             "failed to parse CSV field: '%.*s' cannot be coerced to %s",
             (i32)row[j]->value.len, row[j]->value.ptr,
             builtin_type_str[csv->coercion_hints[j]]
@@ -1143,7 +1188,7 @@ static const Value *eval_import(SymbolTable *s, const ImportExpr *i) {
       FILE *f = fopen(i->path, "rb");
       if (!f) {
         char *msg = NULL;
-        asprintf(&msg, "failed to open file '%s': i/o error", i->path);
+        usize l = asprintf(&msg, "failed to open file '%s': i/o error", i->path);
         err_report_eval(msg, &i->meta.loc, ERR_ERROR);
         return _nil();
       }
@@ -1152,7 +1197,7 @@ static const Value *eval_import(SymbolTable *s, const ImportExpr *i) {
       i64 size = ftell(f);
       fseek(f, 0, SEEK_SET);
       buf = eval_malloc(size);
-      fread(buf, 1, size, f);
+      i64 _ = fread(buf, 1, size, f);
       fclose(f);
 
       str *string = eval_new(str);
@@ -1211,7 +1256,7 @@ static const Value *eval_decl(SymbolTable *s, const DeclarationStmt *decl) {
     assert(r_value->type == VAL_LIST);
     if (decl->left_count != r_value->list->len) {
       char *msg = NULL;
-      asprintf(&msg,
+      usize l = asprintf(&msg,
         "declaration symbol count mismatch: expected %lu, got %u",
         r_value->list->len, decl->left_count
       );

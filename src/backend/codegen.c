@@ -101,7 +101,9 @@ static void _write_value(const Value *v, const char *sep, i32 indent) {
       u32 i = 0;
       map_foreach(key, value, v->map) {
         if (i++ > 0) _p(", ");
-        _p("key = val"); // TODO stringify
+        _write_value(key, "", -1);
+        _p(" = ");
+        _write_value(value, "", -1);
       }
       _p("]");
       break;
@@ -125,7 +127,7 @@ void cg_generate(u32 file_idx) {
   if (value != NULL) {
     char *stem = fs_stem(cs_current_filepath());
     char *out_path = NULL;
-    asprintf(&out_path, "%s/%s.html", cs()->options.out_path, stem);
+    usize l = asprintf(&out_path, "%s/%s.html", cs()->options.out_path, stem);
     fs_mkpath(out_path, S_IRWXU | S_IRWXG | S_IROTH);
     free(stem);
     cg->out_file = fopen(out_path, "w");

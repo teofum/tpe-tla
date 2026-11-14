@@ -1,5 +1,4 @@
 #include <assert.h>
-#include <math.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -1018,7 +1017,7 @@ static Type *tc_report_error_fmt(const Location *loc, const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
   char *message;
-  vasprintf(&message, fmt, args);
+  usize l = vasprintf(&message, fmt, args);
   va_end(args);
 
   logger_log(sa->tc_logger, LOG_ERROR, "Type Error: %s", message);
@@ -1120,8 +1119,11 @@ static Type *_add_to_union_type(SymbolTable *s, Type *value_type, Type *new_type
     }
 
     UnionType *u = value_type->union_type;
+    Type **new_types = tc_new_array(Type *, u->len + 1);
+    memcpy(new_types, u->types, u->len * sizeof(Type *));
+    u->types = new_types;
+    u->types[u->len] = new_type;
     u->len++;
-    u->types = realloc(u->types, u->len * sizeof(Type *)); // FIXME leaks and stinks!!
     return value_type;
   } else {
     if (tc_accepts_type(s, value_type, new_type, NULL, NULL)) {
