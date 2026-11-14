@@ -151,7 +151,7 @@ static void _options_cli_args(CompilerOptions *options, i32 argc, char *const*ar
           valid = false;
         } else {
           if (options->out_path) free(options->out_path);
-          options->out_path = realpath(optarg, NULL);
+          options->out_path = strdup(optarg);
           defined_outdir = true;
         }
         break;
