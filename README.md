@@ -27,13 +27,18 @@ The compiler takes options from environment variables or command line arguments,
 
 ### Command line options
 
-| Command line              | Default     | Description                                                                                              |
-| :------------------------ | :---------- | :------------------------------------------------------------------------------------------------------- |
-| `-h`, `--help`            | unset       | Print a help message and exit.                                                                           |
-| `-v`, `--verbose`         | unset       | Equivalent to `--log=verbose`.                                                                           |
-| `-q`, `--quiet`           | unset       | Equivalent to `--log=none`.                                                                              |
-| `--log=<level>`           | `info`      | Set the compiler logging level. See [Logging](#logging) for valid options.                               |
-| `--emit-ast[=<filename>]` | off, `ast/` | If set, the compiler will emit GraphViz DOT file for the full ASTs after parsing in the given directory. |
+| Command line              | Default     | Description                                                                                                                                                                                |
+| :------------------------ | :---------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `-h`, `--help`            | unset       | Print a help message and exit.                                                                                                                                                             |
+| `-v`, `--verbose`         | unset       | Equivalent to `--log=verbose`.                                                                                                                                                             |
+| `-q`, `--quiet`           | unset       | Equivalent to `--log=none`.                                                                                                                                                                |
+| `-D`, `--define`          | unset       | Define an environment variable. Syntax: -D NAME=value                                                                                                                                      |
+| `-s`, `--src-dir`         | unset       | Set a source directory. All source files within this directory will be recursively added to the list of source files to compile. When this option is set, no other files must be provided. |
+| `-o`, `--out-dir`         | `out`       | Set an output directory. Output files (one per input file that evaluates to a value) will be written here.                                                                                 |
+| `-b`, `--base-dir`        | CWD         | Set a base directory, used as the base path for absolute path resolution in imports. If left unset when `-s` is used, defaults to the source directory.                                    |
+| `-u`, `--base-url`        | `<blank>`   | Set a base URL. Used as a prefix for `import url` expressions.                                                                                                                             |
+| `--log=<level>`           | `info`      | Set the compiler logging level. See [Logging](#logging) for valid options.                                                                                                                 |
+| `--emit-ast[=<filename>]` | off, `ast/` | If set, the compiler will emit GraphViz DOT file for the full ASTs after parsing in the given directory.                                                                                   |
 
 ### Environment variables
 
