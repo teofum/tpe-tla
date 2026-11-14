@@ -7,4 +7,6 @@ int fs_mkpath(char* file_path, mode_t mode);
 
 char *fs_stem(const char *path);
 
+const char *fs_ext(const char *path);
+
 #endif

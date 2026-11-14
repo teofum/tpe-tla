@@ -37,3 +37,9 @@ char *fs_stem(const char *path) {
   free(path2);
   return stem;
 }
+
+const char *fs_ext(const char *path) {
+    const char *dot = strrchr(path, '.');
+    if (!dot || dot == path) return "";
+    return dot + 1;
+}

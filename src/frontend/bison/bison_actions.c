@@ -16,8 +16,6 @@
 #include "bison_actions.h"
 #include "bison_parser.h"
 
-#define PATH_MAX 4096
-
 Stmt *parse_expr_stmt(Expr *expr) {
   fe_parser_log(LOG_DEBUG, "Expression Stmt");
   return ast_stmt_expr(expr);
