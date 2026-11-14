@@ -24,14 +24,30 @@ static const char *frog =
   "___\\\\ \\\\     // //___\n"
   ">____)/_\\---/_\\(____<";
 
+static const char *help =
+" `-h`, `--help`            Print this help message.\n"
+" `-v`, `--verbose`         Equivalent to --log=verbose.\n"
+" `-q`, `--quiet`           Equivalent to --log=none.\n"
+" `-D`, `--define`          Define an environment variable. Syntax: -D NAME=value\n"
+" `-s`, `--src-dir`         Set a source directory. All source files within this directory will be recursively added to the list of source files to compile. When this option is set, no other files must be provided.\n"
+" `-o`, `--out-dir`         Set an output directory. Output files (one per input file that evaluates to a value) will be written here.\n"
+" `-b`, `--base-dir`        Set a base directory, used as the base path for absolute path resolution in imports. If left unset when -s is used, defaults to the source directory.\n"
+" `-u`, `--base-url`        Set a base URL. Used as a prefix for import url expressions.\n"
+" `--log=<level>`           Set the compiler logging level. Valid options are fatal, error, warning, info, verbose, debug, none, all.\n"
+" `--emit-ast[=<filename>]` If set, the compiler will emit GraphViz DOT file for the full ASTs after parsing in the given directory.\n"
+;
+
 CompilerState *init(CompilerOptions *opts);
 CompilationStatus shutdown();
 
 i32 main(i32 argc, char *const*argv) {
   CompilerOptions opts = options(argc, argv);
   if (opts.task == TASK_HELP) {
+    printf("%s\n\n", help);
     printf("%s\n\n", frog);
     printf("Ribbit.\n");
+
+    options_free(&opts);
     return 0;
   }
 
