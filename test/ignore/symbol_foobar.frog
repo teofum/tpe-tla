@@ -1,5 +1,5 @@
-@import foo from "test/ignore/symbol_foo.frog"
-@import bar from "test/ignore/symbol_bar.frog"
+@import foo from "symbol_foo.frog"
+@import bar from "symbol_bar.frog"
 
 foobar is function() -> int {
   foo() + bar()

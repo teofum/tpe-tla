@@ -2,15 +2,14 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <error/error.h>
+#include <support/hash_map.h>
 #include <support/types.h>
 #include <support/util.h>
 #include <support/state.h>
 #include <support/str.h>
 
 #include "ast.h"
-#include "error/error.h"
-#include "support/hash_map.h"
-#include "support/options.h"
 
 const char *import_type_str[] = {
   [IMPORT_URL] = "url",

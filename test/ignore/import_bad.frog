@@ -1,4 +1,4 @@
-@import HasFoo, Foo from "test/ignore/import_type_def.frog"
+@import HasFoo, Foo from "import_type_def.frog"
 
 x: Foo = 5
 x

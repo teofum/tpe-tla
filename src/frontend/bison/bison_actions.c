@@ -43,16 +43,47 @@ Stmt *parse_function_def_stmt(FunctionDef *function) {
   return ast_stmt_function_def(function);
 }
 
+static char *_resolve_import_path(str rel_path) {
+  bool from_root = rel_path.len > 0 && rel_path.ptr[0] == '/';
+  char * base_cstr = from_root
+    ? cs()->options.base_path
+    : dirname(strdup(cs_current_filepath()));
+
+  str base_path = str_from_cstring(base_cstr);
+  fe_parser_log(LOG_DEBUG, "rel '%.*s'", (i32)rel_path.len, rel_path.ptr);
+  fe_parser_log(LOG_DEBUG, "base '%.*s'", (i32)base_path.len, base_path.ptr);
+  if (!from_root) free(base_cstr);
+
+  str sep = str_from_cstring("/");
+  str full_path = str_concat(2, sep, base_path, rel_path);
+  fe_parser_log(LOG_DEBUG, "full '%.*s'", (i32)full_path.len, full_path.ptr);
+  str_free(base_path);
+  str_free(sep);
+
+  char *full_path_cstr = str_to_cstring(full_path);
+  str_free(full_path);
+
+  char *real_path = realpath(full_path_cstr, NULL);
+  free(full_path_cstr);
+  return real_path;
+}
+
 Stmt *parse_import_directive(IdentifierList *ids, StringLiteral *from) {
   fe_parser_log(LOG_DEBUG, "Import Directive");
 
-  i32 file_idx = -1;
   CompilerOptions *o = &cs()->options;
-  for (u32 i = 0; i < o->input_file_count && file_idx == -1; i++) {
-    if (strncmp(o->input_filenames[i], from->value.ptr, from->value.len) == 0) {
-      cs()->file_dependencies[cs()->current_file][i] = true;
-      file_idx = i;
+  i32 file_idx = -1;
+  char *real_from_path = _resolve_import_path(from->value);
+  if (real_from_path) {
+    for (u32 i = 0; i < o->input_file_count && file_idx == -1; i++) {
+      char *real_file_path = realpath(o->input_filenames[i], NULL);
+      if (real_file_path && strcmp(real_file_path, real_from_path) == 0) {
+        cs()->file_dependencies[cs()->current_file][i] = true;
+        file_idx = i;
+      }
+      if (real_file_path) free(real_file_path);
     }
+    free(real_from_path);
   }
   if (file_idx == -1) {
     err_report_import_file(
@@ -282,33 +313,6 @@ BlockExpr *parse_block(StmtList *statements) {
   BlockExpr *block = ast_block(statements);
   fe_parser_log(LOG_DEBUG, "Block (len=%u)", block->len);
   return block;
-}
-
-static char *_resolve_import_path(str rel_path) {
-  bool from_root = rel_path.len > 0 && rel_path.ptr[0] == '/';
-  char * base_cstr = from_root
-    ? cs()->options.base_path
-    : dirname(strdup(cs_current_filepath()));
-
-  str base_path = str_from_cstring(base_cstr);
-  fe_parser_log(LOG_DEBUG, "rel '%.*s'", (i32)rel_path.len, rel_path.ptr);
-  fe_parser_log(LOG_DEBUG, "base '%.*s'", (i32)base_path.len, base_path.ptr);
-  if (!from_root) free(base_cstr);
-
-  str sep = str_from_cstring("/");
-  str full_path = str_concat(2, sep, base_path, rel_path);
-  fe_parser_log(LOG_DEBUG, "full '%.*s'", (i32)full_path.len, full_path.ptr);
-  str_free(base_path);
-  str_free(sep);
-
-  char *full_path_cstr = str_to_cstring(full_path);
-  str_free(full_path);
-
-  char *abs_path = malloc(PATH_MAX);
-  char *real_path = realpath(full_path_cstr, abs_path);
-  free(full_path_cstr);
-  if (!real_path) free(abs_path);
-  return real_path;
 }
 
 ImportExpr *parse_import(Identifier *import_type, Type *data_type, StringLiteral *path) {
